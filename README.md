@@ -1,13 +1,14 @@
 # ComfyUI-LoraHelper (V5.0-Stable)
 
-一个专为 ComfyUI 设计的自动化 LoRA 训练素材整理工具。通过集成大语言模型（LLM），实现从原始素材到结构化训练数据的自动化转化。
+一个专为 ComfyUI 设计的AI自动生成提示词、自动化批量生图、 LoRA 训练素材整理工具。通过集成大语言模型（LLM），实现从原始素材到结构化训练数据的自动化转化。
 
 ## 📦 核心功能
 
-- **模型加载 (Loader)**: 专为 Qwen3 等 GGUF 模型设计的加载器，支持显存自动清理。
-- **智能对话 (Chat)**: 支持动态调节 `max_tokens`、`temperature` 等 AI 核心参数。
-- **剧本切分 (Splitter)**: 自动从 AI 回复中截取提示词、LoRA 标签和自定义文件名。
-- **自动化存盘 (Saver)**: 一键保存图片、同名 `.txt` 标签以及详细的 `_log.txt` 创作日志。
+- **模型加载 (gguf_Loader)**: 专为 Qwen3 等 GGUF 模型设计的加载器，支持显存自动清理。
+- **智能对话 (debug_Chat)**: 支持动态调节 `max_tokens`、`temperature` 等 AI 核心参数。
+- **AI提示词  (prompt_enhancement)**: 支持动态调节 `max_tokens`、`temperature` 等 AI 核心参数。
+- **剧本切分 (output_Splitter)**: 自动从 AI 回复中截取提示词、LoRA 标签和自定义文件名。
+- **自动化存盘 (image_prompt_tag_Saver)**: 一键保存图片、同名标签文件（LoRA训练打标用）以及详细的prompt日志。
 
 ## 📂 目录存放规范
 
