@@ -4,7 +4,17 @@
 
 <details>
 <summary>🌐 Click to expand English Version / 点击展开英文版</summary>
+## 📦 Core Features (EN)
+- **Model Loader (GGUF_Loader)**: Dedicated loader for GGUF architectures with VRAM Auto-Offload.
+- **AI Interaction (Debug_Chat)**: Supports dynamic `max_tokens` and `temperature`.
+    - **Debug Mode**: Logic analysis for prompt debugging.
+    - **Prompt_Enhance Mode**: Creative expansion for visual descriptions.
+- **Output Splitter (Output_Splitter)**: Parses SECTION 1/2/3 to extract prompts and tags.
+- **All-In-One Saver**: Synchronized saving of images, .txt tags, and logs.
 
+</details>
+
+---
 一个专为 ComfyUI 设计的AI自动生成提示词、自动化批量生图、 LoRA 训练素材整理工具。通过集成大语言模型（LLM），实现从原始素材到结构化训练数据的自动化转化。
 
 ## 📦 核心功能
@@ -46,17 +56,3 @@
 
 **建议：**
 建议配合dynamic prompt插件使用，效果更佳，配置如配图。
-
--------------------------------------------------------------------------------------
-## 📦 Core Features (EN)
-Model Loader (GGUF_Loader): A dedicated loader designed for GGUF architectures (e.g., Qwen3), featuring an integrated VRAM Auto-Offload mechanism to optimize memory usage.
-
-AI Interaction (Debug_Chat): Supports dynamic adjustment of core AI parameters such as max_tokens and temperature.
-
-Debug Mode: Analyzes user_prompt based on system_command to output logical reasoning and thought processes, facilitating prompt debugging.
-
-Prompt_Enhance Mode: Generates creative expansions based on raw user materials, following system instructions to produce rich, detailed visual descriptions.
-
-Output Splitter (Output_Splitter): An automated parser that leverages specific identifiers (SECTION 1 / SECTION 2 / SECTION 3) to extract image prompts, LoRA training tags, and custom filenames from the AI response.
-
-All-In-One Saver (All-In-One_Saver): A one-click solution for synchronized data preservation, saving the generated image, a standardized tag file (.txt for LoRA training), and a detailed prompt log (_log.txt).
