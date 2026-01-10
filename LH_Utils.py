@@ -1,8 +1,10 @@
 import os
 import time
 import re
+import json
 import numpy as np
 from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 import folder_paths
 
 class Qwen3TextSplitter:
@@ -44,30 +46,50 @@ class LoRA_AllInOne_Saver:
                 "filename_final": ("STRING", {"forceInput": True}),
                 "folder_path": ("STRING", {"default": "LoRA_Train_Data"}),
                 "trigger_word": ("STRING", {"default": "ChenAnran"}), 
-            }
+                "save_workflow": ("BOOLEAN", {"default": True}), # 功能 2：开关
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"}
         }
     RETURN_TYPES = ()
     FUNCTION = "save"
     OUTPUT_NODE = True  
     CATEGORY = "custom_nodes/MyLoraNodes"
 
-    def save(self, images, gen_prompt, lora_tags, filename_final, folder_path, trigger_word):
-        # 还原：文件名过滤与路径拼接
+    def save(self, images, gen_prompt, lora_tags, filename_final, folder_path, trigger_word, save_workflow, prompt=None, extra_pnginfo=None):
         s_file = str(filename_final)
         clean_name = re.sub(r"[\[\]{}'\"`’]", '', s_file)
         safe_name = re.sub(r'[\\/:*?"<>|\n\r\t]', '', clean_name).strip().replace(' ', '_')[:50]
-        
         full_path = os.path.join(self.output_dir, folder_path) if not os.path.isabs(folder_path) else folder_path
         os.makedirs(full_path, exist_ok=True)
         
         timestamp = int(time.time())
+        results = [] # 这里开始修复
+        
         for i, image in enumerate(images):
             img = Image.fromarray((255. * image.cpu().numpy()).clip(0, 255).astype(np.uint8))
-            base = f"{safe_name}_{timestamp}_{i:02d}"
-            img.save(os.path.join(full_path, f"{base}.png"))
+            file_basename = f"{safe_name}_{timestamp}_{i:02d}"
+            save_filename = f"{file_basename}.png"
+            
+            metadata = PngInfo()
+            if save_workflow:
+                if prompt is not None: metadata.add_text("prompt", json.dumps(prompt))
+                if extra_pnginfo is not None:
+                    for k, v in extra_pnginfo.items(): metadata.add_text(k, json.dumps(v))
+            
+            img.save(os.path.join(full_path, save_filename), pnginfo=metadata)
+            
+            # --- 关键修复：这就是解决资产栏名字的那几行 ---
+            results.append({
+                "filename": save_filename,
+                "subfolder": folder_path,
+                "type": "output"
+            })
+            # ------------------------------------------
+
             if i == 0:
                 with open(os.path.join(full_path, f"{safe_name}_{timestamp}.txt"), "w", encoding="utf-8") as f:
                     f.write(f"{trigger_word}, {lora_tags}".strip(", "))
                 with open(os.path.join(full_path, f"{safe_name}_{timestamp}_log.txt"), "w", encoding="utf-8") as f:
                     f.write(str(gen_prompt))
-        return {"ui": {"images": []}}
+                    
+        return {"ui": {"images": results}} # 这里也从 [] 修复为了 results
