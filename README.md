@@ -41,3 +41,16 @@
 
 **建议：**
 建议配合dynamic prompt插件使用，效果更佳，配置如配图。
+
+-------------------------------------------------------------------------------------
+Model Loader (GGUF_Loader): A dedicated loader designed for GGUF architectures (e.g., Qwen3), featuring an integrated VRAM Auto-Offload mechanism to optimize memory usage.
+
+AI Interaction (Debug_Chat): Supports dynamic adjustment of core AI parameters such as max_tokens and temperature.
+
+Debug Mode: Analyzes user_prompt based on system_command to output logical reasoning and thought processes, facilitating prompt debugging.
+
+Prompt_Enhance Mode: Generates creative expansions based on raw user materials, following system instructions to produce rich, detailed visual descriptions.
+
+Output Splitter (Output_Splitter): An automated parser that leverages specific identifiers (SECTION 1 / SECTION 2 / SECTION 3) to extract image prompts, LoRA training tags, and custom filenames from the AI response.
+
+All-In-One Saver (All-In-One_Saver): A one-click solution for synchronized data preservation, saving the generated image, a standardized tag file (.txt for LoRA training), and a detailed prompt log (_log.txt).
