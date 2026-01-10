@@ -1,4 +1,9 @@
-# ComfyUI-LoraHelper (V5.0-Stable)
+# 🚀 ComfyUI-LoraHelper
+
+[English](#-core-features-en) | [中文](#-核心功能)
+
+<details>
+<summary>🌐 Click to expand English Version / 点击展开英文版</summary>
 
 一个专为 ComfyUI 设计的AI自动生成提示词、自动化批量生图、 LoRA 训练素材整理工具。通过集成大语言模型（LLM），实现从原始素材到结构化训练数据的自动化转化。
 
@@ -43,6 +48,7 @@
 建议配合dynamic prompt插件使用，效果更佳，配置如配图。
 
 -------------------------------------------------------------------------------------
+## 📦 Core Features (EN)
 Model Loader (GGUF_Loader): A dedicated loader designed for GGUF architectures (e.g., Qwen3), featuring an integrated VRAM Auto-Offload mechanism to optimize memory usage.
 
 AI Interaction (Debug_Chat): Supports dynamic adjustment of core AI parameters such as max_tokens and temperature.
