@@ -4,10 +4,12 @@
 
 <details>
 <summary>🌐 Click to expand English Version / 点击展开英文版</summary>
+
 ## 📦 Core Features (EN)
+
 - **Model Loader (GGUF_Loader)**: Dedicated loader for GGUF architectures with VRAM Auto-Offload.
 - **AI Interaction (Debug_Chat)**: Supports dynamic `max_tokens` and `temperature`.
-    - **Debug Mode**: Logic analysis for prompt debugging.
+    - **Debug Mode**: Logic analysis for prompt debugging based on system commands.
     - **Prompt_Enhance Mode**: Creative expansion for visual descriptions.
 - **Output Splitter (Output_Splitter)**: Parses SECTION 1/2/3 to extract prompts and tags.
 - **All-In-One Saver**: Synchronized saving of images, .txt tags, and logs.
