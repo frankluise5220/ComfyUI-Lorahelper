@@ -48,12 +48,15 @@ This project utilizes a decoupled architecture. Ensure the following files are p
 - `LH_Chat.py`: Handles model loading and AI dialogue/enhancement logic.
 - `LH_Utils.py`: Handles text splitting and file storage nodes.
 
-## 💡 Recommendation
+Recommendation: Using [Dynamic Prompts (DP)](https://github.com/adieyal/comfyui-dynamicprompts) as a Pre-Processor
+Workflow:
+-  DP Selection: Use DP nodes to generate randomized base attributes (e.g., {white dress|red cheongsam}, {black hair|blonde}).
 
-**Combine with the Dynamic Prompts extension for maximum efficiency:**
-- **Workflow**: Connect the `gen_prompt` output of this plugin to the input of a Dynamic Prompts node.
-- **Advantage**: While the AI generates high-level scene descriptions, Dynamic Prompts can handle micro-variables via wildcards (e.g., `{red|blue} dress`), enabling infinite variations for batch generation from a single AI script.
-
+-  AI Input: Feed the randomized output into this plugin's user_prompt.
+-  Creative Refinement: Qwen3 takes these random "seeds" and expands them into high-quality, professional-grade visual descriptions with matched lighting and composition.
+-  Why this works?:
+-  It prevents AI "creative ruts" by forcing the LLM to work with randomized variables.
+-  It combines controlled randomness with aesthetic intelligence, perfect for generating diverse, high-quality LoRA training datasets.
 </details>
 
 ---
@@ -97,6 +100,18 @@ This project utilizes a decoupled architecture. Ensure the following files are p
 
 ## 💡 使用建议
 
-**建议配合 Dynamic Prompts 插件使用：**
-- **操作方式**: 将本插件输出的 `gen_prompt` 接入 Dynamic Prompts 节点的输入端。
-- **核心优势**: AI 负责生成场景描述，Dynamic Prompts 负责对通配符变量进行替换（如 `{red|blue} dress`），实现单次 AI 剧本下的无限变体批量生图。
+建议配合 [Dynamic Prompts (DP)](https://github.com/adieyal/comfyui-dynamicprompts) (DP) 插件作为前置输入：
+
+操作方式 (Workflow):
+
+DP 抽签 (Randomization): 使用 random prompt 节点预先抽取随机组合（如：{白色长裙|红色旗袍}, {黑发|金发}）。
+
+AI 润色 (Refinement): 将 DP 抽取的简单描述送入本插件的 user_prompt。
+
+深度扩写 (Expansion): Qwen3 会基于 DP 抽中的随机属性，自动构思与之匹配的灯光、构图及场景细节。
+
+核心优势 (Core Advantage):
+
+打破 AI 审美疲劳: 解决了 LLM 容易陷入特定描述风格的问题，通过 DP 的随机性强制给 AI 提供“创作命题”。
+
+精准可控的批量生图: 你可以通过 DP 确保每张图的基础元素（发色、服装）各不相同，同时利用 AI 保证每一张图的描述质量都是顶级的。
