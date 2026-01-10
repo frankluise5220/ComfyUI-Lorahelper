@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*.gguf
+*.safetensors
+*.ckpt
+version_history.txt
+.DS_Store
