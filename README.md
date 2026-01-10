@@ -4,11 +4,13 @@
 
 ## 📦 核心功能
 
-- **模型加载 (gguf_Loader)**: 专为 Qwen3 等 GGUF 模型设计的加载器，支持显存自动清理。
-- **智能对话 (debug_Chat)**: 支持动态调节 `max_tokens`、`temperature` 等 AI 核心参数。
-- **AI提示词  (prompt_enhancement)**: 支持动态调节 `max_tokens`、`temperature` 等 AI 核心参数。
-- **剧本切分 (output_Splitter)**: 自动从 AI 回复中截取提示词、LoRA 标签和自定义文件名。
-- **自动化存盘 (image_prompt_tag_Saver)**: 一键保存图片、同名标签文件（LoRA训练打标用）以及详细的prompt日志。
+- **模型加载 (GGUF_Loader)**: 专为 Qwen3 等 GGUF 架构设计的加载器，内置 VRAM 自动卸载机制。
+- **用户交互 (debug_Chat)**: 支持动态调节 `max_tokens`、`temperature` 等 AI 核心参数。
+-   并且包括以下两个功能：
+-     Debug Mode: 根据system_command的指令，对user_prompt进行分析，给出思考结果，方便调试。
+-     Prompt_Enhance Mode: AI 将根据用户提供素材，按照用户的system_command的指令进行创意扩写，生成更丰富的视觉描述提示词。
+- **剧本切分 (output_Splitter)**: 基于特定的分段词（SECTION1/SECTION2/SECTION3)从 gen_text输出中截取提示词、LoRA 标签和自定义文件名。
+- **自动化存盘 (All-In-One_Saver)**: 一键保存图片、同名标签文件（LoRA训练打标用）以及详细的prompt日志。
 
 ## 📂 目录存放规范
 
