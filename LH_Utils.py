@@ -32,6 +32,18 @@ class Qwen3TextSplitter:
         title = re.sub(r"[\[\]{}'\"`’]", '', t_match.group(1)).strip() if t_match else f"Auto_{int(time.time())}"
         return (gen_p, lora_tags, f"{user_prefix}_{title[:50]}")
 
+# ==========================================================
+# PROJECT: LoraHelper_Saver (Dataset Saver)
+# MANDATORY UI ORDER (INPUT_TYPES):
+#   1. images -> 2. gen_prompt -> 3. lora_tags
+#   4. filename_final -> 5. folder_path -> 6. trigger_word
+#   7. save_workflow
+#
+# LOGIC DEFINITION:
+#   - Saves images to output/folder_path
+#   - Creates .txt caption files (trigger_word + tags)
+#   - Creates _log.txt with full description
+# ==========================================================
 class LoRA_AllInOne_Saver:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()

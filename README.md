@@ -1,117 +1,130 @@
 # 🚀 ComfyUI-LoraHelper
 
-一个专为 ComfyUI 设计的 AI 自动生成提示词、自动化批量生图、 LoRA 训练素材整理工具。通过集成大语言模型（LLM），实现从原始素材到结构化训练数据的自动化转化。
+一个专为 ComfyUI 设计的 AI 自动生成提示词、自动化批量生图、 LoRA 训练素材整理工具。通过集成本地大语言模型（GGUF），实现从原始素材到结构化训练数据的自动化转化。
 
-An AI-powered tool designed for ComfyUI to automate prompt generation, batch image creation, and LoRA training dataset organization. By integrating Large Language Models (LLM), it achieves a seamless, automated transformation from raw materials to structured training datasets.
-
----
-
-[English Version](#-core-features-en) | [中文说明](#-核心功能)
-
-<details>
-<summary>🌐 Click to expand English Version / 点击展开英文版</summary>
-
-## 📦 Core Features (EN)
-
-- **Model Loader (GGUF_Loader)**: A dedicated loader optimized for GGUF architectures (e.g., Qwen3), featuring an integrated **VRAM Auto-Offload** mechanism to maximize generation efficiency.
-- **User Interaction (Debug_Chat)**: Supports dynamic adjustment of core AI parameters such as `max_tokens`, `temperature`, etc.
-    - Includes the following two primary modes:
-    - **Debug Mode**: Analyzes `user_prompt` based on `system_command` instructions to output logical reasoning and thought processes, facilitating easier prompt debugging.
-    - **Prompt_Enhance Mode**: AI creatively expands on user-provided materials following specific system instructions to generate high-quality, detail-rich visual descriptions.
-- **Script Parsing (Output_Splitter)**: An automated extraction tool that leverages specific identifiers (**SECTION 1 / SECTION 2 / SECTION 3**) to parse prompts, LoRA training tags, and custom filenames from AI responses.
-- **Automated Storage (All-In-One_Saver)**: A one-click solution to synchronize the saving of images, matching tag files (standardized for LoRA training), and comprehensive prompt logs.
-
-## 📂 Directory & Storage Specifications
-
-- **LLM Models**: Please place your `.gguf` model files into the `ComfyUI/models/llm/` directory.
-- **Asset Storage**: Files are saved to `ComfyUI/output/LoRA_Train_Data/` by default. Custom paths are supported.
-
-## ✂️ Splitter Execution Mechanism
-
-The node identifies and segments AI output by recognizing specific semantic markers:
-- `SECTION 1`: Extracted as the Image Generation Prompt (`gen_prompt`).
-- `SECTION 2`: Extracted as LoRA Training Tags (`lora_tags`).
-- `SECTION 3`: Extracted as the final Filename (`filename_final`).
-*Fallback Mechanism: If no markers are detected, the system automatically captures the first natural paragraph to ensure the workflow remains uninterrupted.*
-
-## 💾 Saving Mechanism (Three-In-One)
-
-Every save operation generates three synchronized files:
-1. **Image (.png)**: Contains full generation metadata (workflow embedding is optional).
-2. **Tags (.txt)**: Formatted as `trigger_word, tag1, tag2...`, ready for training.
-3. **Logs (_log.txt)**: Records the original, complete AI response to preserve all raw prompt information for future reference.
-
-## 🛠️ Modular Installation
-
-This project utilizes a decoupled architecture. Ensure the following files are present in the plugin folder:
-- `__init__.py`: Plugin entry point and node registration.
-- `LH_Chat.py`: Handles model loading and AI dialogue/enhancement logic.
-- `LH_Utils.py`: Handles text splitting and file storage nodes.
-
-Recommendation: Using [Dynamic Prompts (DP)](https://github.com/adieyal/comfyui-dynamicprompts) as a Pre-Processor
-Workflow:
--  DP Selection: Use DP nodes to generate randomized base attributes (e.g., {white dress|red cheongsam}, {black hair|blonde}).
-
--  AI Input: Feed the randomized output into this plugin's user_prompt.
--  Creative Refinement: Qwen3 takes these random "seeds" and expands them into high-quality, professional-grade visual descriptions with matched lighting and composition.
--  Why this works?:
--  It prevents AI "creative ruts" by forcing the LLM to work with randomized variables.
--  It combines controlled randomness with aesthetic intelligence, perfect for generating diverse, high-quality LoRA training datasets.
-</details>
+An AI-powered tool designed for ComfyUI to automate prompt generation, batch image creation, and LoRA training dataset organization. By integrating local Large Language Models (GGUF), it achieves a seamless, automated transformation from raw materials to structured training datasets.
 
 ---
 
-## 📦 核心功能 (CN)
+[English Version](#-english-version) | [中文说明](#-中文说明)
 
-- **模型加载 (GGUF_Loader)**: 专为 Qwen3 等 GGUF 架构设计的加载器，内置 VRAM 自动卸载机制。
-- **用户交互 (Debug_Chat)**: 支持动态调节 `max_tokens`、`temperature` 等 AI 核心参数。
-    - 并且包括以下两个功能：
-    - **Debug Mode**: 根据 system_command 的指令，对 user_prompt 进行分析，给出思考结果，方便调试。
-    - **Prompt_Enhance Mode**: AI 将根据用户提供素材进行创意扩写，生成更丰富的视觉描述提示词。
-- **剧本切分 (Output_Splitter)**: 基于特定的分段词（SECTION 1/2/3）从输出中截取提示词、LoRA 标签和自定义文件名。
-- **自动化存盘 (All-In-One_Saver)**: 一键保存图片、同名标签文件（LoRA 训练打标用）以及详细的 prompt 日志。
+<a name="-english-version"></a>
+## 🌏 English Version
 
-## 📂 目录存放规范
+### 📦 Installation
+1. Clone this repository into your `ComfyUI/custom_nodes/` directory:
+   ```bash
+   cd ComfyUI/custom_nodes/
+   git clone https://github.com/yourusername/ComfyUI-Lorahelper.git
+   ```
+2. Install the required dependencies:
+   ```bash
+   cd ComfyUI-Lorahelper
+   pip install -r requirements.txt
+   ```
+   *Note: This project requires `llama-cpp-python` for GGUF model support.*
 
-- **LLM 模型**: 请将 `.gguf` 文件放入 `ComfyUI/models/llm/` 目录下。
-- **素材存盘**: 默认保存在 `ComfyUI/output/LoRA_Train_Data/`，支持自定义路径。
+### 🧩 Node Overview
 
-## ✂️ Splitter 运行机制
+#### 1. LoraHelper_Loader (GGUF Model Loader)
+*   **Function**: Loads `.gguf` format LLM models.
+*   **Path**: Place your models in `ComfyUI/models/llm/`.
+*   **Features**: Supports auto-offloading VRAM.
 
-节点通过识别 AI 输出中的特定标记进行切分：
-- `SECTION 1`: 提取为生图提示词 (gen_prompt)。
-- `SECTION 2`: 提取为 LoRA 训练标签 (lora_tags)。
-- `SECTION 3`: 提取为最终文件名 (filename_final)。
-*若未发现标记，系统会自动抓取首个自然段进行保底，确保流程不中断。*
+#### 2. LoraHelper_Chat (DeepBlue Architecture)
+The core intelligence node.
+*   **Inputs**:
+    *   `model`: The loaded LLM.
+    *   `image` (Optional): Connecting an image enables **Vision Mode**.
+    *   `context`: Connects to history for multi-turn conversations.
+    *   `user_prompt` (UP): Input material/text.
+    *   `system_command` (SC): Executive instructions for the AI.
+*   **Modes**:
+    *   **Enhance_Prompt**: Creatively expands on user inputs.
+    *   **Debug_Chat**: Analyzes prompts or images based on instructions.
 
-## 💾 保存机制 (三位一体)
+#### 3. LoraHelper_Monitor (History Viewer)
+*   **Function**: Displays a rolling buffer of the last 5 chat interactions.
+*   **Usage**: Connect to a `ShowText` node to visualize the conversation history.
 
-每次保存将生成：
-1. **图片 (.png)**: 包含完整生图元数据 (工作流保存可选)。
-2. **标签 (.txt)**: 格式为 `触发词, 标签1, 标签2...`。
-3. **日志 (_log.txt)**: 记录 AI 的原始完整描述，方便整理文生图原始信息。
+#### 4. LoraHelper_Splitter (Text Parser)
+*   **Function**: Parses the LLM output into structured data.
+*   **Logic**: Looks for specific markers:
+    *   `SECTION 1`: Generation Prompt
+    *   `SECTION 2`: LoRA Tags
+    *   `SECTION 3`: Filename
 
-## 🛠️ 模块化安装
+#### 5. LoraHelper_Saver (Dataset Saver)
+*   **Function**: One-click solution for saving training data.
+*   **Outputs**:
+    *   **Image**: `.png` with metadata.
+    *   **Tags**: `.txt` file with trigger word and tags.
+    *   **Log**: `_log.txt` with the full raw AI response.
+*   **Path**: Default saves to `ComfyUI/output/LoRA_Train_Data/`.
 
-本项目采用解耦架构，请确保文件夹内包含以下文件：
-- `__init__.py`: 插件入口与节点注册。
-- `LH_Chat.py`: 处理模型加载与 AI 对话及增强逻辑。
-- `LH_Utils.py`: 处理文本切分与文件存盘节点。
+---
 
-## 💡 使用建议
+<a name="-中文说明"></a>
+## 🇨🇳 中文说明
 
-建议配合 [Dynamic Prompts (DP)](https://github.com/adieyal/comfyui-dynamicprompts) (DP) 插件作为前置输入：
+### 📦 安装指南
+1. 将本项目克隆到 `ComfyUI/custom_nodes/` 目录：
+   ```bash
+   cd ComfyUI/custom_nodes/
+   git clone https://github.com/yourusername/ComfyUI-Lorahelper.git
+   ```
+2. 安装必要的依赖库：
+   ```bash
+   cd ComfyUI-Lorahelper
+   pip install -r requirements.txt
+   ```
+   *注意：本项目依赖 `llama-cpp-python` 来加载 GGUF 模型，请确保正确安装。*
 
-操作方式 (Workflow):
+### 🧩 节点详解
 
-DP 抽签 (Randomization): 使用 random prompt 节点预先抽取随机组合（如：{白色长裙|红色旗袍}, {黑发|金发}）。
+#### 1. LoraHelper_Loader (模型加载器)
+*   **功能**: 加载 `.gguf` 格式的大语言模型。
+*   **路径**: 请将模型文件放入 `ComfyUI/models/llm/` 目录。
+*   **特性**: 支持 VRAM 自动卸载，优化显存占用。
 
-AI 润色 (Refinement): 将 DP 抽取的简单描述送入本插件的 user_prompt。
+#### 2. LoraHelper_Chat (核心对话节点)
+基于 DeepBlue 架构的智能核心。
+*   **输入参数**:
+    *   `model`: 已加载的 LLM 模型。
+    *   `image` (可选): 接入图片后自动进入**视觉模式 (Vision Mode)**，忽略文本输入，仅根据指令分析图片。
+    *   `context`: 上下文输入，用于多轮对话记忆。
+    *   `user_prompt` (UP): 用户素材或原始提示词。
+    *   `system_command` (SC): 给 AI 的系统级指令。
+*   **运行模式**:
+    *   **Enhance_Prompt**: 对用户素材进行创意扩写。
+    *   **Debug_Chat**: 根据指令分析素材或图片，输出思考过程。
 
-深度扩写 (Expansion): Qwen3 会基于 DP 抽中的随机属性，自动构思与之匹配的灯光、构图及场景细节。
+#### 3. LoraHelper_Monitor (历史看板)
+*   **功能**: 维护并显示最近 5 轮的对话历史。
+*   **用法**: 输出连接到 `ShowText` 节点，方便实时监控 AI 的回复和上下文。
 
-核心优势 (Core Advantage):
+#### 4. LoraHelper_Splitter (文本切分器)
+*   **功能**: 将 AI 的输出解析为结构化数据。
+*   **逻辑**: 自动识别以下标记进行提取：
+    *   `SECTION 1`: 生图提示词 (Gen Prompt)
+    *   `SECTION 2`: LoRA 训练标签 (Tags)
+    *   `SECTION 3`: 最终文件名 (Filename)
 
-打破 AI 审美疲劳: 解决了 LLM 容易陷入特定描述风格的问题，通过 DP 的随机性强制给 AI 提供“创作命题”。
+#### 5. LoraHelper_Saver (数据集保存器)
+*   **功能**: 一键保存 LoRA 训练所需的所有文件。
+*   **输出内容**:
+    *   **图片**: `.png` 格式，包含完整元数据。
+    *   **标签**: `.txt` 文件，格式为 `触发词, 标签1, 标签2...`。
+    *   **日志**: `_log.txt` 文件，记录 AI 的原始完整回复。
+*   **路径**: 默认保存在 `ComfyUI/output/LoRA_Train_Data/`，支持自定义子文件夹。
 
-精准可控的批量生图: 你可以通过 DP 确保每张图的基础元素（发色、服装）各不相同，同时利用 AI 保证每一张图的描述质量都是顶级的。
+---
+
+## 💡 使用建议 (Best Practice)
+
+建议配合 **[Dynamic Prompts (DP)](https://github.com/adieyal/comfyui-dynamicprompts)** 插件使用：
+1.  **DP 抽签**: 使用 DP 节点生成随机组合（如 `{白色长裙|红色旗袍}, {黑发|金发}`）。
+2.  **AI 润色**: 将 DP 的随机输出作为 `user_prompt` 输入给本插件。
+3.  **深度扩写**: 本插件会基于随机属性，自动补充灯光、构图及场景细节。
+
+**核心优势**: 结合了随机性的“广度”和 AI 的“深度”，能够快速生成高质量、多样化的 LoRA 训练数据集。
