@@ -10,9 +10,11 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "UniversalGGUFLoader": "LoraHelper_Loader",
+    "UniversalGGUFLoader": "Qwen3_GGUF_loader",
     "UniversalAIChat": "LoraHelper_Chat",
     "LH_History_Monitor": "LoraHelper_Monitor",
     "Qwen3TextSplitter": "LoraHelper_Splitter",
     "LoRA_AllInOne_Saver": "LoraHelper_Saver"
 }
+
+WEB_DIRECTORY = "./web"
