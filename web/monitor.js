@@ -35,7 +35,7 @@ app.registerExtension({
 					// Auto-resize node logic
 					const lineCount = text_val.split('\n').length;
                     // Approximate height: line count * line height + header/padding
-					const estimatedHeight = Math.max(240, lineCount * 18 + 80);
+					const estimatedHeight = Math.max(240, lineCount * 20 + 100);
                     const currentWidth = this.size[0];
                     
                     // Resize only if needed to avoid jitter, but ensure minimum size
@@ -51,11 +51,12 @@ app.registerExtension({
                             widget.inputEl.style.backgroundColor = "#222";
                             widget.inputEl.style.color = "#00ff00"; // Green text for monitor style
                             widget.inputEl.style.fontFamily = "Consolas, monospace";
-                            widget.inputEl.style.fontSize = "12px";
+                            widget.inputEl.style.fontSize = "13px";
                             widget.inputEl.style.lineHeight = "1.5";
                             widget.inputEl.style.padding = "10px";
                             widget.inputEl.style.border = "1px solid #444";
                             widget.inputEl.style.borderRadius = "4px";
+                            widget.inputEl.style.whiteSpace = "pre-wrap"; // Ensure wrapping
                             
                             // FORCE HEIGHT to fill node
                             // Leave some space for header (approx 40-60px)

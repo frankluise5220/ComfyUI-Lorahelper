@@ -750,7 +750,9 @@ class UniversalAIChat:
 #   - UI Display: Formatted cards (Old -> New)
 # ==========================================================
 class LH_History_Monitor:
-    _slots = []
+    def __init__(self):
+        self.history = []
+
     @classmethod
     def INPUT_TYPES(s):
         return { "required": { "chat_history": ("STRING", {"forceInput": True}) } }
@@ -762,46 +764,67 @@ class LH_History_Monitor:
     CATEGORY = "custom_nodes/MyLoraNodes"
 
     def update(self, chat_history):
-        # Debug Print
-        print(f"\033[34m[LoraHelper_Monitor] Received Update: {len(chat_history)} chars\033[0m")
-        print(f"\033[34m[LoraHelper_Monitor] Preview: {chat_history[:100]}...\033[0m")
+        # 1. 解析输入 (支持 JSON 或 纯文本)
+        import json
+        user_msg = ""
+        ai_msg = ""
         
-        # 避免重复添加 (简单的去重逻辑，防止重运行导致的重复)
-        if chat_history and (not self._slots or chat_history != self._slots[-1]):
-            self._slots.append(chat_history)
-        
-        # 保持 5 轮
-        if len(self._slots) > 5:
-            self._slots.pop(0) # 移除最旧的 (头部)
-        
-        # 1. Context 输出 (纯文本，旧 -> 新)
-        # 直接拼接 User: ... \n AI: ...
-        context = "\n\n".join(self._slots)
-
-        # 2. UI 展示 (混合模式：上方为卡片视图，下方为纯文本视图)
-        display_lines = []
-        
-        # Part A: Visual Cards (For Reading)
-        display_lines.append("═════════ 👀 Visual History (最近5轮) ═════════")
-        for i, slot in enumerate(self._slots):
-            parts = slot.split("\nAI: ", 1)
-            if len(parts) == 2:
-                u = parts[0].replace("User: ", "", 1)
-                a = parts[1]
-                card = (
-                    f"🔻 Round {i+1} User:\n{u}\n"
-                    f"🔹 Round {i+1} AI:\n{a}\n"
-                    f"──────────────────────────"
-                )
-                display_lines.append(card)
+        try:
+            data = json.loads(chat_history)
+            if isinstance(data, dict):
+                user_msg = data.get("user", "")
+                ai_msg = data.get("ai", "")
             else:
-                display_lines.append(f"Round {i+1}: {slot}\n──────────────────────────")
+                # 可能是旧格式或纯文本
+                user_msg = "Raw Input"
+                ai_msg = str(chat_history)
+        except:
+             # 解析失败，当作纯文本
+             user_msg = "Raw Input"
+             ai_msg = str(chat_history)
         
-        # Part B: Raw Context (For Copying)
-        display_lines.append("\n═════════ 📋 Raw Context (复制下方内容用于Debug) ═════════")
-        display_lines.append(context)
+        # 2. 更新历史 (去重)
+        # 构造一个结构化对象存储
+        new_entry = {"user": user_msg, "ai": ai_msg}
         
-        # Join all lines into a single string for proper display in Monitor
-        final_text = "\n".join(display_lines)
+        # 简单去重：检查上一条是否完全一致
+        if self.history:
+            last = self.history[-1]
+            if last["user"] == user_msg and last["ai"] == ai_msg:
+                pass # 重复，忽略
+            else:
+                self.history.append(new_entry)
+        else:
+            self.history.append(new_entry)
+            
+        # 保持 5 轮
+        if len(self.history) > 5:
+            self.history.pop(0)
+
+        # 3. 构造 Context (用于回传给 Chat)
+        # 格式：Round X User: ... \n Round X AI: ...
+        context_parts = []
+        for i, h in enumerate(self.history):
+            context_parts.append(f"Round {i+1} User: {h['user']}")
+            context_parts.append(f"Round {i+1} AI: {h['ai']}")
+        context = "\n\n".join(context_parts)
+
+        # 4. 构造 UI 显示 —— 关键修改：拆分成多个短文本块
+        ui_text = []
+        ui_text.append("═════════ 👀 Visual History (Latest 5 Rounds) ═════════\n")
         
-        return {"ui": {"text": [final_text]}, "result": (context,)}
+        for i, h in enumerate(reversed(self.history)): # 最新轮在上
+            idx = len(self.history) - i
+            ui_text.append(f"🔻 Round {idx} — User 输入")
+            ui_text.append(h["user"] or "(空)")  # 单独一块，用户输入
+            
+            ui_text.append(f"🔹 Round {idx} — AI 输出")
+            ui_text.append(h["ai"] or "(空)")    # 单独一块，AI输出
+            
+            ui_text.append("──────────────────────────\n")  # 分隔线
+
+        # 如果历史为空
+        if len(ui_text) <= 1:
+             ui_text.append("（暂无对话历史）")
+        
+        return {"ui": {"text": ui_text}, "result": (context,)}
