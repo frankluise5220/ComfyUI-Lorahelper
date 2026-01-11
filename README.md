@@ -77,6 +77,15 @@ The core intelligence node.
     *   **Log**: `_log.txt` with the full raw AI response.
 *   **Path**: Default saves to `ComfyUI/output/LoRA_Train_Data/`.
 
+## 💡 Best Practice
+
+It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.com/adieyal/comfyui-dynamicprompts)**:
+1.  **DP Randomization**: Use DP nodes to generate random combinations (e.g., `{white dress|red cheongsam}, {black hair|blonde hair}`).
+2.  **AI Refinement**: Feed the random output from DP into this plugin as `user_prompt`.
+3.  **Deep Expansion**: This plugin will automatically add lighting, composition, and scene details based on the random attributes.
+
+**Core Advantage**: Combines the "breadth" of randomness with the "depth" of AI to quickly generate high-quality, diverse LoRA training datasets.
+
 ---
 
 <a name="-中文说明"></a>

@@ -264,22 +264,33 @@ class UniversalAIChat:
         extra_instructions = ""
         required_sections = ["SECTION 1"]
         
+        # [Fix] Smart Detection: Check for existing SECTIONs in system_command to avoid duplication
+        sc_upper = system_command.upper() if system_command else ""
+        has_section_2 = "SECTION 2" in sc_upper
+        has_section_3 = "SECTION 3" in sc_upper
+        
         if enable_tags_extraction:
-            extra_instructions += (
-                "\n\nSECTION 2:\n"
-                "Extract Danbooru-style tags based on the generated description in SECTION 1. Comma-separated.\n"
-                "Rule 1: MUST start with subject tags (e.g., 1girl, solo, man, 2boys).\n"
-                "Rule 2: Followed by appearance, clothes, pose, background.\n"
-                "Rule 3: No weights. No subjective words."
-            )
-            required_sections.append("SECTION 2")
+            if not has_section_2:
+                extra_instructions += (
+                    "\n\nSECTION 2:\n"
+                    "Extract Danbooru-style tags based on the generated description in SECTION 1. Comma-separated.\n"
+                    "Rule 1: MUST start with subject tags (e.g., 1girl, solo, man, 2boys).\n"
+                    "Rule 2: Followed by appearance, clothes, pose, background.\n"
+                    "Rule 3: No weights. No subjective words."
+                )
+                required_sections.append("SECTION 2")
+            else:
+                print(f"\033[36m[UniversalAIChat] Smart Skip: 'SECTION 2' detected in System Command. Auto-append skipped.\033[0m")
             
         if enable_filename_extraction:
-            extra_instructions += (
-                "\n\nSECTION 3:\n"
-                "Create a short title (3 words max, lower_case_with_underscores) for the generated description in SECTION 1. Output in brackets, e.g., [morning_coffee]."
-            )
-            required_sections.append("SECTION 3")
+            if not has_section_3:
+                extra_instructions += (
+                    "\n\nSECTION 3:\n"
+                    "Create a short title (3 words max, lower_case_with_underscores) for the generated description in SECTION 1. Output in brackets, e.g., [morning_coffee]."
+                )
+                required_sections.append("SECTION 3")
+            else:
+                print(f"\033[36m[UniversalAIChat] Smart Skip: 'SECTION 3' detected in System Command. Auto-append skipped.\033[0m")
 
         # 2.3 构建格式约束 (Footer)
         # 极简版 Footer，仅列出清单
