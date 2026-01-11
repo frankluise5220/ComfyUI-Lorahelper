@@ -21,11 +21,20 @@ class Qwen3TextSplitter:
         p_match = re.search(r'SECTION 1.*?[:：]\s*(.*?)(?=SECTION 2|SECTION 3|\[|$)', raw, re.DOTALL | re.IGNORECASE)
         gen_p = p_match.group(1).strip() if p_match else raw.split('\n\n')[0].strip()
         
-        tags_match = re.search(r'SECTION 2.*?[:：]\s*(.*?)(?=SECTION 3|\[|$)', raw, re.DOTALL | re.IGNORECASE)
+        # 优化 SECTION 2 提取逻辑，防止吞掉 SECTION 3
+        # 使用更严格的断言，并二次清洗
+        tags_match = re.search(r'SECTION 2.*?[:：]\s*(.*?)(?=\s*SECTION 3|\s*\[|$)', raw, re.DOTALL | re.IGNORECASE)
         lora_tags = ""
         if tags_match:
-            tags_src = re.sub(r':\s*\d+\.?\d*|[()\[\]{}]', '', tags_match.group(1))
+            raw_tags = tags_match.group(1)
+            # 二次保障：如果正则漏了，手动截断
+            if "SECTION 3" in raw_tags.upper():
+                raw_tags = re.split(r'SECTION 3', raw_tags, flags=re.IGNORECASE)[0]
+            
+            tags_src = re.sub(r':\s*\d+\.?\d*|[()\[\]{}]', '', raw_tags)
             tokens = [t.strip() for t in re.split(r'[,\n;，；]', tags_src) if 2 < len(t.strip()) < 50]
+            # 过滤掉包含 "SECTION" 的 token
+            tokens = [t for t in tokens if "SECTION" not in t.upper()]
             lora_tags = ", ".join(list(dict.fromkeys(tokens)))
 
         t_match = re.search(r'(?:SECTION 3.*?[:：]\s*)?\[([^\]]+)\]', raw, re.DOTALL | re.IGNORECASE)
@@ -57,6 +66,7 @@ class LoRA_AllInOne_Saver:
                 "lora_tags": ("STRING", {"forceInput": True}),
                 "filename_final": ("STRING", {"forceInput": True}),
                 "folder_path": ("STRING", {"default": "LoRA_Train_Data"}),
+                "filename_prefix": ("STRING", {"default": "Anran"}),
                 "trigger_word": ("STRING", {"default": "ChenAnran"}), 
                 "save_workflow": ("BOOLEAN", {"default": True}), # 功能 2：开关
             },
@@ -67,8 +77,18 @@ class LoRA_AllInOne_Saver:
     OUTPUT_NODE = True  
     CATEGORY = "custom_nodes/MyLoraNodes"
 
-    def save(self, images, gen_prompt, lora_tags, filename_final, folder_path, trigger_word, save_workflow, prompt=None, extra_pnginfo=None):
+    def save(self, images, gen_prompt, lora_tags, filename_final, folder_path, filename_prefix, trigger_word, save_workflow, prompt=None, extra_pnginfo=None):
+        # 0. 基础清理
         s_file = str(filename_final)
+        
+        # 应用 filename_prefix
+        if filename_prefix and filename_prefix.strip():
+             # 如果 filename_final 已经包含前缀（防止重复），这里可以做一个简单判断
+             # 但通常用户如果连接了 Chat 节点，Chat 输出的是纯文件名（因为我们刚移除了前缀逻辑）
+             prefix = filename_prefix.strip()
+             if not s_file.startswith(prefix):
+                 s_file = f"{prefix}_{s_file}"
+
         clean_name = re.sub(r"[\[\]{}'\"`’]", '', s_file)
         safe_name = re.sub(r'[\\/:*?"<>|\n\r\t]', '', clean_name).strip().replace(' ', '_')[:50]
         full_path = os.path.join(self.output_dir, folder_path) if not os.path.isabs(folder_path) else folder_path

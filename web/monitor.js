@@ -1,95 +1,88 @@
 import { app } from "../../scripts/app.js";
+import { ComfyWidgets } from "../../scripts/widgets.js";
 
 app.registerExtension({
 	name: "Comfy.LoraHelper.Monitor",
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
 		if (nodeData.name === "LH_History_Monitor") {
+			function populate(text) {
+                // Clear existing widgets to avoid duplication/stale state
+				if (this.widgets) {
+					for (let i = 0; i < this.widgets.length; i++) {
+						this.widgets[i].onRemove?.();
+					}
+					this.widgets.length = 0;
+				}
+
+                // Ensure text is an array
+				const v = Array.isArray(text) ? text : [text];
+				
+                // Combine into a single string for better display as a single block (User preference usually)
+                // Or if user wants blocks, we can iterate. 
+                // Given the chat history context, a single large text area is usually better for copy-paste/viewing.
+                // But ShowText iterates. Let's join them to be safe and ensure one big box.
+                const joinedText = v.join("\n");
+
+                // Create standard ComfyUI STRING widget
+                // Using ComfyWidgets["STRING"] ensures correct event handling and DOM structure
+				const w = ComfyWidgets["STRING"](
+                    this, 
+                    "display_text", 
+                    ["STRING", { multiline: true }], 
+                    app
+                ).widget;
+
+				w.inputEl.readOnly = true;
+				w.inputEl.style.opacity = 0.6;
+				w.value = joinedText;
+
+                // Auto-resize logic using standard computeSize
+				requestAnimationFrame(() => {
+					const sz = this.computeSize();
+					if (sz[0] < this.size[0]) {
+						sz[0] = this.size[0];
+					}
+					if (sz[1] < this.size[1]) {
+						sz[1] = this.size[1];
+					}
+					this.onResize?.(sz);
+					app.graph.setDirtyCanvas(true, false);
+				});
+			}
+
 			const onExecuted = nodeType.prototype.onExecuted;
 			nodeType.prototype.onExecuted = function (message) {
 				onExecuted?.apply(this, arguments);
-
 				if (message && message.text) {
-					// Join with newlines to preserve formatting
-					const text_val = message.text.join("\n");
-					
-					// Find existing widget
-					let widget = this.widgets?.find((w) => w.name === "display_text");
-					
-					// If not found, create it
-					if (!widget) {
-						// addWidget(type, name, value, callback, options)
-                        // Use "customtext" if available, else "text" with multiline
-                        // Actually, standard ComfyUI just uses "text" with multiline options for big boxes
-						widget = this.addWidget(
-							"text", 
-							"display_text", 
-							text_val, 
-							function(v) {}, 
-							{ multiline: true } 
-						);
-					}
-                    
-                    // Update value
-                    widget.value = text_val;
-                    
-					// Auto-resize node logic
-					const lineCount = text_val.split('\n').length;
-                    // Approximate height: line count * line height + header/padding
-					const estimatedHeight = Math.max(240, lineCount * 20 + 100);
-                    const currentWidth = this.size[0];
-                    
-                    // Resize only if needed to avoid jitter, but ensure minimum size
-					if (this.size[1] < estimatedHeight || this.size[1] > estimatedHeight + 100) {
-						this.setSize([Math.max(currentWidth, 400), estimatedHeight]);
-					}
-                    
-                    // Style the DOM element (input) if it exists
-                    // We need to force it to be a textarea and set height
-                    setTimeout(() => {
-                        if (widget.inputEl) {
-                            widget.inputEl.readOnly = true;
-                            widget.inputEl.style.backgroundColor = "#222";
-                            widget.inputEl.style.color = "#00ff00"; // Green text for monitor style
-                            widget.inputEl.style.fontFamily = "Consolas, monospace";
-                            widget.inputEl.style.fontSize = "13px";
-                            widget.inputEl.style.lineHeight = "1.5";
-                            widget.inputEl.style.padding = "10px";
-                            widget.inputEl.style.border = "1px solid #444";
-                            widget.inputEl.style.borderRadius = "4px";
-                            widget.inputEl.style.whiteSpace = "pre-wrap"; // Ensure wrapping
-                            
-                            // FORCE HEIGHT to fill node
-                            // Leave some space for header (approx 40-60px)
-                            const widgetHeight = this.size[1] - 60;
-                            widget.inputEl.style.height = `${widgetHeight}px`;
-                            widget.inputEl.style.maxHeight = `${widgetHeight}px`;
-                            
-                            widget.inputEl.scrollTop = widget.inputEl.scrollHeight; // Auto scroll to bottom
-                        }
-                    }, 50);
-
-                    // Force redraw
-					this.setDirtyCanvas(true, true);
-				}
+                    populate.call(this, message.text);
+                }
 			};
             
-            // Handle manual resize to update widget height
-            const onResize = nodeType.prototype.onResize;
-            nodeType.prototype.onResize = function(size) {
-                onResize?.apply(this, arguments);
-                const widget = this.widgets?.find((w) => w.name === "display_text");
-                if (widget && widget.inputEl) {
-                     // Sync widget height with new node height
-                     const widgetHeight = size[1] - 60;
-                     widget.inputEl.style.height = `${widgetHeight}px`;
-                     widget.inputEl.style.maxHeight = `${widgetHeight}px`;
+            // Handle configuration (reload)
+            const onConfigure = nodeType.prototype.onConfigure;
+            nodeType.prototype.onConfigure = function () {
+                onConfigure?.apply(this, arguments);
+                // If we have saved values, restore them
+                if (this.widgets_values && this.widgets_values.length) {
+                     populate.call(this, this.widgets_values);
                 }
             };
             
-            // Handle creation
-            const onNodeCreated = nodeType.prototype.onNodeCreated;
+            // Initial setup - Create a placeholder if needed
+             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function() {
                 onNodeCreated?.apply(this, arguments);
+                if (!this.widgets || this.widgets.length === 0) {
+                     const w = ComfyWidgets["STRING"](
+                        this, 
+                        "display_text", 
+                        ["STRING", { multiline: true }], 
+                        app
+                    ).widget;
+                    w.inputEl.readOnly = true;
+                    w.inputEl.style.opacity = 0.6;
+                    w.value = "Waiting for history...";
+                }
             };
 		}
 	},

@@ -42,10 +42,16 @@ The core intelligence node.
     *   `context`: Connects to history for multi-turn conversations.
     *   `user_prompt` (UP): Input material/text.
     *   `system_command` (SC): Executive instructions for the AI.
+    *   `enable_tags_extraction`: Toggle automatic Danbooru tags generation (SECTION 2).
+    *   `enable_filename_extraction`: Toggle automatic filename generation (SECTION 3).
+*   **Outputs**:
+    *   `description`: The main generated text (SECTION 1).
+    *   `tags`: Extracted tags (if enabled).
+    *   `filename`: Extracted filename (if enabled).
+    *   `chat_history`: Raw history for Monitor.
 *   **Vision Mode (Implicit)**:
     *   Triggered automatically when an image is connected.
     *   **Auto-Instruction**: Ignores `user_prompt` and uses a built-in optimized instruction to generate structured outputs (Caption, Tags, Filename).
-    *   **Tagging**: Generates Danbooru-style tags, comma-separated, covering subject, appearance, attire, pose, view, and background.
 *   **Modes (Text-only)**:
     *   **Enhance_Prompt**: Creatively expands on user inputs.
     *   **Debug_Chat**: Analyzes prompts based on instructions.
@@ -53,19 +59,18 @@ The core intelligence node.
 #### 3. LoraHelper_Monitor (History Viewer)
 *   **Function**: Manages conversation history and context.
 *   **Features**:
-    *   **Rolling Buffer**: Maintains the last 5 rounds of conversation.
-    *   **Built-in Display**: Directly shows the chat history on the node (no external `ShowText` needed).
-    *   **Context Loop**: Outputs context to be fed back into the Chat node.
+    *   **Visual History**: Displays the last 5 rounds in clear "Round X" cards.
+    *   **Auto-Resize**: Automatically adjusts size to fit content.
+    *   **Context Loop**: Outputs formatted context to be fed back into the Chat node.
 
-#### 4. LoraHelper_Splitter (Text Parser)
-*   **Function**: Parses the LLM output into structured data.
-*   **Logic**: Looks for specific markers:
-    *   `SECTION 1`: Natural Language Description (Caption)
-    *   `SECTION 2`: LoRA Tags (Comma-separated)
-    *   `SECTION 3`: Filename
+#### 4. LoraHelper_Splitter (Optional)
+*   **Function**: Parses raw LLM output into structured data.
+*   **Note**: `LoraHelper_Chat` now has built-in splitting capabilities. This node is only needed if you want to process raw text from other sources.
 
 #### 5. LoraHelper_Saver (Dataset Saver)
 *   **Function**: One-click solution for saving training data.
+*   **Inputs**:
+    *   `filename_prefix`: Prefix for the saved files (default: "Anran").
 *   **Outputs**:
     *   **Image**: `.png` with metadata.
     *   **Tags**: `.txt` file with trigger word and tags.
@@ -108,10 +113,16 @@ The core intelligence node.
     *   `context`: 上下文输入，用于多轮对话记忆。
     *   `user_prompt` (UP): 用户素材或原始提示词。
     *   `system_command` (SC): 给 AI 的系统级指令。
+    *   `enable_tags_extraction`: 标签生成开关 (SECTION 2)。
+    *   `enable_filename_extraction`: 文件名生成开关 (SECTION 3)。
+*   **输出端口**:
+    *   `description`: 核心描述文本 (SECTION 1)。
+    *   `tags`: 提取的标签 (需开启开关)。
+    *   `filename`: 提取的文件名 (需开启开关)。
+    *   `chat_history`: 原始对话历史 (连入 Monitor)。
 *   **隐形反推模式**:
     *   **自动触发**: 只要连接图片，即刻生效。
-    *   **智能指令**: 自动忽略 `user_prompt`，使用内置的强指令生成结构化输出（自然语言描述、LoRA 标签、文件名）。
-    *   **打标优化**: 自动生成标准 Danbooru 风格标签，逗号分隔，涵盖主体、外貌、衣着、动作、视角、背景等核心要素。
+    *   **智能指令**: 自动忽略 `user_prompt`，使用内置的强指令生成结构化输出。
 *   **运行模式 (纯文本)**:
     *   **Enhance_Prompt**: 对用户素材进行创意扩写。
     *   **Debug_Chat**: 根据指令分析素材，输出思考过程。
@@ -119,19 +130,17 @@ The core intelligence node.
 #### 3. LoraHelper_Monitor (历史看板)
 *   **功能**: 维护并显示最近 5 轮的对话历史。
 *   **特性**:
-    *   **可视化显示**: 以 "Round X" 卡片形式清晰展示对话内容，便于阅读。
-    *   **上下文循环**: 输出原始 `context` 文本，可回传给 Chat 节点实现多轮对话记忆。
-    *   **滚动缓存**: 自动保留最新的 5 条记录。
+    *   **可视化显示**: 以 "Round X" 卡片形式清晰展示对话内容，自动调整窗口大小。
+    *   **上下文循环**: 输出格式化后的 `context` 文本，可回传给 Chat 节点实现多轮对话记忆。
 
-#### 4. LoraHelper_Splitter (文本切分器)
-*   **功能**: 将 AI 的输出解析为结构化数据。
-*   **逻辑**: 自动识别以下标记进行提取：
-    *   `SECTION 1`: 自然语言描述 (Caption)
-    *   `SECTION 2`: LoRA 训练标签 (Tags - 逗号分隔)
-    *   `SECTION 3`: 最终文件名 (Filename)
+#### 4. LoraHelper_Splitter (可选)
+*   **功能**: 将 AI 的原始输出解析为结构化数据。
+*   **注意**: `LoraHelper_Chat` 现已内置自动切分功能。该节点仅在您需要处理其他来源的原始文本时使用。
 
 #### 5. LoraHelper_Saver (数据集保存器)
 *   **功能**: 一键保存 LoRA 训练所需的所有文件。
+*   **输入参数**:
+    *   `filename_prefix`: 文件名前缀 (默认: "Anran")。
 *   **输出内容**:
     *   **图片**: `.png` 格式，包含完整元数据。
     *   **标签**: `.txt` 文件，格式为 `触发词, 标签1, 标签2...`。

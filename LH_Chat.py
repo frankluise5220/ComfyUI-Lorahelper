@@ -769,19 +769,28 @@ class LH_History_Monitor:
         user_msg = ""
         ai_msg = ""
         
-        try:
-            data = json.loads(chat_history)
-            if isinstance(data, dict):
-                user_msg = data.get("user", "")
-                ai_msg = data.get("ai", "")
-            else:
-                # 可能是旧格式或纯文本
-                user_msg = "Raw Input"
-                ai_msg = str(chat_history)
-        except:
-             # 解析失败，当作纯文本
-             user_msg = "Raw Input"
-             ai_msg = str(chat_history)
+        # 尝试解析特定格式 "User: ... \nAI: ..."
+        if isinstance(chat_history, str) and chat_history.startswith("User:"):
+             # 使用 split 分割，注意只分割第一个 "\nAI: "
+             parts = chat_history.split("\nAI: ", 1)
+             if len(parts) == 2:
+                 user_msg = parts[0][5:].strip() # 去掉 "User: "
+                 ai_msg = parts[1].strip()
+             else:
+                 user_msg = "Raw Input"
+                 ai_msg = str(chat_history)
+        else:
+            try:
+                data = json.loads(chat_history)
+                if isinstance(data, dict):
+                    user_msg = data.get("user", "")
+                    ai_msg = data.get("ai", "")
+                else:
+                    user_msg = "Raw Input"
+                    ai_msg = str(chat_history)
+            except:
+                 user_msg = "Raw Input"
+                 ai_msg = str(chat_history)
         
         # 2. 更新历史 (去重)
         # 构造一个结构化对象存储

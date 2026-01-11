@@ -1,0 +1,49 @@
+import { app } from "../../scripts/app.js";
+import { ComfyWidgets } from "../../scripts/widgets.js";
+
+app.registerExtension({
+	name: "Comfy.LoraHelper.Monitor",
+	async beforeRegisterNodeDef(nodeType, nodeData, app) {
+		if (nodeData.name === "LH_History_Monitor") {
+			const onExecuted = nodeType.prototype.onExecuted;
+			nodeType.prototype.onExecuted = function (message) {
+				onExecuted?.apply(this, arguments);
+
+				// ComfyUI 的标准 UI 消息格式通常是 {"ui": {"text": ["..."]}, ...}
+                // 但在 LH_Chat.py 中 Monitor 返回的是 {"ui": {"text": display_lines}, ...}
+                // 这里的 message 实际上是 message.text (如果后端发送的是 text 类型的 UI 更新)
+                
+                // 调试：打印 message 结构到浏览器控制台
+                console.log("[LoraHelper Monitor] Received message:", message);
+
+				if (message && message.text) {
+                    // message.text 是一个数组
+                    const text_val = message.text.join("");
+					
+                    // 查找名为 "display_text" 的 widget
+                    let widget = this.widgets?.find((w) => w.name === "display_text");
+                    
+                    // 如果不存在，则使用 ComfyWidgets 创建标准 Text Widget
+                    if (!widget) {
+                        // 使用 ComfyWidgets 工厂方法 (更稳健)
+                        // 参数: node, inputName, inputData, app
+                         widget = ComfyWidgets.STRING(this, "display_text", ["STRING", { multiline: true }], app).widget;
+                         widget.inputEl.readOnly = true;
+                         widget.inputEl.style.opacity = 0.6;
+                    }
+                    
+                    if (widget) {
+                        widget.value = text_val;
+                        // 强制刷新
+                         if (widget.inputEl) {
+                             widget.inputEl.value = text_val;
+                         }
+                    }
+                    
+                    // 自动调整大小
+                    this.onResize?.(this.size);
+				}
+			};
+		}
+	},
+});
