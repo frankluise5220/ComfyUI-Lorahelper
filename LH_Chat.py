@@ -213,30 +213,23 @@ class UniversalAIChat:
         
         # 定义已知的默认模板 (用于智能切换)
         # 1. 中文默认 (INPUT_TYPES 中的默认值)
-        # [Optimized based on Qwen-VL Official Node Reference]
-        # Added explicit guidance for visual features: color, shape, texture, lighting.
+        # [Optimized based on User Request: Abandon SECTIONs]
+        # Use natural language instructions and standard markers (Tags:, Filename:)
         DEFAULT_CN_VISION = (
-            "你是一个AI提示词大师。请严格按照格式输出：\n"
-            "SECTION 1:\n"
-            "请详细分析图片的关键视觉特征（包括主体、表情、服饰、材质、颜色、光影、构图和背景）。用连贯的自然语言描述，不要使用列表（不少于300个单词）。\n"
-            "SECTION 2:\n"
-            "请输出标准 Danbooru 风格标签，用英文逗号分隔。范围：1.主体与数量；2.外貌特征；3.衣着配饰；4.动作姿态；5.构图视角；6.环境背景。禁止：主观评价词及权重语法。\n"
-            "SECTION 3:\n"
-            "用职业视角为内容取一个简短的英文标题（由三个代表性名词组成，用方括号括起来）。"
+            "你是一个AI提示词大师。请详细分析图片的关键视觉特征（包括主体、表情、服饰、材质、颜色、光影、构图和背景）。"
+            "用连贯的自然语言描述，不要使用列表（不少于300个单词）。"
         )
 
         # 2. 英文默认 (Vision)
         DEFAULT_EN_VISION = (
-            "You are an expert AI art critic.\n"
-            "SECTION 1:\n"
-            "Analyze the image in detail, focusing on key visual features: subject, action, apparel, texture, color scheme, lighting, composition, and background. Provide a rich, natural language description (Min 300 words)."
+            "You are an expert AI art critic. "
+            "Analyze the image in detail, focusing on key visual features: subject, action, apparel, texture, color scheme, lighting, composition, and background. "
+            "Provide a rich, natural language description (Min 300 words)."
         )
         
         # 3. 英文默认 (Text)
         DEFAULT_EN_TEXT = (
-            "Refine the following text.\n"
-            "SECTION 1:\n"
-            "Provide a refined, detailed version of the input text."
+            "Refine the following text. Provide a refined, detailed version."
         )
 
         sc_stripped = system_command.strip()
@@ -273,68 +266,53 @@ class UniversalAIChat:
         if new_sc:
             system_command = new_sc
 
-        # 2.2 构建附加指令 (SECTION 2 & 3)
+        # 2.2 构建附加指令 (SECTION 2 & 3 -> Tags & Filename)
         extra_instructions = ""
-        required_sections = ["SECTION 1"]
+        required_sections = []
         
-        # [Fix] Smart Detection: Check for existing SECTIONs in system_command to avoid duplication
+        # [Fix] Smart Detection: Check for existing SECTIONs or Markers in system_command to avoid duplication
         sc_upper = system_command.upper() if system_command else ""
+        
+        # Check for legacy SECTION markers
         has_section_1 = "SECTION 1" in sc_upper
         has_section_2 = "SECTION 2" in sc_upper
         has_section_3 = "SECTION 3" in sc_upper
         
-        # [Auto-Fix] Ensure SECTION 1 is defined if missing
-        if not has_section_1:
-            print(f"\033[36m[UniversalAIChat] Smart Fix: 'SECTION 1' missing in System Command. Auto-appending default definition.\033[0m")
-            # [Refined Logic] 根据用户输入语言猜测，或者默认用英文
-            # 这里简单起见，如果 system_command 包含中文字符，就补中文，否则补英文
-            # 简单的中文检测：看是否有字符 > 0x4e00
-            is_chinese_input = any(u'\u4e00' <= c <= u'\u9fff' for c in system_command)
-            
-            if is_chinese_input:
-                extra_instructions += (
-                    "\n\nSECTION 1:\n"
-                    "请详细描述图片内容（主体、动作、颜色、光影、构图）。"
-                )
-            else:
-                extra_instructions += (
-                    "\n\nSECTION 1:\n"
-                    "Analyze the image visual features (subject, color, lighting, composition) and generate a detailed description."
-                )
+        # Check for new Natural markers
+        has_tags_marker = "TAGS:" in sc_upper or "TAGS：" in sc_upper
+        has_filename_marker = "FILENAME:" in sc_upper or "FILENAME：" in sc_upper
+        
+        # [Auto-Fix] Ensure Description Instruction is present (if empty)
+        # 现在的默认 Prompt 已经包含了描述指令，所以只有当 SC 为空时才需要担心。
+        # 但如果 SC 不为空，且没有 "SECTION 1" 也没有明显的描述指令？
+        # 用户要求模糊处理，所以我们假设 SC 本身就是描述指令。
+        # 只要不是完全没有指令就行。
+        
+        # 只有在非常特定的情况下（比如 SC 只有 "Tags:"）才补全？
+        # 暂时跳过 SECTION 1 的强制补全，因为我们现在默认 SC 就是描述指令。
 
         if enable_tags_extraction:
-            if not has_section_2:
+            if not (has_section_2 or has_tags_marker):
                 extra_instructions += (
-                    "\n\nSECTION 2:\n"
-                    "Extract Danbooru-style tags based on the generated description in SECTION 1. Comma-separated.\n"
-                    "Rule 1: MUST start with subject tags (e.g., 1girl, solo, man, 2boys).\n"
-                    "Rule 2: Followed by appearance, clothes, pose, background.\n"
-                    "Rule 3: No weights. No subjective words."
+                    "\n\nTags:\n"
+                    "Extract Danbooru-style tags based on the description. Comma-separated. "
+                    "Start with subject tags (e.g., 1girl, solo), then appearance, clothes, pose, background. "
+                    "No subjective words."
                 )
-                required_sections.append("SECTION 2")
             else:
-                print(f"\033[36m[UniversalAIChat] Smart Skip: 'SECTION 2' detected in System Command. Auto-append skipped.\033[0m")
+                print(f"\033[36m[UniversalAIChat] Smart Skip: Tags instruction detected. Auto-append skipped.\033[0m")
             
         if enable_filename_extraction:
-            if not has_section_3:
+            if not (has_section_3 or has_filename_marker):
                 extra_instructions += (
-                    "\n\nSECTION 3:\n"
-                    "Create a short title (3 words max, lower_case_with_underscores) for the generated description in SECTION 1. Output in brackets, e.g., [morning_coffee]."
+                    "\n\nFilename:\n"
+                    "Create a short title (3 words max, lower_case_with_underscores) for the content. Output in brackets, e.g., [morning_coffee]."
                 )
-                required_sections.append("SECTION 3")
             else:
-                print(f"\033[36m[UniversalAIChat] Smart Skip: 'SECTION 3' detected in System Command. Auto-append skipped.\033[0m")
+                print(f"\033[36m[UniversalAIChat] Smart Skip: Filename instruction detected. Auto-append skipped.\033[0m")
 
-        # 2.3 构建格式约束 (Footer)
-        # 极简版 Footer，仅列出清单
+        # 2.3 构建格式约束 (Footer) - 移除，因为自然语言格式不需要严格的 Footer
         footer_instruction = ""
-        if len(required_sections) > 1:
-            req_str = ", ".join(required_sections)
-            footer_instruction = (
-                f"\n\nOUTPUT FORMAT REQUIRED:\n"
-                f"You must output {req_str} in order.\n"
-                f"Do not output anything else."
-            )
         
         # ==========================================================
         # 3. 构造消息内容 (Message Content Construction)
@@ -684,39 +662,13 @@ class UniversalAIChat:
         if match:
             # 从匹配到的位置开始截取
             start_index = match.start()
-            # 如果匹配到的是 \nSECTION 1:，start_index 会包含 \n，我们需要保留 SECTION 1:
-            # match.group() 是 "\nSECTION 1:" 或 "SECTION 1:"
-            # 我们直接从 match.start() + (1 if match.group().startswith('\n') else 0) 开始?
-            # 不，直接取 match.start() 之后的内容即可，保留 \n 也没关系，反正后面有 strip()
-            
             # 精确处理：找到 "SECTION 1:" 的起始位置
             real_start = clean_text.find("SECTION 1:", start_index)
             clean_text = clean_text[real_start:]
         else:
-            # Fallback: 如果没找到标准格式，尝试宽容匹配 (不带换行符限制)
-            # 但仍然使用 find (从左往右)，以防误删
-            first_anchor = clean_text.find("SECTION 1:")
-            if first_anchor != -1:
-                clean_text = clean_text[first_anchor:]
-            else:
-                # 容错：如果没找到 SECTION 1，但找到了 SECTION 2 (极罕见情况)
-                # 同样使用 find
-                pass
-            target_anchor_2 = "SECTION 2:"
-            if target_anchor_2 in clean_text:
-                start_pos = clean_text.find(target_anchor_2)
-                clean_text = clean_text[start_pos:]
-            
-            # 如果都没找到，说明可能不是标准格式输出，或者用户用了自定义 Prompt。
-            # 此时再尝试处理 "未闭合的 <think>" (即只有 <think> 没有 </think>)
-            # 策略：如果开头是 <think>，且找不到 </think>，这通常意味着整个输出都是思考过程或者被截断了。
-            # 但既然没找到 SECTION，我们最好还是保留它，或者是给个提示？
-            # [Aggressive Fix] 如果还是以 <think> 开头，说明整个回复都是思考过程，或者正文被吞了
-            if clean_text.startswith('<think>'):
-                # 尝试只保留最后一部分文本（风险较大），或者提示错误
-                # 这里我们选择保留原样，但在 Monitor 里可能会比较难看
-                pass
-
+            # Fallback for New Natural Format
+            # If no SECTION 1, we assume the text starts from the beginning (after think block)
+            pass
 
         # [Critical Correction] Monitor 数据流
         # 用户纠正：Chat 应该把“文本原样不动”给 Monitor，连 think 过程都要保留。
@@ -733,82 +685,73 @@ class UniversalAIChat:
             torch.cuda.empty_cache()
             
         # 5. 内置 Splitter 逻辑 (Built-in Splitter)
-        # 将 clean_text (已截取 SECTION 1 之后的内容) 切分为 description, tags, filename
-        # 默认值
+        # [Optimized for Natural Language Markers: Tags: / Filename:]
+        # Backward compatibility for SECTION 1/2/3 is maintained but deprecated.
+        
         out_desc = clean_text
         out_tags = ""
         out_filename = ""
         
-        # 尝试解析 SECTION 格式
-        # 格式预期:
-        # SECTION 1: xxx
-        # SECTION 2: xxx
-        # SECTION 3: xxx
+        # Clean "SECTION 1:" prefix if present (Legacy)
+        # Also clean simple "Description:" prefix if present
+        clean_text_upper = clean_text.upper()
+        if clean_text_upper.startswith("SECTION 1:"):
+             clean_text = clean_text[10:].strip()
+        elif clean_text_upper.startswith("DESCRIPTION:"):
+             clean_text = clean_text[12:].strip()
         
-        # [User Correction] 截取动作要在 context 之前？
-        # 用户说：“我们做截取的时候，不是从这个五轮的文字里截取，是从每一次输出的文本里截取，截取动作要在context这个动作之前。”
-        # 理解：用户可能是在纠正我之前的回复（我之前说把 Monitor 的历史全塞给 Chat）。
-        # 现在的代码逻辑正是如此：
-        # 1. full_res (Model Output) -> 2. clean_text (Smart Truncation/截取) -> 3. Splitter (解析) -> 4. Return
-        # 而 chat_history 也是基于 clean_text 生成的。
-        # 所以目前的截取逻辑是作用于“单次输出”的，符合用户要求。
-
+        # Logic: Find the first occurrence of "Tags:" or "Filename:" (or Legacy SECTION 2/3)
+        # Everything before that is Description.
         
-        # 查找各个 Section 的位置
-        # 注意：由于之前做过“从右向左查找 SECTION 1”，所以 clean_text 理论上是从 SECTION 1 开始的
+        # Define Markers
+        # Priority: Legacy SECTION -> Natural Markers
+        markers = [
+            (r'SECTION 2[:：]?', 'tags'),
+            (r'SECTION 3[:：]?', 'filename'),
+            (r'(?:\n|^)Tags[:：]', 'tags'),
+            (r'(?:\n|^)Filename[:：]', 'filename')
+        ]
         
-        # 如果 clean_text 不包含 SECTION 1 字样，说明可能模型没按格式输出，或者已经被截断了
-        # 我们用更通用的正则来提取
+        # Find the earliest marker
+        first_marker_pos = len(clean_text)
         
-        # 提取 SECTION 1 (Description)
-        # 逻辑升级：无论是否有 "SECTION 1:" 标签，只要是在 SECTION 2/3 之前的内容，都算作 Description
-        # 先尝试标准匹配 (注意：增加了对换行的容错，且允许冒号丢失)
-        # 正则含义：查找 SECTION 1(可选冒号) 后面，直到遇到 SECTION 2 或 SECTION 3 或结束
+        for pattern, _ in markers:
+            m = re.search(pattern, clean_text, re.IGNORECASE)
+            if m:
+                first_marker_pos = min(first_marker_pos, m.start())
         
-        match_s1 = re.search(r'SECTION 1[:：]?\s*(.*?)(?=\n\s*SECTION 2|\n\s*SECTION 3|SECTION 2|SECTION 3|$)', clean_text, re.DOTALL | re.IGNORECASE)
-        if match_s1:
-            out_desc = match_s1.group(1).strip()
+        # Split Description
+        if first_marker_pos < len(clean_text):
+            out_desc = clean_text[:first_marker_pos].strip()
+            remaining_text = clean_text[first_marker_pos:]
         else:
-            # Fallback: 如果没找到 SECTION 1 标签，尝试截取开头到第一个其他 SECTION 的位置
-            # 找到最早出现的 SECTION 2 或 SECTION 3
-            end_pos = len(clean_text)
+            out_desc = clean_text.strip()
+            remaining_text = ""
             
-            # 使用更严格的正则查找 SECTION 2/3，允许冒号丢失
-            match_s2_start = re.search(r'(?:\n|^)\s*SECTION 2', clean_text, re.IGNORECASE)
-            if match_s2_start:
-                end_pos = min(end_pos, match_s2_start.start())
-                
-            match_s3_start = re.search(r'(?:\n|^)\s*SECTION 3', clean_text, re.IGNORECASE)
-            if match_s3_start:
-                end_pos = min(end_pos, match_s3_start.start())
-            
-            # 截取
-            candidate_desc = clean_text[:end_pos].strip()
-            if candidate_desc:
-                out_desc = candidate_desc
-        
-        # 提取 SECTION 2 (Tags)
-        # [Fix] 增强对冒号的容错，有些模型可能漏写冒号，或者写成中文冒号
-        match_s2 = re.search(r'SECTION 2[:：]?\s*(.*?)(?=\nSECTION 3:|SECTION 3:|$)', clean_text, re.DOTALL | re.IGNORECASE)
-        if match_s2:
-            raw_tags = match_s2.group(1).strip()
-            # 清理 tags: 移除可能的 markdown 列表符，统一逗号
+        # Extract Tags
+        # Look for Tags marker in remaining_text
+        tags_pattern = r'(?:SECTION 2[:：]?|Tags[:：])\s*(.*?)(?=\n(?:SECTION 3|Filename)|$)'
+        m_tags = re.search(tags_pattern, remaining_text, re.DOTALL | re.IGNORECASE)
+        if m_tags:
+            raw_tags = m_tags.group(1).strip()
+            # Clean tags
             raw_tags = raw_tags.replace('\n', ',').replace('、', ',')
-            # 简单的去重和清理
             tags_list = [t.strip() for t in raw_tags.split(',') if t.strip()]
             out_tags = ", ".join(tags_list)
             
-        # 提取 SECTION 3 (Filename)
-        match_s3 = re.search(r'SECTION 3[:：]?\s*(.*?)(?=$)', clean_text, re.DOTALL | re.IGNORECASE)
-        if match_s3:
-            raw_fn = match_s3.group(1).strip()
-            # 尝试提取方括号内的内容
+        # Extract Filename
+        # Look for Filename marker in remaining_text
+        fn_pattern = r'(?:SECTION 3[:：]?|Filename[:：])\s*(.*?)(?=$)'
+        m_fn = re.search(fn_pattern, remaining_text, re.DOTALL | re.IGNORECASE)
+        if m_fn:
+            raw_fn = m_fn.group(1).strip()
+            # Extract brackets
             match_bracket = re.search(r'\[(.*?)\]', raw_fn)
             if match_bracket:
                 out_filename = match_bracket.group(1).strip()
             else:
                 out_filename = raw_fn
-                
+
         # 返回切分后的结果
         return (out_desc, out_tags, out_filename, chat_history)
 
