@@ -775,16 +775,59 @@ class UniversalAIChat:
         # 2. Self-Correction: The model might output a draft and then a final version.
         # 3. Structure: The prompt demands Description -> Tags -> Filename. The structural markers are at the end.
         
-        # New Logic:
-        # 1. We scan the ENTIRE text for ALL markers.
-        # 2. We identify the START position of the LAST valid marker for each type (Tags/Filename).
-        # 3. We cut the Description at the EARLIEST of these LAST markers.
-        #    (This removes the final metadata blocks but keeps colloquial mentions in the description).
-        # 4. We extract the content from the LAST match.
-
+        # [Fix for "Prompt Cut Failed"]
+        # In the user's case, the model output:
+        #   [First Content Block (looks like Tags)]
+        #   Filename: ...
+        #   ---
+        #   Description: ...
+        #   Tags: ...
+        #   Filename: ...
+        #
+        # The code correctly found the LAST Tags match (the second one) and the LAST Filename match (the second one).
+        # It then cut the description at the EARLIEST of these matches.
+        # However, the user's output had a "Description:" header in the middle!
+        # And the REAL description was AFTER that header.
+        
+        # This implies a "Draft -> Final" structure or "Metadata -> Description -> Metadata" structure.
+        # If the model explicitly outputs "Description:", we should trust that explicit header.
+        
+        # Strategy Update v4: Explicit Description Header Priority
+        # 1. Check if there is an explicit "Description:" header later in the text.
+        #    If found, the REAL description starts there. We should discard everything before it.
+        # 2. Then, apply the cut logic (stop at next Tags/Filename).
+        
         md_prefix = r'(?:[#*\-_>]\s*)*'
         md_suffix = r'(?:\*\*|__)?'
         
+        # Detect explicit Description header
+        desc_header_pattern = rf'^{md_prefix}(?:Description|Analysis|Caption|Prompt){md_suffix}[:：]\s*'
+        
+        # Find the LAST occurrence of "Description:" (in case of multiple drafts)
+        # We search line by line or using multiline regex
+        desc_matches = list(re.finditer(desc_header_pattern, clean_text, re.MULTILINE | re.IGNORECASE))
+        
+        if desc_matches:
+            # Found explicit headers!
+            # The real description likely starts after the LAST explicit header.
+            last_desc_header = desc_matches[-1]
+            start_pos = last_desc_header.end()
+            # Update clean_text to start from there
+            clean_text_for_desc = clean_text[start_pos:].strip()
+            # Also need to offset subsequent searches? 
+            # Actually, if we truncate clean_text, we must ensure Tags/Filename extraction still works on the FULL text?
+            # Or does Tags/Filename usually come AFTER the description?
+            # In the user's example: Description -> Tags -> Filename. Yes.
+            
+            # Let's use the truncated text for Description extraction
+            # But we should use the FULL text (starting from Description) for Tags/Filename to ensure we get the ones associated with THIS description.
+            
+            # So:
+            valid_content_start = start_pos
+        else:
+            valid_content_start = 0
+            clean_text_for_desc = clean_text
+            
         # Define Patterns
         tags_marker_pattern = rf'(?:SECTION 2[:：]?|{md_prefix}Tags{md_suffix}[:：])'
         filename_marker_pattern = rf'(?:SECTION 3[:：]?|{md_prefix}Filename{md_suffix}[:：])'
@@ -792,48 +835,44 @@ class UniversalAIChat:
         # Universal Stop: Next Marker or End of String
         universal_stop_marker = rf'(?:\n\s*(?:SECTION [123][:：]?|{md_prefix}(?:Tags|Filename){md_suffix}[:：])|$)'
 
-        # Helper: Find Last Match
-        def find_last_content(marker_pattern, text):
-            # Pattern: Marker + Content + Lookahead(Stop)
+        # Helper: Find First Match (since we are now looking relative to the valid start)
+        # Why First? Because we chopped off the previous drafts.
+        # But wait, the user's example had Tags at the very beginning too?
+        # User: "AI: 1girl... Filename... --- Description: ... Tags: ... Filename: ..."
+        # If we start after "Description:", we see "Tags: ... Filename: ...".
+        # So finding the First match in the truncated text is correct.
+        
+        def find_first_content(marker_pattern, text):
             full_pattern = rf'({marker_pattern})\s*(.*?)(?={universal_stop_marker})'
-            matches = list(re.finditer(full_pattern, text, re.DOTALL | re.IGNORECASE))
-            if matches:
-                return matches[-1] # Return the last match object
-            return None
+            match = re.search(full_pattern, text, re.DOTALL | re.IGNORECASE)
+            return match
 
-        # 1. Find Last Matches
-        last_tags_match = find_last_content(tags_marker_pattern, clean_text)
-        last_fn_match = find_last_content(filename_marker_pattern, clean_text)
+        # 1. Find Matches in the Valid Content Region
+        tags_match = find_first_content(tags_marker_pattern, clean_text_for_desc)
+        fn_match = find_first_content(filename_marker_pattern, clean_text_for_desc)
         
-        # 2. Determine Description Cut Point
-        # The description ends where the metadata block begins.
-        # We look for the start of the Last Tags Block AND the Last Filename Block.
-        # The Description stops at the EARLIEST of these.
-        
+        # 2. Determine Description Cut Point (Relative to clean_text_for_desc)
         cut_candidates = []
-        if last_tags_match: cut_candidates.append(last_tags_match.start())
-        if last_fn_match: cut_candidates.append(last_fn_match.start())
-        
-        # Also consider Legacy Section 2/3 explicit markers if they differ? 
-        # (The patterns above cover them).
+        if tags_match: cut_candidates.append(tags_match.start())
+        if fn_match: cut_candidates.append(fn_match.start())
         
         if cut_candidates:
             cut_pos = min(cut_candidates)
-            out_desc = clean_text[:cut_pos].strip()
+            out_desc = clean_text_for_desc[:cut_pos].strip()
         else:
-            out_desc = clean_text.strip()
+            out_desc = clean_text_for_desc.strip()
             
         # 3. Extract Content (If Enabled)
         
-        if enable_tags_extraction and last_tags_match:
-            raw_tags = last_tags_match.group(2).strip()
+        if enable_tags_extraction and tags_match:
+            raw_tags = tags_match.group(2).strip()
             # Clean tags
             raw_tags = raw_tags.replace('\n', ',').replace('、', ',')
             tags_list = [t.strip() for t in raw_tags.split(',') if t.strip()]
             out_tags = ", ".join(tags_list)
             
-        if enable_filename_extraction and last_fn_match:
-            raw_fn = last_fn_match.group(2).strip()
+        if enable_filename_extraction and fn_match:
+            raw_fn = fn_match.group(2).strip()
             # Extract brackets
             match_bracket = re.search(r'\[(.*?)\]', raw_fn)
             if match_bracket:
