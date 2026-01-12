@@ -114,6 +114,8 @@ class UniversalGGUFLoader:
         model._has_vision_handler = chat_handler is not None
         # [Model Name] 记录模型文件名，用于后续的智能判断
         model._model_filename = os.path.basename(model_path)
+        # [Smart Detection] Check if model is Qwen-based (for special prompt handling)
+        model._is_qwen = "qwen" in os.path.basename(model_path).lower()
         
         return (model,)
 
@@ -184,6 +186,7 @@ class UniversalAIChat:
         # 2. 如果没接 image，就 enhance (除非调成 debug 模式)。
         
         is_vision_task = image is not None
+        is_qwen_model = getattr(model, '_is_qwen', False)
         
         if is_vision_task and not has_vision_handler:
              # 用户连了 image，但模型不支持
@@ -333,8 +336,15 @@ class UniversalAIChat:
             
             final_text_parts = []
             
+            # [Qwen Optimization]
+            # Qwen 模型支持标准的 System Role，且对 Picture 1: ... 格式敏感。
+            # 非 Qwen 模型 (如 Llava) 通常建议将 System 指令合并到 User 内容中。
+            use_independent_system_msg = is_qwen_model
+            
             # Part 1: System Command (Base Task)
-            final_text_parts.append(system_command)
+            # 如果不使用独立的 System Message，则将其合并到 Text Parts 开头
+            if not use_independent_system_msg:
+                final_text_parts.append(system_command)
             
             # Part 2: User Prompt (Hints) - 如果有的话
             if user_prompt:
@@ -359,13 +369,25 @@ class UniversalAIChat:
             img.save(buffered, format="JPEG", quality=95)
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
             
-            current_user_content = [
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
-                {"type": "text", "text": final_vision_text}
-            ]
+            if is_qwen_model:
+                # [Qwen-VL Specific Structure]
+                # Mimic the "Picture 1: <img>" structure for better attention
+                # Note: llama-cpp-python handles the <img> token insertion
+                # We prepend "Picture 1: " text block
+                current_user_content = [
+                    {"type": "text", "text": "Picture 1: "},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
+                    {"type": "text", "text": final_vision_text}
+                ]
+            else:
+                # [Standard Vision Structure]
+                current_user_content = [
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
+                    {"type": "text", "text": final_vision_text}
+                ]
             
-            # Vision 任务不使用独立的 System Message (合并到 User Text)
-            system_command_for_msg = "" 
+            # Vision 任务: 根据模型类型决定是否使用独立 System Message
+            system_command_for_msg = system_command if use_independent_system_msg else ""
             
         else:
             # [Text Mode]
