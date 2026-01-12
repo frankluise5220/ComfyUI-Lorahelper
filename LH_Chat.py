@@ -216,15 +216,18 @@ class UniversalAIChat:
         # [Optimized based on User Request: Abandon SECTIONs]
         # Use natural language instructions and standard markers (Tags:, Filename:)
         DEFAULT_CN_VISION = (
-            "你是一个AI提示词大师。请详细分析图片的关键视觉特征（包括主体、表情、服饰、材质、颜色、光影、构图和背景）。"
-            "用连贯的自然语言描述，不要使用列表（不少于300个单词）。"
+            "你是一个AI视觉专家。请对图片进行全面、细致的分析。"
+            "详细描述画面的所有关键元素，包括：主体特征（外貌、动作、表情）、服饰细节、环境背景、光影效果、色彩基调以及艺术风格。"
+            "请使用连贯、优美的自然语言进行描述，避免使用列表格式。描述应尽可能丰富详尽（不少于300字），以便能被用于高质量的图像重绘。"
         )
 
         # 2. 英文默认 (Vision)
         DEFAULT_EN_VISION = (
-            "You are an expert AI art critic. "
-            "Analyze the image in detail, focusing on key visual features: subject, action, apparel, texture, color scheme, lighting, composition, and background. "
-            "Provide a rich, natural language description (Min 300 words)."
+            "You are an expert AI art critic and prompt engineer. "
+            "Please provide a comprehensive and detailed analysis of the image. "
+            "Focus on describing the main subject (appearance, pose, expression), attire and accessories, background environment, lighting, color palette, and overall artistic style. "
+            "Use fluid, descriptive natural language. Avoid bullet points. "
+            "The description should be rich, vivid, and detailed (minimum 300 words) to support high-quality image reproduction."
         )
         
         # 3. 英文默认 (Text)
@@ -295,8 +298,9 @@ class UniversalAIChat:
             if not (has_section_2 or has_tags_marker):
                 extra_instructions += (
                     "\n\nTags:\n"
-                    "Extract Danbooru-style tags based on the description. Comma-separated. "
-                    "Start with subject tags (e.g., 1girl, solo), then appearance, clothes, pose, background. "
+                    "Extract Danbooru-style tags based on the description. "
+                    "MUST start this section with 'Tags:'. "
+                    "Comma-separated. Start with subject tags (e.g., 1girl, solo), then appearance, clothes, pose, background. "
                     "No subjective words."
                 )
             else:
@@ -306,7 +310,9 @@ class UniversalAIChat:
             if not (has_section_3 or has_filename_marker):
                 extra_instructions += (
                     "\n\nFilename:\n"
-                    "Create a short title (3 words max, lower_case_with_underscores) for the content. Output in brackets, e.g., [morning_coffee]."
+                    "Create a short title (3 words max, lower_case_with_underscores) for the content. "
+                    "MUST start this section with 'Filename:'. "
+                    "Output in brackets, e.g., [morning_coffee]."
                 )
             else:
                 print(f"\033[36m[UniversalAIChat] Smart Skip: Filename instruction detected. Auto-append skipped.\033[0m")
@@ -344,18 +350,58 @@ class UniversalAIChat:
             # 如果不使用独立的 System Message，则将其合并到 Text Parts 开头
             if not use_independent_system_msg:
                 final_text_parts.append(system_command)
+            else:
+                # [Fix for Vision Mode + Independent System Message]
+                # If we ARE using independent system messages (Qwen), we must NOT put the SC into the User Message.
+                # HOWEVER, if the system_command is short (like "Describe this image"), and we move it to System Role,
+                # the User Message might become empty (since we disabled User Prompt).
+                # 
+                # If final_text_parts is empty, Qwen might be confused ("What do you want me to do with Picture 1?").
+                # So, if final_text_parts is empty, we should add a minimal trigger.
+                pass
             
             # Part 2: User Prompt (Hints) - 如果有的话
-            if user_prompt:
-                final_text_parts.append(f"\n[User Hint/Input]: {user_prompt}")
+            # [User Requirement] 在 Image 模式下，UP (User Prompt) 应该被完全屏蔽。
+            # Image 和 UP 是互斥的：有图看图，没图看字。
+            # 因此，在 Vision Mode 下，我们不将 user_prompt 加入到 final_text_parts 中。
+            pass
+            # if user_prompt:
+            #     final_text_parts.append(f"\n[User Hint/Input]: {user_prompt}")
             
             # Part 3: Extra Sections
             if extra_instructions:
-                final_text_parts.append(extra_instructions)
+                if use_independent_system_msg:
+                    # [Qwen Optimization]
+                    # Merge extra instructions (Tags/Filename requirements) into the System Role.
+                    # This ensures the model sees all instructions (Describe + Tags) as a unified directive,
+                    # preventing it from ignoring the System Command in favor of the User Prompt.
+                    system_command += extra_instructions
+                else:
+                    final_text_parts.append(extra_instructions)
             
             # Part 4: Footer
             if footer_instruction:
                 final_text_parts.append(footer_instruction)
+            
+            # [Safety Fallback]
+            # If final_text_parts is empty (which happens if Qwen Mode + No Extra Instructions + UP Disabled),
+            # we must provide at least a simple trigger.
+            if not final_text_parts:
+                # [Fix for Qwen]
+                # If we rely on System Prompt, we must explicitly ask the model to perform the Description task FIRST.
+                # Otherwise, it might jump straight to the Tags (which are at the end of System Prompt).
+                
+                # User Feedback: "Describe" is too simple. We need to reinforce the detailed requirements.
+                fallback_prompt = (
+                    "Please provide the detailed image analysis as requested in the System Instructions. "
+                    "Start with the comprehensive natural language description (covering all visual elements like subject, attire, background, lighting, and style). "
+                    "Ensure the description is rich and detailed."
+                )
+                
+                if enable_tags_extraction or enable_filename_extraction:
+                    fallback_prompt += "\n\nThen, proceed to generate the required metadata (Tags/Filename) exactly as specified."
+                
+                final_text_parts.append(fallback_prompt)
             
             final_vision_text = "\n\n".join(final_text_parts)
             display_up = f"[IMAGE]\n{final_vision_text}"
@@ -397,6 +443,7 @@ class UniversalAIChat:
                 ]
             
             # Vision 任务: 根据模型类型决定是否使用独立 System Message
+            # [Fix] Ensure this variable is correctly set for message construction
             system_command_for_msg = system_command if use_independent_system_msg else ""
             
         else:
@@ -440,7 +487,8 @@ class UniversalAIChat:
         # 4. 构造完整消息链 (Messages List)
         messages = []
         
-        # System Message (仅 Text Mode)
+        # System Message (仅 Text Mode 或 Qwen Vision Mode)
+        # [Fix] 之前这里写了 (仅 Text Mode)，这是错误的。对于 Vision Mode，如果 use_independent_system_msg 为真，也需要加。
         if system_command_for_msg:
              messages.append({"role": "system", "content": system_command_for_msg})
 
@@ -692,59 +740,97 @@ class UniversalAIChat:
         out_tags = ""
         out_filename = ""
         
-        # Clean "SECTION 1:" prefix if present (Legacy)
-        # Also clean simple "Description:" prefix if present
-        clean_text_upper = clean_text.upper()
-        if clean_text_upper.startswith("SECTION 1:"):
-             clean_text = clean_text[10:].strip()
-        elif clean_text_upper.startswith("DESCRIPTION:"):
-             clean_text = clean_text[12:].strip()
+        # [Robust Cleaning] Remove potential start labels (Legacy & Natural)
+        # Handle cases like "SECTION 1:", "**Description:**", "### Analysis:", etc.
+        # We use a comprehensive regex to strip these prefixes so out_desc starts with clean content.
+        # This ensures that even if the model says "**Description:**", it is removed from the final output.
+        clean_prefix_pattern = r'^\s*(?:SECTION 1[:：]?|(?:[#*\-_>]\s*)*(?:Description|Analysis|Caption|Prompt)(?:\*\*|__)?[:：])\s*'
+        clean_text = re.sub(clean_prefix_pattern, '', clean_text, flags=re.IGNORECASE).strip()
         
         # Logic: Find the first occurrence of "Tags:" or "Filename:" (or Legacy SECTION 2/3)
         # Everything before that is Description.
         
         # Define Markers
         # Priority: Legacy SECTION -> Natural Markers
-        markers = [
-            (r'SECTION 2[:：]?', 'tags'),
-            (r'SECTION 3[:：]?', 'filename'),
-            (r'(?:\n|^)Tags[:：]', 'tags'),
-            (r'(?:\n|^)Filename[:：]', 'filename')
-        ]
+        # [Refined Safety Strategy]
+        # User Request: "I want Description to be PURE. If there are Tags/Filename/SECTIONs in the output, CUT THEM OUT, even if extraction is disabled."
+        #
+        # 1. Markers List: ALWAYS includes ALL potential metadata markers (Legacy & Natural).
+        #    - We match them strictly at line start to avoid false positives in description text.
+        #    - If a marker is found, we CUT the description there.
+        #
+        # 2. Extraction Logic:
+        #    - We only EXTRACT the content after the marker if the corresponding switch (enable_tags/filename) is ON.
+        #    - If switch is OFF, we discard the content (it's considered "junk" or "legacy pollution").
         
-        # Find the earliest marker
-        first_marker_pos = len(clean_text)
+        # [Edge Case Fix - Comprehensive Markdown Support]
+        # [Extraction Strategy Update v3: The "Last Stand" Logic]
+        # User Question: "Is the first or the last one correct?"
+        # Answer: The LAST one is usually the refined, structural, and correct one.
+        # Why?
+        # 1. False Positives: "Tags:" might appear colloquially in the Description.
+        # 2. Self-Correction: The model might output a draft and then a final version.
+        # 3. Structure: The prompt demands Description -> Tags -> Filename. The structural markers are at the end.
         
-        for pattern, _ in markers:
-            m = re.search(pattern, clean_text, re.IGNORECASE)
-            if m:
-                first_marker_pos = min(first_marker_pos, m.start())
+        # New Logic:
+        # 1. We scan the ENTIRE text for ALL markers.
+        # 2. We identify the START position of the LAST valid marker for each type (Tags/Filename).
+        # 3. We cut the Description at the EARLIEST of these LAST markers.
+        #    (This removes the final metadata blocks but keeps colloquial mentions in the description).
+        # 4. We extract the content from the LAST match.
+
+        md_prefix = r'(?:[#*\-_>]\s*)*'
+        md_suffix = r'(?:\*\*|__)?'
         
-        # Split Description
-        if first_marker_pos < len(clean_text):
-            out_desc = clean_text[:first_marker_pos].strip()
-            remaining_text = clean_text[first_marker_pos:]
+        # Define Patterns
+        tags_marker_pattern = rf'(?:SECTION 2[:：]?|{md_prefix}Tags{md_suffix}[:：])'
+        filename_marker_pattern = rf'(?:SECTION 3[:：]?|{md_prefix}Filename{md_suffix}[:：])'
+        
+        # Universal Stop: Next Marker or End of String
+        universal_stop_marker = rf'(?:\n\s*(?:SECTION [123][:：]?|{md_prefix}(?:Tags|Filename){md_suffix}[:：])|$)'
+
+        # Helper: Find Last Match
+        def find_last_content(marker_pattern, text):
+            # Pattern: Marker + Content + Lookahead(Stop)
+            full_pattern = rf'({marker_pattern})\s*(.*?)(?={universal_stop_marker})'
+            matches = list(re.finditer(full_pattern, text, re.DOTALL | re.IGNORECASE))
+            if matches:
+                return matches[-1] # Return the last match object
+            return None
+
+        # 1. Find Last Matches
+        last_tags_match = find_last_content(tags_marker_pattern, clean_text)
+        last_fn_match = find_last_content(filename_marker_pattern, clean_text)
+        
+        # 2. Determine Description Cut Point
+        # The description ends where the metadata block begins.
+        # We look for the start of the Last Tags Block AND the Last Filename Block.
+        # The Description stops at the EARLIEST of these.
+        
+        cut_candidates = []
+        if last_tags_match: cut_candidates.append(last_tags_match.start())
+        if last_fn_match: cut_candidates.append(last_fn_match.start())
+        
+        # Also consider Legacy Section 2/3 explicit markers if they differ? 
+        # (The patterns above cover them).
+        
+        if cut_candidates:
+            cut_pos = min(cut_candidates)
+            out_desc = clean_text[:cut_pos].strip()
         else:
             out_desc = clean_text.strip()
-            remaining_text = ""
             
-        # Extract Tags
-        # Look for Tags marker in remaining_text
-        tags_pattern = r'(?:SECTION 2[:：]?|Tags[:：])\s*(.*?)(?=\n(?:SECTION 3|Filename)|$)'
-        m_tags = re.search(tags_pattern, remaining_text, re.DOTALL | re.IGNORECASE)
-        if m_tags:
-            raw_tags = m_tags.group(1).strip()
+        # 3. Extract Content (If Enabled)
+        
+        if enable_tags_extraction and last_tags_match:
+            raw_tags = last_tags_match.group(2).strip()
             # Clean tags
             raw_tags = raw_tags.replace('\n', ',').replace('、', ',')
             tags_list = [t.strip() for t in raw_tags.split(',') if t.strip()]
             out_tags = ", ".join(tags_list)
             
-        # Extract Filename
-        # Look for Filename marker in remaining_text
-        fn_pattern = r'(?:SECTION 3[:：]?|Filename[:：])\s*(.*?)(?=$)'
-        m_fn = re.search(fn_pattern, remaining_text, re.DOTALL | re.IGNORECASE)
-        if m_fn:
-            raw_fn = m_fn.group(1).strip()
+        if enable_filename_extraction and last_fn_match:
+            raw_fn = last_fn_match.group(2).strip()
             # Extract brackets
             match_bracket = re.search(r'\[(.*?)\]', raw_fn)
             if match_bracket:
