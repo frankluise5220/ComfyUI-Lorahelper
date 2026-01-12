@@ -157,7 +157,7 @@ class UniversalAIChat:
         }
     
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("description", "tags", "filename", "chat_history")
+    RETURN_NAMES = ("prompt", "tags", "filename", "chat_history")
     FUNCTION = "chat"
     CATEGORY = "custom_nodes/MyLoraNodes"
 
