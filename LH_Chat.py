@@ -213,13 +213,23 @@ class UniversalAIChat:
         
         # 定义已知的默认模板 (用于智能切换)
         # 1. 中文默认 (INPUT_TYPES 中的默认值)
-        DEFAULT_CN_VISION = "你是一个AI提示词大师。请严格按照格式输出：\nSECTION 1:\n请用连贯的自然语言详细描述图片内容，包括主体、表情、头饰、服饰、动作、场景和氛围。不要使用列表（不少于300个单词）。\nSECTION 2:\n请输出标准 Danbooru 风格标签，用英文逗号分隔。范围：1.主体与数量(如 1girl, solo)；2.外貌特征(保留颜色/形态，如 long hair, blue eyes)；3.衣着配饰(如 white dress, glasses)；4.动作姿态(如 sitting, hand on hip)；5.构图视角(如 upper body, close-up, from side)；6.环境背景。禁止：主观评价词(beautiful, amazing)及权重语法。\nSECTION 3:\n用职业视角为内容取一个简短的英文标题（由三个代表性名词组成，用空格分隔），用方括号括起来，例如：[woman bed lamp]。不要包含后缀或数字。"
-        
+        # [Optimized based on Qwen-VL Official Node Reference]
+        # Added explicit guidance for visual features: color, shape, texture, lighting.
+        DEFAULT_CN_VISION = (
+            "你是一个AI提示词大师。请严格按照格式输出：\n"
+            "SECTION 1:\n"
+            "请详细分析图片的关键视觉特征（包括主体、表情、服饰、材质、颜色、光影、构图和背景）。用连贯的自然语言描述，不要使用列表（不少于300个单词）。\n"
+            "SECTION 2:\n"
+            "请输出标准 Danbooru 风格标签，用英文逗号分隔。范围：1.主体与数量；2.外貌特征；3.衣着配饰；4.动作姿态；5.构图视角；6.环境背景。禁止：主观评价词及权重语法。\n"
+            "SECTION 3:\n"
+            "用职业视角为内容取一个简短的英文标题（由三个代表性名词组成，用方括号括起来）。"
+        )
+
         # 2. 英文默认 (Vision)
         DEFAULT_EN_VISION = (
-            "Describe the image in detail.\n"
+            "You are an expert AI art critic.\n"
             "SECTION 1:\n"
-            "Provide a detailed, natural language description of the image content, including subject, action, scene, and atmosphere. (Min 300 words)."
+            "Analyze the image in detail, focusing on key visual features: subject, action, apparel, texture, color scheme, lighting, composition, and background. Provide a rich, natural language description (Min 300 words)."
         )
         
         # 3. 英文默认 (Text)
@@ -276,10 +286,21 @@ class UniversalAIChat:
         # [Auto-Fix] Ensure SECTION 1 is defined if missing
         if not has_section_1:
             print(f"\033[36m[UniversalAIChat] Smart Fix: 'SECTION 1' missing in System Command. Auto-appending default definition.\033[0m")
-            extra_instructions += (
-                "\n\nSECTION 1:\n"
-                "Main response content."
-            )
+            # [Refined Logic] 根据用户输入语言猜测，或者默认用英文
+            # 这里简单起见，如果 system_command 包含中文字符，就补中文，否则补英文
+            # 简单的中文检测：看是否有字符 > 0x4e00
+            is_chinese_input = any(u'\u4e00' <= c <= u'\u9fff' for c in system_command)
+            
+            if is_chinese_input:
+                extra_instructions += (
+                    "\n\nSECTION 1:\n"
+                    "请详细描述图片内容（主体、动作、颜色、光影、构图）。"
+                )
+            else:
+                extra_instructions += (
+                    "\n\nSECTION 1:\n"
+                    "Analyze the image visual features (subject, color, lighting, composition) and generate a detailed description."
+                )
 
         if enable_tags_extraction:
             if not has_section_2:
@@ -374,8 +395,19 @@ class UniversalAIChat:
                 # Mimic the "Picture 1: <img>" structure for better attention
                 # Note: llama-cpp-python handles the <img> token insertion
                 # We prepend "Picture 1: " text block
+                
+                # [Fuzzy Instruction Enhancer]
+                # 如果 system_command 存在但很短（说明用户可能只是随手写了个指令），我们可以在 User Prompt 里加强引导
+                # 模仿官方节点的 "Analyze the image provided below:"
+                
+                user_preamble = "Picture 1: "
+                # 如果没有独立 System Msg (即 SC 被合并到了这里)，且 SC 看起来不像是一个完整的 Prompt (没有 SECTION 1)，
+                # 那么我们可以在图片后面加一句 "Analyze the image..."
+                
+                # 但这里简单点，直接加上官方风味的引导
+                
                 current_user_content = [
-                    {"type": "text", "text": "Picture 1: "},
+                    {"type": "text", "text": user_preamble},
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
                     {"type": "text", "text": final_vision_text}
                 ]
