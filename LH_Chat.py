@@ -306,7 +306,12 @@ class UniversalAIChat:
             
             # Part 1: Description (Always required implicitly or explicitly)
             template_instructions += "[PART 1: Description]\n"
-            template_instructions += "(Provide the detailed natural language analysis here...)\n\n"
+            
+            # [Smart SC Integration]
+            # Instead of a generic placeholder, we should check if the SC itself contains the description instructions.
+            # Since we defaulted the SC earlier (lines 254-270), system_command holds the main instruction.
+            # We point the model to follow the "System Command" for this part.
+            template_instructions += "(Execute the main image analysis task as defined in the system instructions above)\n\n"
             
             # Part 2: Tags
             if enable_tags_extraction:
@@ -390,10 +395,20 @@ class UniversalAIChat:
             if extra_instructions:
                 if use_independent_system_msg:
                     # [Qwen Optimization]
-                    # Merge extra instructions (Tags/Filename requirements) into the System Role.
-                    # This ensures the model sees all instructions (Describe + Tags) as a unified directive,
-                    # preventing it from ignoring the System Command in favor of the User Prompt.
-                    system_command += extra_instructions
+                    # Merge extra instructions (Template) into the System Role?
+                    # NO. If we put the template in System Role, it's far away from the image.
+                    # Qwen usually prefers the instruction "Describe this picture..." to be in the User Message alongside "Picture 1: <img>".
+                    #
+                    # [Reversal of Previous Logic]
+                    # Putting the Template in System Role might be why SC is ignored. The model sees a huge template in System, 
+                    # and then a tiny "Picture 1" in User, and gets confused about WHERE to start.
+                    #
+                    # Let's try putting the Template in the USER Message.
+                    # This way, the input is: "Picture 1: <img> ... [Template]"
+                    # The template says: "Please analyze the image..."
+                    # This is a direct command.
+                    
+                    final_text_parts.append(extra_instructions)
                 else:
                     final_text_parts.append(extra_instructions)
             
