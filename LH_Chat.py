@@ -294,30 +294,46 @@ class UniversalAIChat:
         # 只有在非常特定的情况下（比如 SC 只有 "Tags:"）才补全？
         # 暂时跳过 SECTION 1 的强制补全，因为我们现在默认 SC 就是描述指令。
 
-        if enable_tags_extraction:
-            if not (has_section_2 or has_tags_marker):
-                # [Qwen Fix] Explicitly order the tasks to prevent Recency Bias
-                extra_instructions += (
-                    "\n\n[TASK ORDER: 1. Description -> 2. Tags -> 3. Filename]\n"
-                    "Tags:\n"
-                    "AFTER generating the description, extract Danbooru-style tags. "
-                    "MUST start this section with 'Tags:'. "
-                    "Comma-separated. Start with subject tags (e.g., 1girl, solo), then appearance, clothes, pose, background. "
-                    "No subjective words."
-                )
-            else:
-                print(f"\033[36m[UniversalAIChat] Smart Skip: Tags instruction detected. Auto-append skipped.\033[0m")
+        # [Structured Prompt System]
+        # Instead of appending linear instructions, we build a structured TEMPLATE.
+        # This prevents "Recency Bias" where the model outputs the last instruction (Tags) first.
+        
+        template_instructions = ""
+        
+        if enable_tags_extraction or enable_filename_extraction:
+            template_instructions += "\n\n=== RESPONSE FORMAT (STRICT) ===\n"
+            template_instructions += "Please analyze the image and output the result in the following structure:\n\n"
             
-        if enable_filename_extraction:
-            if not (has_section_3 or has_filename_marker):
-                extra_instructions += (
-                    "\n\nFilename:\n"
-                    "Finally, create a short title (3 words max, lower_case_with_underscores). "
-                    "MUST start this section with 'Filename:'. "
-                    "Output in brackets, e.g., [morning_coffee]."
-                )
-            else:
-                print(f"\033[36m[UniversalAIChat] Smart Skip: Filename instruction detected. Auto-append skipped.\033[0m")
+            # Part 1: Description (Always required implicitly or explicitly)
+            template_instructions += "[PART 1: Description]\n"
+            template_instructions += "(Provide the detailed natural language analysis here...)\n\n"
+            
+            # Part 2: Tags
+            if enable_tags_extraction:
+                if not (has_section_2 or has_tags_marker):
+                    template_instructions += "[PART 2: Tags]\n"
+                    template_instructions += "Tags: (Extract Danbooru-style tags here...)\n\n"
+                else:
+                    print(f"\033[36m[UniversalAIChat] Smart Skip: Tags instruction detected in SC.\033[0m")
+            
+            # Part 3: Filename
+            if enable_filename_extraction:
+                if not (has_section_3 or has_filename_marker):
+                    template_instructions += "[PART 3: Filename]\n"
+                    template_instructions += "Filename: [short_title_here]\n\n"
+                else:
+                    print(f"\033[36m[UniversalAIChat] Smart Skip: Filename instruction detected in SC.\033[0m")
+                    
+            template_instructions += "=== END FORMAT ===\n"
+            
+            # Append detailed rules
+            if enable_tags_extraction and not (has_section_2 or has_tags_marker):
+                template_instructions += "\n[Tags Rules]: Comma-separated, Danbooru style. No subjective words. Start with subject, then appearance, clothes, pose, background."
+                
+            if enable_filename_extraction and not (has_section_3 or has_filename_marker):
+                template_instructions += "\n[Filename Rules]: Max 3 words, lower_case_with_underscores, inside brackets."
+
+        extra_instructions = template_instructions
 
         # 2.3 构建格式约束 (Footer) - 移除，因为自然语言格式不需要严格的 Footer
         footer_instruction = ""
@@ -396,13 +412,12 @@ class UniversalAIChat:
                 # User Feedback: "Describe" is too simple. We need to reinforce the detailed requirements.
                 fallback_prompt = (
                     "Please provide the detailed image analysis as requested in the System Instructions. "
-                    "STEP 1: Start with the comprehensive natural language description (covering all visual elements like subject, attire, background, lighting, and style). "
-                    "Ensure the description is rich and detailed. "
-                    "DO NOT start with Tags."
+                    "Follow the 'RESPONSE FORMAT' strictly. "
+                    "Start with [PART 1: Description]."
                 )
                 
                 if enable_tags_extraction or enable_filename_extraction:
-                    fallback_prompt += "\n\nThen, proceed to generate the required metadata (Tags/Filename) exactly as specified."
+                    fallback_prompt += "\nThen proceed to Tags and Filename."
                 
                 final_text_parts.append(fallback_prompt)
             
