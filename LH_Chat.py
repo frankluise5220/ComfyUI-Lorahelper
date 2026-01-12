@@ -296,9 +296,11 @@ class UniversalAIChat:
 
         if enable_tags_extraction:
             if not (has_section_2 or has_tags_marker):
+                # [Qwen Fix] Explicitly order the tasks to prevent Recency Bias
                 extra_instructions += (
-                    "\n\nTags:\n"
-                    "Extract Danbooru-style tags based on the description. "
+                    "\n\n[TASK ORDER: 1. Description -> 2. Tags -> 3. Filename]\n"
+                    "Tags:\n"
+                    "AFTER generating the description, extract Danbooru-style tags. "
                     "MUST start this section with 'Tags:'. "
                     "Comma-separated. Start with subject tags (e.g., 1girl, solo), then appearance, clothes, pose, background. "
                     "No subjective words."
@@ -310,7 +312,7 @@ class UniversalAIChat:
             if not (has_section_3 or has_filename_marker):
                 extra_instructions += (
                     "\n\nFilename:\n"
-                    "Create a short title (3 words max, lower_case_with_underscores) for the content. "
+                    "Finally, create a short title (3 words max, lower_case_with_underscores). "
                     "MUST start this section with 'Filename:'. "
                     "Output in brackets, e.g., [morning_coffee]."
                 )
@@ -394,8 +396,9 @@ class UniversalAIChat:
                 # User Feedback: "Describe" is too simple. We need to reinforce the detailed requirements.
                 fallback_prompt = (
                     "Please provide the detailed image analysis as requested in the System Instructions. "
-                    "Start with the comprehensive natural language description (covering all visual elements like subject, attire, background, lighting, and style). "
-                    "Ensure the description is rich and detailed."
+                    "STEP 1: Start with the comprehensive natural language description (covering all visual elements like subject, attire, background, lighting, and style). "
+                    "Ensure the description is rich and detailed. "
+                    "DO NOT start with Tags."
                 )
                 
                 if enable_tags_extraction or enable_filename_extraction:
