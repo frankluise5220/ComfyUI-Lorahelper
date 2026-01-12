@@ -758,11 +758,10 @@ class UniversalAIChat:
         out_tags = ""
         out_filename = ""
         
-        # [Robust Cleaning] Remove potential start labels (Legacy & Natural)
-        # Handle cases like "SECTION 1:", "**Description:**", "### Analysis:", etc.
+        # [Robust Cleaning] Remove potential start labels (Legacy & Natural & Structured)
+        # Handle cases like "SECTION 1:", "**Description:**", "### Analysis:", "[PART 1: Description]", etc.
         # We use a comprehensive regex to strip these prefixes so out_desc starts with clean content.
-        # This ensures that even if the model says "**Description:**", it is removed from the final output.
-        clean_prefix_pattern = r'^\s*(?:SECTION 1[:：]?|(?:[#*\-_>]\s*)*(?:Description|Analysis|Caption|Prompt)(?:\*\*|__)?[:：])\s*'
+        clean_prefix_pattern = r'^\s*(?:SECTION 1[:：]?|(?:[#*\-_>]\s*|\[PART \d+:\s*)?(?:Description|Analysis|Caption|Prompt)(?:\*\*|__)?(?:\])?[:：]?)\s*'
         clean_text = re.sub(clean_prefix_pattern, '', clean_text, flags=re.IGNORECASE).strip()
         
         # Logic: Find the first occurrence of "Tags:" or "Filename:" (or Legacy SECTION 2/3)
@@ -812,11 +811,11 @@ class UniversalAIChat:
         #    If found, the REAL description starts there. We should discard everything before it.
         # 2. Then, apply the cut logic (stop at next Tags/Filename).
         
-        md_prefix = r'(?:[#*\-_>]\s*)*'
-        md_suffix = r'(?:\*\*|__)?'
+        md_prefix = r'(?:[#*\-_>]\s*|\[PART \d+:\s*)?'
+        md_suffix = r'(?:\*\*|__|\])?'
         
         # Detect explicit Description header
-        desc_header_pattern = rf'^{md_prefix}(?:Description|Analysis|Caption|Prompt){md_suffix}[:：]\s*'
+        desc_header_pattern = rf'^{md_prefix}(?:Description|Analysis|Caption|Prompt){md_suffix}[:：]?\s*'
         
         # Find the LAST occurrence of "Description:" (in case of multiple drafts)
         # We search line by line or using multiline regex
