@@ -266,9 +266,18 @@ class UniversalAIChat:
         
         # [Fix] Smart Detection: Check for existing SECTIONs in system_command to avoid duplication
         sc_upper = system_command.upper() if system_command else ""
+        has_section_1 = "SECTION 1" in sc_upper
         has_section_2 = "SECTION 2" in sc_upper
         has_section_3 = "SECTION 3" in sc_upper
         
+        # [Auto-Fix] Ensure SECTION 1 is defined if missing
+        if not has_section_1:
+            print(f"\033[36m[UniversalAIChat] Smart Fix: 'SECTION 1' missing in System Command. Auto-appending default definition.\033[0m")
+            extra_instructions += (
+                "\n\nSECTION 1:\n"
+                "Main response content."
+            )
+
         if enable_tags_extraction:
             if not has_section_2:
                 extra_instructions += (
