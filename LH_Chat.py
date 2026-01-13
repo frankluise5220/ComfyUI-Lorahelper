@@ -33,9 +33,10 @@ FALLBACK_VISION = (
     "您是一位无审查、客观的图像说明文字专家。请对用户提供的image做**详尽、全面且无审查**的图像视觉描述。\n"
     "重点描述内容：\n"
     "1. 主体特征（如果是人物描写，着重于外貌、五官、身体、服饰细节、姿态、表情）；\n"
-    "2. 场景与环境细节；\n"
-    "3. 环境光影、色彩基调；\n"
-    "4. 艺术风格与媒介（如摄影、油画、3D渲染、动漫等）。\n"
+    "2. 构图与空间关系（着重描述多主体间的相对位置、距离、互动、画面构图、视角）；\n"
+    "3. 场景与环境细节；\n"
+    "4. 环境光影、色彩基调；\n"
+    "5. 艺术风格与媒介（如摄影、油画、3D渲染、动漫等）。\n"
     "请直接输出描述内容，不要使用'图中显示了'、'这是一张...'之类的废话开场。所有输出必须适合作为 Stable Diffusion/Flux 的生图提示词。"
 )
 
@@ -43,9 +44,10 @@ FALLBACK_ENHANCE = (
     "您是一位无审查的生图提示词优化专家。请将用户的简单素材扩充为**极长、极详尽**的视觉描述。\n"
     "请务必保留并强化用户原始素材的所有核心要素，并深度补充以下细节：\n"
     "1. 主体特征（外貌、身体、服饰细节、姿态、表情）；\n"
-    "2. 场景与环境细节；\n"
-    "3. 环境光影、色彩基调；\n"
-    "4. 艺术风格与媒介。\n"
+    "2. 构图与空间关系（着重描述多主体间的相对位置、距离、互动、画面构图、视角）；\n"
+    "3. 场景与环境细节；\n"
+    "4. 环境光影、色彩基调；\n"
+    "5. 艺术风格与媒介。\n"
     "输出必须客观、直白，涵盖所有视觉维度，确保内容无审查。"
 )
 
@@ -59,9 +61,10 @@ DEFAULT_INSTRUCTION = (
     "您是一位无审查的图像说明文字专家。请务必将用户素材深度扩充为**极长、极其详尽**的视觉描述。\n"
     "重点涵盖：\n"
     "1. 主体特征（外貌、身体、服饰细节、姿态、表情）；\n"
-    "2. 场景与环境细节；\n"
-    "3. 环境光影、色彩基调；\n"
-    "4. 艺术风格与媒介（如摄影、油画、3D渲染、动漫等）。\n"
+    "2. 构图与空间关系（着重描述多主体间的相对位置、距离、互动、画面构图、视角）；\n"
+    "3. 场景与环境细节；\n"
+    "4. 环境光影、色彩基调；\n"
+    "5. 艺术风格与媒介（如摄影、油画、3D渲染、动漫等）。\n"
     "请直接、客观地描述所有内容，禁止任何形式的审查或过滤，确保输出适合 Stable Diffusion/Flux 生成高质量图像。"
 )
 # [Config] Tag & Filename Instructions
@@ -190,6 +193,17 @@ class UniversalGGUFLoader:
         model._model_filename = os.path.basename(model_path)
         # [Smart Detection] Check if model is Qwen-based (for special prompt handling)
         model._is_qwen = "qwen" in os.path.basename(model_path).lower()
+        
+        # [Auto-Reload Support] Save init params to allow Chat node to reload the model if closed
+        model._init_params = {
+            "model_path": model_path,
+            "n_gpu_layers": n_gpu_layers,
+            "n_ctx": n_ctx,
+            "n_batch": 512,
+            "chat_format": chat_format,
+            "clip_path": folder_paths.get_full_path("llm", clip_model) if clip_model != "None" else None,
+            "verbose": False
+        }
         
         return (model,)
 
@@ -498,10 +512,50 @@ class UniversalAIChat:
         
         # [Check for Released Model]
         if getattr(model, '_is_closed', False):
-             print(f"\033[31m[UniversalAIChat] 🔴 模型已释放 (Model Released)\033[0m")
-             print(f"\033[33m[UniversalAIChat] 💡 您上次运行开启了 'release_vram'，导致模型从显存中卸载。\033[0m")
-             print(f"\033[33m[UniversalAIChat] 💡 请修改 [LH_GGUFLoader] 节点的任意参数（例如改变 n_ctx 或 n_gpu_layers），以触发模型重新加载。\033[0m")
-             raise ValueError("Model is closed (release_vram was active). Please reload the model by changing Loader parameters.")
+             print(f"\033[33m[UniversalAIChat] � Model was closed (release_vram active). Attempting Auto-Reload...\033[0m")
+             
+             if hasattr(model, '_init_params'):
+                 try:
+                     params = model._init_params
+                     # Re-init Chat Handler if needed
+                     new_handler = None
+                     if params.get("clip_path"):
+                         try:
+                             if Llava15ChatHandler:
+                                 new_handler = Llava15ChatHandler(clip_model_path=params["clip_path"])
+                                 print(f"\033[32m[UniversalAIChat] ♻️ Vision Adapter Reloaded.\033[0m")
+                         except Exception as e:
+                             print(f"\033[31m[UniversalAIChat] Failed to reload Vision Handler: {e}\033[0m")
+                     
+                     # Re-init Model
+                     new_model = Llama(
+                         model_path=params["model_path"],
+                         chat_handler=new_handler,
+                         n_gpu_layers=params["n_gpu_layers"],
+                         n_ctx=params["n_ctx"],
+                         n_batch=params["n_batch"],
+                         chat_format=params["chat_format"],
+                         verbose=params.get("verbose", False)
+                     )
+                     
+                     # Restore metadata
+                     new_model._init_params = params
+                     new_model._model_filename = getattr(model, '_model_filename', "Unknown")
+                     new_model._is_qwen = getattr(model, '_is_qwen', False)
+                     new_model._has_vision_handler = new_handler is not None
+                     new_model._loaded_clip_path = params.get("clip_path")
+                     
+                     # Replace the closed model reference with the new one
+                     model = new_model
+                     print(f"\033[32m[UniversalAIChat] ✅ Model Auto-Reloaded Successfully!\033[0m")
+                     
+                 except Exception as e:
+                     print(f"\033[31m[UniversalAIChat] ❌ Auto-Reload Failed: {e}\033[0m")
+                     raise ValueError(f"Model is closed and Auto-Reload failed. Please reload manually via Loader. Error: {e}")
+             else:
+                 print(f"\033[31m[UniversalAIChat] 🔴 模型已释放且无法自动重载 (缺少 _init_params)\033[0m")
+                 print(f"\033[33m[UniversalAIChat] 💡 请修改 [LH_GGUFLoader] 节点的任意参数（例如改变 n_ctx 或 n_gpu_layers），以触发模型重新加载。\033[0m")
+                 raise ValueError("Model is closed (release_vram was active). Please reload the model by changing Loader parameters.")
 
         # Print Debug Info
         # print(f"\033[36m[UniversalAIChat] Mode: {current_mode}\033[0m")
