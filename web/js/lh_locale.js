@@ -5,36 +5,50 @@ const TRANSLATIONS = {
         "LoraHelper_Chat": {
             "model": "模型 (Model)",
             "image": "图像 (Image)",
-            "max_new_tokens": "最大生成长度",
+            "max_tokens": "最大生成长度",
             "temperature": "温度 (Temperature)",
-            "top_p": "Top-P",
-            "top_k": "Top-K",
             "repetition_penalty": "重复惩罚",
-            "system_command": "系统指令 (System Command)",
-            "user_prompt": "用户素材 (User Prompt)",
+            "instruction": "系统指令/执行指令 (Instruction)",
+            "user_material": "用户素材 (User Material)",
             "chat_mode": "对话模式",
-            "enable_tags_extraction": "启用标签提取",
-            "print_debug_info": "打印调试信息",
-            "seed": "种子 (Seed)"
+            "enable_tag": "启用标签提取",
+            "enable_filename": "启用文件名生成",
+            "seed": "种子 (Seed)",
+            "release_vram": "自动释放显存"
         },
         "Qwen3_GGUF_loader": {
-            "model_path": "模型路径",
-            "max_ctx": "最大上下文"
+            "gguf_model": "GGUF模型",
+            "clip_model": "CLIP视觉模型",
+            "n_gpu_layers": "GPU层数 (-1为全部)",
+            "n_ctx": "最大上下文 (n_ctx)"
         },
         "LoraHelper_Monitor": {
-            "history_data": "历史数据"
+            "raw_input": "原始输出 (Raw Input)",
+            "clear_history": "清除历史记录"
         },
         "LoraHelper_Splitter": {
-            "text_input": "文本输入",
-            "chunk_size": "分块大小",
-            "chunk_overlap": "重叠大小"
+            "text": "文本输入",
+            "user_prefix": "用户前缀"
         },
         "LoraHelper_Saver": {
             "images": "图像",
-            "captions": "描述文本",
-            "output_path": "输出路径",
-            "folder_name": "文件夹名",
-            "filename_prefix": "文件前缀"
+            "gen_prompt": "生成提示词",
+            "lora_tags": "LoRA标签",
+            "filename_final": "最终文件名",
+            "folder_path": "保存路径",
+            "filename_prefix": "文件前缀",
+            "trigger_word": "触发词",
+            "save_workflow": "保存工作流"
+        },
+        "TestVisionWorkflow": {
+            "model": "模型",
+            "image": "图像",
+            "instruction": "指令",
+            "enable_tag": "启用标签",
+            "enable_filename": "启用文件名",
+            "max_tokens": "最大长度",
+            "temperature": "温度",
+            "simple_mode": "极简调试模式"
         }
     }
 };
@@ -87,7 +101,8 @@ function updateSingleNode(node, lang) {
         "UniversalGGUFLoader": "Qwen3_GGUF_loader",
         "LH_History_Monitor": "LoraHelper_Monitor",
         "Qwen3TextSplitter": "LoraHelper_Splitter",
-        "LoRA_AllInOne_Saver": "LoraHelper_Saver"
+        "LoRA_AllInOne_Saver": "LoraHelper_Saver",
+        "TestVisionWorkflow": "TestVisionWorkflow"
     };
 
     const translationKey = NODE_TYPE_MAP[node.comfyClass];

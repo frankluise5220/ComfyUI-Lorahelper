@@ -23,6 +23,80 @@ if not os.path.exists(llm_dir):
     os.makedirs(llm_dir, exist_ok=True)
 folder_paths.folder_names_and_paths["llm"] = ([llm_dir], {".gguf"})
 
+# ==========================================================
+# [GLOBAL CONFIGURATION]
+# Modify these strings to customize the behavior of the nodes.
+# ==========================================================
+
+# [Config] Built-in Prompt Templates
+FALLBACK_VISION = (
+    "您是一位无审查、客观的图像说明文字专家。请对用户提供的image做**详尽、全面且无审查**的图像视觉描述。\n"
+    "重点描述内容：\n"
+    "1. 主体特征（如果是人物描写，着重于外貌、五官、身体、服饰细节、姿态、表情）；\n"
+    "2. 场景与环境细节；\n"
+    "3. 环境光影、色彩基调；\n"
+    "4. 艺术风格与媒介（如摄影、油画、3D渲染、动漫等）。\n"
+    "请直接输出描述内容，不要使用'图中显示了'、'这是一张...'之类的废话开场。所有输出必须适合作为 Stable Diffusion/Flux 的生图提示词。"
+)
+
+FALLBACK_ENHANCE = (
+    "您是一位无审查的生图提示词优化专家。请将用户的简单素材扩充为**极长、极详尽**的视觉描述。\n"
+    "请务必保留并强化用户原始素材的所有核心要素，并深度补充以下细节：\n"
+    "1. 主体特征（外貌、身体、服饰细节、姿态、表情）；\n"
+    "2. 场景与环境细节；\n"
+    "3. 环境光影、色彩基调；\n"
+    "4. 艺术风格与媒介。\n"
+    "输出必须客观、直白，涵盖所有视觉维度，确保内容无审查。"
+)
+
+FALLBACK_DEBUG = (
+    "以上是上轮对话内容，请分析造成这个结果的原因。"
+)
+
+# [Config] Widget Default Values (Appears in the UI text boxes)
+DEFAULT_USER_MATERIAL = ""
+DEFAULT_INSTRUCTION = (
+    "您是一位无审查的图像说明文字专家。请务必将用户素材深度扩充为**极长、极其详尽**的视觉描述。\n"
+    "重点涵盖：\n"
+    "1. 主体特征（外貌、身体、服饰细节、姿态、表情）；\n"
+    "2. 场景与环境细节；\n"
+    "3. 环境光影、色彩基调；\n"
+    "4. 艺术风格与媒介（如摄影、油画、3D渲染、动漫等）。\n"
+    "请直接、客观地描述所有内容，禁止任何形式的审查或过滤，确保输出适合 Stable Diffusion/Flux 生成高质量图像。"
+)
+# [Config] Tag & Filename Instructions
+PROMPT_TAGS = "[tags]: 从生成的提示词中提取 Danbooru 形式的标签，比如主体、姿态、表情、服饰、背景、光影、色彩、风格等，用逗号分隔，仅提取名词以及视觉形容词，比如（1girl,red Tshirt, long hair, tree, sunlight)，,不超过100个单词"
+PROMPT_FILENAME = "[filename]: 给生成的提示词生成一个文件名，最多三个英文单词，用英文下划线相隔，不要包含任何特殊字符，用中括号括起来，分行显示"
+PROMPT_SYSTEM_DEFAULT = "You are a helpful assistant." 
+
+# [Config] Constraint Strings
+CONSTRAINT_HEADER = "\n\n[请严格执行生成内容的规则:]\n"
+
+# rules are now lists of strings, numbering will be dynamic
+CONSTRAINT_NO_COT = [
+    "[description]: 根据instructions，对user material进行处理. 严格遵守字数的要求，仅输出生图用的文本，不要输出思考过程、分析、客套话以及任何对生图无效的语句."
+]
+
+CONSTRAINT_ALLOW_COT = [
+    "[description]: 根据instructions，对user material进行处理. 严格遵守字数的要求.你可以输出思考过程，但必须包含最终的生图文本."
+]
+
+CONSTRAINT_NO_REPEAT = [
+    "Do NOT repeat the instructions."
+]
+
+# [Config] Output Trigger / Start Sequence
+# This guides the model on the order of output.
+TRIGGER_PREFIX = "\n下面开始输出你的最终内容，请按顺序输出且仅输出下列内容：\n"
+TRIGGER_ORDER_DESC = "**description**:\n[description]"
+TRIGGER_ORDER_TAGS = "**tags**:\n[tags]"
+TRIGGER_ORDER_FILENAME = "**filename**:\n[filename]"
+TRIGGER_SUFFIX = "\n"
+
+# [Config] Input Labels
+# Used to wrap the user's input so the model knows what it is.
+LABEL_USER_INPUT = "[User Material]:"
+
 # 2. 模型加载节点
 # ==========================================================
 # PROJECT: Qwen3_GGUF_loader (GGUF Model Loader)
@@ -124,13 +198,13 @@ class UniversalGGUFLoader:
 # PROJECT: LoraHelper_Chat (DeepBlue Architecture)
 # MANDATORY UI ORDER (INPUT_TYPES):
 #   1. model (Loader) -> 2. image (Optional)
-#   3. context (History/Top) -> 4. user_prompt (Material/UP) -> 5. system_command (Command/SC)
-#   6. chat_mode (Logic Switch) -> 7. max_tokens -> 8. temperature
-#   9. repetition_penalty -> 10. seed -> 11. release_vram
+#   3. user_material (Material) -> 4. instruction (Command)
+#   5. chat_mode (Logic Switch) -> 6. max_tokens -> 7. temperature
+#   8. repetition_penalty -> 9. seed -> 10. release_vram
 #
 # LOGIC DEFINITION:
-#   - user_prompt = Input Material (UP)
-#   - system_command = Executive Instructions (SC)
+#   - user_material = Input Material
+#   - instruction = Executive Instructions
 #   - chat_mode = [Enhance_Prompt, Debug_Chat]
 # ==========================================================
 class UniversalAIChat:
@@ -139,12 +213,12 @@ class UniversalAIChat:
         return {
             "required": {
                 "model": ("LLM_MODEL",), 
-                "context": ("STRING", {"multiline": True, "default": ""}), 
-                "user_prompt": ("STRING", {"multiline": True, "default": "在此输入素材内容 (UP)..."}), 
-                "system_command": ("STRING", {"multiline": True, "default": "你是一个AI提示词大师。请严格按照格式输出：\nSECTION 1:\n请用连贯的自然语言详细描述图片内容，包括主体、表情、头饰、服饰、动作、场景和氛围。不要使用列表（不少于300个单词）。\nSECTION 2:\n请输出标准 Danbooru 风格标签，用英文逗号分隔。范围：1.主体与数量(如 1girl, solo)；2.外貌特征(保留颜色/形态，如 long hair, blue eyes)；3.衣着配饰(如 white dress, glasses)；4.动作姿态(如 sitting, hand on hip)；5.构图视角(如 upper body, close-up, from side)；6.环境背景。禁止：主观评价词(beautiful, amazing)及权重语法。\nSECTION 3:\n用职业视角为内容取一个简短的英文标题（由三个代表性名词组成，用空格分隔），用方括号括起来，例如：[woman bed lamp]。不要包含后缀或数字。"}),
+                "user_material": ("STRING", {"multiline": True, "default": DEFAULT_USER_MATERIAL}), 
+                "instruction": ("STRING", {"multiline": True, "default": DEFAULT_INSTRUCTION}),
                 "chat_mode": (["Enhance_Prompt", "Debug_Chat"],),
-                "enable_tags_extraction": ("BOOLEAN", {"default": False, "label_on": "Enable Tags", "label_off": "Disable Tags"}),
-                "enable_filename_extraction": ("BOOLEAN", {"default": False, "label_on": "Enable Filename", "label_off": "Disable Filename"}),
+                "enable_tag": ("BOOLEAN", {"default": False, "label_on": "Enable Tags", "label_off": "Disable Tags"}),
+                "enable_filename": ("BOOLEAN", {"default": False, "label_on": "Enable Filename", "label_off": "Disable Filename"}),
+                "enable_cot": ("BOOLEAN", {"default": False, "label_on": "Enable Thinking (CoT)", "label_off": "Disable Thinking"}),
                 "max_tokens": ("INT", {"default": 512, "min": 1, "max": 8192}),
                 "temperature": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 2.0, "step": 0.01}),
                 "repetition_penalty": ("FLOAT", {"default": 1.1, "min": 1.0, "max": 2.0, "step": 0.01}),
@@ -152,12 +226,12 @@ class UniversalAIChat:
                 "release_vram": ("BOOLEAN", {"default": True}),
             },
             "optional": {
-                "image": ("IMAGE",), 
+                "image": ("IMAGE",),
             }
         }
     
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("prompt", "tags", "filename", "chat_history")
+    RETURN_NAMES = ("prompt", "tags", "filename", "raw_output")
     FUNCTION = "chat"
     CATEGORY = "custom_nodes/MyLoraNodes"
 
@@ -167,508 +241,344 @@ class UniversalAIChat:
     def IS_CHANGED(s, **kwargs):
         return float("nan")
 
-    def chat(self, model, context, user_prompt, system_command, chat_mode, enable_tags_extraction, enable_filename_extraction, max_tokens, temperature, repetition_penalty, seed, release_vram, image=None):
+    def chat(self, model, user_material, instruction, chat_mode, enable_tag, enable_filename, enable_cot, max_tokens, temperature, repetition_penalty, seed, release_vram, image=None):
         # 0. 基础防御性处理 (Defensive Check)
-        # 确保输入不为 None，即使 ComfyUI 传了空值
-        if user_prompt is None: user_prompt = ""
-        if system_command is None: system_command = ""
-        if context is None: context = ""
+        if user_material is None: user_material = ""
+        if instruction is None: instruction = ""
         
-        # 1. 隐形反推模式判定 (Implicit Vision Mode)
-        # 逻辑：
-        # A. 必须有图片输入 (image is not None)
-        # B. 模型必须支持视觉 (model._has_vision_handler is True)
+        # ==========================================================
+        # 1. 模式判定与默认指令定义 (Mode Determination & Defaults)
+        # ==========================================================
         
-        has_vision_handler = getattr(model, '_has_vision_handler', False)
-        
-        # [Strict Logic per User Request]
-        # 1. 接 image 仍然是最高优先级，接了就反推。
-        # 2. 如果没接 image，就 enhance (除非调成 debug 模式)。
-        
+        # Widget Default Value (视为“空”)
+        WIDGET_DEFAULT_SC = ""
+
+        # [Config] Constants moved to Global Scope (Top of file) for easy access.
+
+        # Mode Logic
+        # Priority: Image > Enhance > Debug
         is_vision_task = image is not None
-        is_qwen_model = getattr(model, '_is_qwen', False)
+        current_mode = "VISION" if is_vision_task else chat_mode # "Enhance_Prompt" or "Debug_Chat"
         
-        if is_vision_task and not has_vision_handler:
-             # 用户连了 image，但模型不支持
-             print("\033[31m[UniversalAIChat] CRITICAL WARNING: Image input detected but model has no Vision Handler!\033[0m")
-             print("\033[33m[UniversalAIChat] System will attempt to run in Text-Only mode, but results may be unexpected as Vision Logic was requested.\033[0m")
-             pass
+        # Check SC status
+        sc_stripped = instruction.strip()
+        is_sc_empty = (not sc_stripped) or (sc_stripped == WIDGET_DEFAULT_SC.strip())
         
-        # 智能处理默认占位符
-        if user_prompt.strip() == "在此输入素材内容 (UP)...":
-            user_prompt = ""
+        # Prepare Variables
+        final_system_command = instruction
+        final_user_content = "" # For text part
+        apply_template = False
+        
+        # Mode Specific Logic
+        if is_vision_task:
+            # 强制给一个简短的 System 角色，有时能激活 Qwen 的回复逻辑
+            #messages.insert(0, {"role": "system", "content": "You are a helpful assistant that describes images in detail."})
+            # [Vision Mode Guard]
+            if not getattr(model, '_has_vision_handler', False):
+                 raise ValueError("Vision Task detected (Image Input), but the loaded model does not have a Vision Handler (CLIP/MMProj). Please load a CLIP model in the Loader node.")
 
+            # [Mode 1: Vision / Reverse Engineering]
+            # Ignore UP (User Prompt is ignored as per request)
+            # But we need an INSTRUCTION for the image.
+            
+            # Handle SC (System Command acts as the Instruction)
+            if is_sc_empty:
+                # No SC provided -> Use Fallback Instruction
+                instruction_content = FALLBACK_VISION
+                # Also set system command to this fallback for consistency? 
+                # Or keep system command empty?
+                # Usually system prompt defines "Who you are", User prompt defines "What to do".
+                # For simplicity and effectiveness, we put the instruction in USER prompt.
+                final_system_command = "" # Disable System Message for Vision
+            else:
+                # User provided SC -> Use it as the Instruction
+                instruction_content = instruction
+                # [FIX] Avoid duplication and System Role confusion in Vision Mode!
+                # For Llama.cpp Vision, it's safest to use a SINGLE User Message containing [Image, Text].
+                # We disable the System Message entirely for Vision tasks to prevent "0-token output" or handler errors.
+                final_system_command = "" 
+            
+            # Set the content that goes into User Message
+            final_user_content = instruction_content
+            
+            # Enable Template
+            apply_template = True
+            
+        elif current_mode == "Enhance_Prompt":
+            # [Mode 2: Prompt Enhance]
+            # Use UP, wrapped with label
+            final_user_content = f"{LABEL_USER_INPUT}\n{user_material}"
+            
+            # Handle SC
+            if is_sc_empty:
+                final_system_command = FALLBACK_ENHANCE
+            else:
+                final_system_command = instruction
+                
+            # Enable Template
+            apply_template = True
+            
+        elif current_mode == "Debug_Chat":
+            # [Mode 3: Debug]
+            # Use UP directly (User should provide Context in UP if needed)
+            final_user_content = user_material
+
+            # Handle SC
+            if is_sc_empty:
+                final_system_command = FALLBACK_DEBUG
+            else:
+                final_system_command = instruction
+            
+            # Force Disable Switches
+            enable_tag = False
+            enable_filename = False
+            enable_cot = True # Debug mode defaults to allowing thinking
+            apply_template = False
+            
         # ==========================================================
-        # 2. 动态指令构建 (Dynamic Instruction Construction)
+        # 2. 模板构建 (Template Construction)
         # ==========================================================
-        # 核心逻辑：
-        # - SECTION 1 (主任务): 由 system_command 决定。如果用户没写，则使用内部默认值。
-        # - SECTION 2/3 (附加任务): 由开关 (enable_tags/filename) 强制决定，硬性追加。
-        
-        # [Debug] 打印开关状态
-        # print(f"\033[36m[UniversalAIChat] Tags Extraction: {enable_tags_extraction}, Filename Extraction: {enable_filename_extraction}\033[0m")
-
-        # 2.1 确定基础指令 (SECTION 1)
-        # 检查是否为默认 SC (空，或者使用了已知的默认模板)
-        
-        # 定义已知的默认模板 (用于智能切换)
-        # 1. 中文默认 (INPUT_TYPES 中的默认值)
-        # [Optimized based on User Request: Abandon SECTIONs]
-        # Use natural language instructions and standard markers (Tags:, Filename:)
-        DEFAULT_CN_VISION = (
-            "你是一个AI视觉专家。请对图片进行全面、细致的分析。"
-            "详细描述画面的所有关键元素，包括：主体特征（外貌、动作、表情）、服饰细节、环境背景、光影效果、色彩基调以及艺术风格。"
-            "请使用连贯、优美的自然语言进行描述，避免使用列表格式。描述应尽可能丰富详尽（不少于300字），以便能被用于高质量的图像重绘。"
-        )
-
-        # 2. 英文默认 (Vision)
-        DEFAULT_EN_VISION = (
-            "You are an expert AI art critic and prompt engineer. "
-            "Please provide a comprehensive and detailed analysis of the image. "
-            "Focus on describing the main subject (appearance, pose, expression), attire and accessories, background environment, lighting, color palette, and overall artistic style. "
-            "Use fluid, descriptive natural language. Avoid bullet points. "
-            "The description should be rich, vivid, and detailed (minimum 300 words) to support high-quality image reproduction."
-        )
-        
-        # 3. 英文默认 (Text)
-        DEFAULT_EN_TEXT = (
-            "Refine the following text. Provide a refined, detailed version."
-        )
-
-        sc_stripped = system_command.strip()
-        
-        # 判定当前 SC 是否为某种默认值
-        is_cn_vision_default = (sc_stripped == DEFAULT_CN_VISION.strip())
-        is_en_vision_default = (sc_stripped == DEFAULT_EN_VISION.strip())
-        is_en_text_default = (sc_stripped == DEFAULT_EN_TEXT.strip())
-        is_empty = (not sc_stripped)
-
-        # 智能切换逻辑：
-        # 1. 如果为空 -> 填补默认值 (Vision/Text 对应)
-        # 2. 如果是 Vision 任务，但 SC 是 Text 默认值 -> 切换为 Vision 默认
-        # 3. 如果是 Text 任务，但 SC 是 Vision 默认值 -> 切换为 Text 默认
-        # 4. 如果是 Vision 任务，且 SC 是 Vision 默认值 (无论是 CN 还是 EN) -> 保持不变 (尊重用户选择的语言)
-        
-        new_sc = None
-        
-        if is_empty:
-             new_sc = DEFAULT_EN_VISION if is_vision_task else DEFAULT_EN_TEXT
-             # print(f"\033[36m[UniversalAIChat] System Command is empty. Using default {'Vision' if is_vision_task else 'Text'} Prompt.\033[0m")
-        
-        elif is_vision_task:
-             if is_en_text_default:
-                 new_sc = DEFAULT_EN_VISION
-                 # print(f"\033[36m[UniversalAIChat] Auto-switched from Text Default to Vision Default.\033[0m")
-             # 如果是 CN_VISION_DEFAULT，虽然是默认值，但适用于 Vision，所以保留，不强制转 EN
-        
-        else: # Text Task
-             if is_cn_vision_default or is_en_vision_default:
-                 new_sc = DEFAULT_EN_TEXT
-                 # print(f"\033[36m[UniversalAIChat] Auto-switched from Vision Default to Text Default.\033[0m")
-
-        if new_sc:
-            system_command = new_sc
-
-        # 2.2 构建附加指令 (SECTION 2 & 3 -> Tags & Filename)
-        extra_instructions = ""
-        required_sections = []
-        
-        # [Fix] Smart Detection: Check for existing SECTIONs or Markers in system_command to avoid duplication
-        sc_upper = system_command.upper() if system_command else ""
-        
-        # Check for legacy SECTION markers
-        has_section_1 = "SECTION 1" in sc_upper
-        has_section_2 = "SECTION 2" in sc_upper
-        has_section_3 = "SECTION 3" in sc_upper
-        
-        # Check for new Natural markers
-        has_tags_marker = "TAGS:" in sc_upper or "TAGS：" in sc_upper
-        has_filename_marker = "FILENAME:" in sc_upper or "FILENAME：" in sc_upper
-        
-        # [Auto-Fix] Ensure Description Instruction is present (if empty)
-        # 现在的默认 Prompt 已经包含了描述指令，所以只有当 SC 为空时才需要担心。
-        # 但如果 SC 不为空，且没有 "SECTION 1" 也没有明显的描述指令？
-        # 用户要求模糊处理，所以我们假设 SC 本身就是描述指令。
-        # 只要不是完全没有指令就行。
-        
-        # 只有在非常特定的情况下（比如 SC 只有 "Tags:"）才补全？
-        # 暂时跳过 SECTION 1 的强制补全，因为我们现在默认 SC 就是描述指令。
-
-        # [Structured Prompt System]
-        # Instead of appending linear instructions, we build a structured TEMPLATE.
-        # This prevents "Recency Bias" where the model outputs the last instruction (Tags) first.
-        
         template_instructions = ""
         
-        if enable_tags_extraction or enable_filename_extraction:
-            template_instructions += "\n\n=== RESPONSE FORMAT (STRICT) ===\n"
-            template_instructions += "Please analyze the image and output the result in the following structure:\n\n"
-            
-            # Part 1: Description (Always required implicitly or explicitly)
-            template_instructions += "[PART 1: Description]\n"
-            
-            # [Smart SC Integration]
-            # Instead of a generic placeholder, we should check if the SC itself contains the description instructions.
-            # Since we defaulted the SC earlier (lines 254-270), system_command holds the main instruction.
-            # We point the model to follow the "System Command" for this part.
-            template_instructions += "(Execute the main image analysis task as defined in the system instructions above)\n\n"
-            
-            # Part 2: Tags
-            if enable_tags_extraction:
-                if not (has_section_2 or has_tags_marker):
-                    template_instructions += "[PART 2: Tags]\n"
-                    template_instructions += "Tags: (Extract Danbooru-style tags here...)\n\n"
-                else:
-                    print(f"\033[36m[UniversalAIChat] Smart Skip: Tags instruction detected in SC.\033[0m")
-            
-            # Part 3: Filename
-            if enable_filename_extraction:
-                if not (has_section_3 or has_filename_marker):
-                    template_instructions += "[PART 3: Filename]\n"
-                    template_instructions += "Filename: [short_title_here]\n\n"
-                else:
-                    print(f"\033[36m[UniversalAIChat] Smart Skip: Filename instruction detected in SC.\033[0m")
-                    
-            template_instructions += "=== END FORMAT ===\n"
-            
-            # Append detailed rules
-            if enable_tags_extraction and not (has_section_2 or has_tags_marker):
-                template_instructions += "\n[Tags Rules]: Comma-separated, Danbooru style. No subjective words. Start with subject, then appearance, clothes, pose, background."
-                
-            if enable_filename_extraction and not (has_section_3 or has_filename_marker):
-                template_instructions += "\n[Filename Rules]: Max 3 words, lower_case_with_underscores, inside brackets."
-
-        extra_instructions = template_instructions
-
-        # 2.3 构建格式约束 (Footer) - 移除，因为自然语言格式不需要严格的 Footer
-        footer_instruction = ""
+        # [Smart Template Logic]
+        # Only apply rigid template if we actually need to extract specific parts (Tag/Filename).
+        # If both are disabled, we should allow the model to flow naturally.
+        needs_structure = enable_tag or enable_filename
         
-        # ==========================================================
-        # 3. 构造消息内容 (Message Content Construction)
-        # ==========================================================
+        # We ignore 'apply_template' flag for content decision, only use it as a gate for modes that support it.
+        # But effectively, if needs_structure is False, we append NOTHING.
         
-        current_user_content = None
-        display_up = ""
+        if apply_template:
+            # [Strict Instruction Injection]
+            # 用户要求：无论是用户指令还是默认指令，都要加上“仅输出最终描述”、“不要输出思考过程”、“不要生成无效文字”。
+            # 这必须作为系统级的强制约束，追加在 System Command 或 User Prompt 的末尾。
+            
+            # [CoT Switch Logic]
+            # If enable_cot is True, we SKIP the "No Thinking" constraint.
+            # If enable_cot is False (default), we ENFORCE it.
+            
+            # [Smart Constraint] Dynamically append specific format instructions as Rules
+            rules = []
+            rules.extend(CONSTRAINT_NO_REPEAT)
 
+            if not enable_cot:
+                rules.extend(CONSTRAINT_NO_COT)
+            else:
+                rules.extend(CONSTRAINT_ALLOW_COT)
+
+            if enable_tag:
+                rules.append(PROMPT_TAGS)
+            
+            if enable_filename:
+                rules.append(PROMPT_FILENAME)
+
+            strict_constraints = CONSTRAINT_HEADER
+            for i, rule in enumerate(rules, 1):
+                strict_constraints += f"{i}. {rule}\n"
+            
+            # [Smart Constraint] Dynamically append output trigger based on switches
+            output_order = [TRIGGER_ORDER_DESC]
+            if enable_tag:
+                output_order.append(TRIGGER_ORDER_TAGS)
+            if enable_filename:
+                output_order.append(TRIGGER_ORDER_FILENAME)
+            
+            start_sequence = f"\n下面开始输出你的最终内容，内容包含以下{len(output_order)}个部分，请按顺序输出且仅输出下列内容：\n{chr(10).join(output_order)}{TRIGGER_SUFFIX}"
+            strict_constraints += start_sequence
+
+            # Append constraints to template_instructions (which is appended to User Message)
+            # This ensures it's the LAST thing the model sees.
+            template_instructions += strict_constraints
+            
+            # If not needs_structure, template_instructions only contains strict_constraints (if apply_template is True).
+            
+        # ==========================================================
+        # 3. 消息组装 (Message Assembly)
+        # ==========================================================
+        is_qwen_model = getattr(model, '_is_qwen', False)
+        
+        messages = []
+        # 3.1 System Message
+        # [Fix] Some models require a System Message to initialize the context correctly, even if empty.
+        # Especially Qwen-VL or Llama-3-Vision might expect the chat template to start with System.
+        # If final_system_command is empty (Vision Mode), we skip adding it to avoid confusing the Handler?
+        # User feedback suggests MISSING System message might be the cause of 0-token output.
+        # Let's try adding a generic System Message if it's empty but we are in Vision Mode?
+        # OR: Restore the generic system persona for Vision Mode, but keep it very simple.
+        
+        if final_system_command:
+            messages.append({"role": "system", "content": final_system_command})
+        # elif is_vision_task:
+             # [Vision Fix] Qwen/Llama Vision often fail if System message is present
+             # We strictly omit System message for Vision tasks to prevent 0-token output.
+             # messages.append({"role": "system", "content": PROMPT_SYSTEM_DEFAULT})
+    
+        # 3.2 User Message
         if is_vision_task:
             # [Vision Mode]
-            # 组合：[Image] + [User Prompt (Hints)] + [System Command (Task)] + [Extra (Tags/File)] + [Footer]
-            
-            # 注意：对于 Vision 模型，通常建议把 Task 放在 Image 之后
-            
-            # 如果是默认 SC，system_command 已经是完整的 Base Instruction
-            # 如果是自定义 SC，system_command 是用户的指令
-            
-            # 组合 Text 部分
-            # 结构：[SC/Base] + [User Prompt] + [Extra] + [Footer]
-            
-            final_text_parts = []
-            
-            # [Qwen Optimization]
-            # Qwen 模型支持标准的 System Role，且对 Picture 1: ... 格式敏感。
-            # 非 Qwen 模型 (如 Llava) 通常建议将 System 指令合并到 User 内容中。
-            use_independent_system_msg = is_qwen_model
-            
-            # Part 1: System Command (Base Task)
-            # 如果不使用独立的 System Message，则将其合并到 Text Parts 开头
-            if not use_independent_system_msg:
-                final_text_parts.append(system_command)
-            else:
-                # [Fix for Vision Mode + Independent System Message]
-                # If we ARE using independent system messages (Qwen), we must NOT put the SC into the User Message.
-                # HOWEVER, if the system_command is short (like "Describe this image"), and we move it to System Role,
-                # the User Message might become empty (since we disabled User Prompt).
-                # 
-                # If final_text_parts is empty, Qwen might be confused ("What do you want me to do with Picture 1?").
-                # So, if final_text_parts is empty, we should add a minimal trigger.
-                pass
-            
-            # Part 2: User Prompt (Hints) - 如果有的话
-            # [User Requirement] 在 Image 模式下，UP (User Prompt) 应该被完全屏蔽。
-            # Image 和 UP 是互斥的：有图看图，没图看字。
-            # 因此，在 Vision Mode 下，我们不将 user_prompt 加入到 final_text_parts 中。
-            pass
-            # if user_prompt:
-            #     final_text_parts.append(f"\n[User Hint/Input]: {user_prompt}")
-            
-            # Part 3: Extra Sections
-            if extra_instructions:
-                if use_independent_system_msg:
-                    # [Qwen Optimization]
-                    # Merge extra instructions (Template) into the System Role?
-                    # NO. If we put the template in System Role, it's far away from the image.
-                    # Qwen usually prefers the instruction "Describe this picture..." to be in the User Message alongside "Picture 1: <img>".
-                    #
-                    # [Reversal of Previous Logic]
-                    # Putting the Template in System Role might be why SC is ignored. The model sees a huge template in System, 
-                    # and then a tiny "Picture 1" in User, and gets confused about WHERE to start.
-                    #
-                    # Let's try putting the Template in the USER Message.
-                    # This way, the input is: "Picture 1: <img> ... [Template]"
-                    # The template says: "Please analyze the image..."
-                    # This is a direct command.
-                    
-                    final_text_parts.append(extra_instructions)
-                else:
-                    final_text_parts.append(extra_instructions)
-            
-            # Part 4: Footer
-            if footer_instruction:
-                final_text_parts.append(footer_instruction)
-            
-            # [Safety Fallback]
-            # If final_text_parts is empty (which happens if Qwen Mode + No Extra Instructions + UP Disabled),
-            # we must provide at least a simple trigger.
-            if not final_text_parts:
-                # [Fix for Qwen]
-                # If we rely on System Prompt, we must explicitly ask the model to perform the Description task FIRST.
-                # Otherwise, it might jump straight to the Tags (which are at the end of System Prompt).
-                
-                # User Feedback: "Describe" is too simple. We need to reinforce the detailed requirements.
-                fallback_prompt = (
-                    "Please provide the detailed image analysis as requested in the System Instructions. "
-                    "Follow the 'RESPONSE FORMAT' strictly. "
-                    "Start with [PART 1: Description]."
-                )
-                
-                if enable_tags_extraction or enable_filename_extraction:
-                    fallback_prompt += "\nThen proceed to Tags and Filename."
-                
-                final_text_parts.append(fallback_prompt)
-            
-            final_vision_text = "\n\n".join(final_text_parts)
-            display_up = f"[IMAGE]\n{final_vision_text}"
-            
-            # 图像处理
+            # Image Processing
             i = 255. * image[0].cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-            if img.mode != "RGB": img = img.convert("RGB")
+            
+            # [Format Handling]
+            # Ensure RGB. Handle RGBA by pasting on white background (better for vision models than black default)
+            if img.mode == "RGBA":
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[3]) # 3 is the alpha channel
+                img = background
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+                
             buffered = BytesIO()
-            img.save(buffered, format="JPEG", quality=95)
+            # [Optimization] Use JPEG for better compatibility and smaller size
+            # PNG can sometimes cause issues with certain VLM tokenizers or just be too large.
+            # JPEG quality 95 is virtually lossless for vision tasks.
+            # [Resize Logic]
+            # If the image is too large, we should resize it to avoid OOM or excessive token usage.
+            # Standard VLM limit is often around 1024x1024 or 2048x2048 (depending on model).
+            # Qwen-VL handles high res well, but >2048 is usually diminishing returns for simple captioning.
+            # Let's cap at 1536px on the long edge to be safe and fast.
+            max_dimension = 1536
+            if max(img.size) > max_dimension:
+                scale_factor = max_dimension / max(img.size)
+                new_size = (int(img.size[0] * scale_factor), int(img.size[1] * scale_factor))
+                img = img.resize(new_size, Image.Resampling.LANCZOS)
+                print(f"\033[36m[UniversalAIChat] Image Resized to {img.size}\033[0m")
+
+            img.save(buffered, format="JPEG", quality=95) 
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
             
-            if is_qwen_model:
-                # [Qwen-VL Specific Structure]
-                # Mimic the "Picture 1: <img>" structure for better attention
-                # Note: llama-cpp-python handles the <img> token insertion
-                # We prepend "Picture 1: " text block
-                
-                # [Fuzzy Instruction Enhancer]
-                # 如果 system_command 存在但很短（说明用户可能只是随手写了个指令），我们可以在 User Prompt 里加强引导
-                # 模仿官方节点的 "Analyze the image provided below:"
-                
-                user_preamble = "Picture 1: "
-                # 如果没有独立 System Msg (即 SC 被合并到了这里)，且 SC 看起来不像是一个完整的 Prompt (没有 SECTION 1)，
-                # 那么我们可以在图片后面加一句 "Analyze the image..."
-                
-                # 但这里简单点，直接加上官方风味的引导
-                
-                current_user_content = [
-                    {"type": "text", "text": user_preamble},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
-                    {"type": "text", "text": final_vision_text}
-                ]
-            else:
-                # [Standard Vision Structure]
-                current_user_content = [
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
-                    {"type": "text", "text": final_vision_text}
-                ]
+            print(f"\033[36m[UniversalAIChat] Image Processed. Size: {img.size}, Mode: {img.mode} -> RGB/JPEG\033[0m")
             
-            # Vision 任务: 根据模型类型决定是否使用独立 System Message
-            # [Fix] Ensure this variable is correctly set for message construction
-            system_command_for_msg = system_command if use_independent_system_msg else ""
+            # User Content Construction
+            # [Simplicity First]
+            
+            if is_sc_empty:
+                prefix = "Instructions for the image above:\n"
+            else:
+                prefix = "\n" 
+            
+            user_text_content = f"{prefix}{final_user_content}\n{template_instructions}"
+            
+            # === DEBUG PROMPT DIFFERENCE ===
+            print(f"\n\033[33m[UniversalAIChat] === PROMPT CONTENT DEBUG ===\033[0m")
+            print(f"\033[33m[UniversalAIChat] SWITCHES: Tag={enable_tag}, Filename={enable_filename}\033[0m")
+            print(f"\033[33m[UniversalAIChat] FINAL PROMPT SENT TO MODEL:\n----------------------------------------\n{user_text_content}\n----------------------------------------\033[0m\n")
+            
+            # Standard Multimodal Message Structure
+            # Works for Llama-3-Vision, Qwen-VL, MiniCPM-V via llama-cpp-python
+            user_content_list = [
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
+                {"type": "text", "text": user_text_content}
+            ]
+            
+            messages.append({"role": "user", "content": user_content_list})
+            display_up = f"[IMAGE]\n{user_text_content}"
+            
+            print(f"\033[36m[UniversalAIChat] Vision Prompt Constructed. Messages: {len(messages)}\033[0m")
             
         else:
-            # [Text Mode]
-            # 结构：System Message = system_command
-            # User Message = user_prompt + [Extra] + [Footer]
+            # [Text Mode (Enhance / Debug)]
+            final_text_content = f"{final_user_content}{template_instructions}"
+            messages.append({"role": "user", "content": final_text_content})
             
-            # System Message 保持为 system_command
-            system_command_for_msg = system_command
+            display_up = f"🛡️ [System Instruction]:\n{final_system_command}\n\n{final_text_content}"
 
-            # 如果是默认 SC，我们已经把它改写成了 "你是一个...专家...SECTION 1..."
-            # 如果是自定义 SC，保持原样
-            
-            # 处理 User Prompt 空值 fallback
-            if not user_prompt.strip():
-                if chat_mode == "Enhance_Prompt":
-                    user_prompt = "Please proceed with the task."
-                else:
-                    user_prompt = "Hello."
-            
-            # 构建 User Message 的后缀 (Extra + Footer)
-            user_suffix_parts = []
-            if extra_instructions:
-                user_suffix_parts.append(extra_instructions)
-            if footer_instruction:
-                user_suffix_parts.append(footer_instruction)
-            
-            user_suffix = "\n\n".join(user_suffix_parts)
-            
-            final_user_text = f"{user_prompt}\n{user_suffix}" if user_suffix else user_prompt
-            
-            current_user_content = final_user_text
-            
-            # [Display Logic Improvement]
-            # 让 Monitor 显示完整上下文 (包含 System Command)，消除用户对“指令是否生效”的疑虑
-            if system_command_for_msg:
-                 display_up = f"🛡️ [System Instruction]:\n{system_command_for_msg}\n\n👤 [User Input]:\n{final_user_text}"
-            else:
-                 display_up = final_user_text
+        # ==========================================================
+        # 4. 推理执行 (Inference Execution)
+        # ==========================================================
+        
+        # [State Management]
+        # Vision models with adapters are sensitive to KV cache state.
+        # We MUST reset the model state before each generation to prevent:
+        # 1. "Turn off switch but still broken" (Cache corruption)
+        # 2. Interference from previous turns
+        # if hasattr(model, 'reset'):
+        #     model.reset()
+        
+        # [Check for Released Model]
+        if getattr(model, '_is_closed', False):
+             print(f"\033[31m[UniversalAIChat] 🔴 模型已释放 (Model Released)\033[0m")
+             print(f"\033[33m[UniversalAIChat] 💡 您上次运行开启了 'release_vram'，导致模型从显存中卸载。\033[0m")
+             print(f"\033[33m[UniversalAIChat] 💡 请修改 [LH_GGUFLoader] 节点的任意参数（例如改变 n_ctx 或 n_gpu_layers），以触发模型重新加载。\033[0m")
+             raise ValueError("Model is closed (release_vram was active). Please reload the model by changing Loader parameters.")
 
-        # 4. 构造完整消息链 (Messages List)
-        messages = []
+        # Print Debug Info
+        # print(f"\033[36m[UniversalAIChat] Mode: {current_mode}\033[0m")
+        # print(f"\033[36m[UniversalAIChat] System Command: {final_system_command[:50]}...\033[0m")
         
-        # System Message (仅 Text Mode 或 Qwen Vision Mode)
-        # [Fix] 之前这里写了 (仅 Text Mode)，这是错误的。对于 Vision Mode，如果 use_independent_system_msg 为真，也需要加。
-        if system_command_for_msg:
-             messages.append({"role": "system", "content": system_command_for_msg})
-
-        
-        # Rule 2: Context 注入
-        # [Universal Support - Modified]
-        # 用户纠正：Monitor 只是存储，通常不连线给 Chat。
-        # 只有在 Debug 模式下，用户才会手动连线或复制内容。
-        # 但如果用户在 Enhance_Prompt 模式下也连了线呢？
-        # 用户原话：“不需要，除非 我在debug模式的情况下，我才需要手动复制，或者连线给chat.”
-        # 这意味着：如果连了线，我们应该尊重连线。
-        # 但如果 Context 导致了截断，说明 Context 太长了。
-        
-        # 既然用户说“这是错的，并没有”，那说明刚才的“第二轮截断”并非因为 Context（因为用户可能根本没连 Context）。
-        # 如果没连 Context，为什么会截断？
-        # 1. 第一轮生成的太长，导致 System Command + User Prompt + Output > 2048？
-        # 2. 或者用户其实连了 Context 但自己没意识到？
-        # 3. 或者模型自己在发疯？
-        
-        # 无论如何，我们先把 Context 注入逻辑改回“尊重连线”。
-        # 只要 context 有值，就注入。这没问题。
-        
-        # 关键是，用户说“第二轮输出不完整”，如果没连 Context，那第二轮和第一轮应该是一模一样的（假设 Prompt 没变）。
-        # 如果第二轮是针对第一轮的润色（比如把第一轮的输出作为第二轮的输入），那么输入确实变长了。
-        
-        if context and context.strip():
-            # ... (保持注入逻辑不变，因为只有连了线 context 才有值)
-            pass
-            
-            context_header = "\n\n## Historical Context (Reference Only):\n"
-            
-            if is_vision_task:
-                 current_text = current_user_content[1]["text"]
-                 new_text = f"{context_header}{context}\n\n{current_text}"
-                 current_user_content[1]["text"] = new_text
-            else:
-                 messages.append({"role": "user", "content": f"{context_header}{context}"})
-
-        
-        # Rule 3: User Input (Text + Image or Text only)
-        # [Critical Fix for VL Models]
-        # 对于某些 VL 模型 (如 Qwen-VL, Llava)，如果 content 是 list 格式，必须确保格式完全符合 llama-cpp-python 的预期。
-        # 调试信息：打印消息结构
-        print(f"\033[36m[UniversalAIChat] Input Messages: {len(messages)} items\033[0m")
-        if is_vision_task:
-             print(f"\033[36m[UniversalAIChat] Vision Task Detected. Image Size: {len(img_str)} chars\033[0m")
-             
-        messages.append({"role": "user", "content": current_user_content})
-
-        # 推理执行
         try:
-            # [Vision Mode Context Warning]
-            # 视觉任务通常需要较长的 Context (图片 Token + 生成内容)
-            if is_vision_task:
-                 # 获取当前 n_ctx
-                 current_n_ctx = model.n_ctx() if hasattr(model, 'n_ctx') else 0
-                 if current_n_ctx < 4096:
-                     print(f"\033[31m[UniversalAIChat] CRITICAL WARNING: Vision task requires at least 4096 ctx. Current: {current_n_ctx}.\033[0m")
-                     print(f"\033[33m[UniversalAIChat] Please increase 'n_ctx' in Loader node to avoid truncation or errors.\033[0m")
-
-            # [Stop Token Handling]
-            # 强制锁定停止词，防止模型无限生成或吐出特殊标记
-            # User Suggestion: Add <|im_start|> to stop tokens to prevent hallucinating new turns.
-            stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|im_start|>"]
+            # [Optimization] Standard Stop Tokens
+            # We strictly stick to standard EOS tokens to avoid "0-token output" caused by false positives.
+            # Removing custom tokens like "[PART 1: Description]" because they might be the START of the generation!
             
-            # [Temperature Guard]
-            safe_temperature = min(max(temperature, 0.0), 2.0)
-            if safe_temperature > 1.5:
-                print(f"\033[33m[UniversalAIChat] Warning: High temperature ({safe_temperature}) detected. Output may be incoherent.\033[0m")
-
-            # [Execution Logic Split]
-            # User Request: 强制 ChatML 格式，且在 Text 模式下不使用 create_chat_completion (避免错误模板)
-            
+            # [CRITICAL FIX] Stop Token Strategy for Vision
+            # User diagnosis: "Stop Token hitting start" or "0 output".
+            # For Vision tasks, especially with Qwen2-VL or Llama-3-Vision via GGUF,
+            # explicit stop tokens might be triggering false positives if the chat template is slightly mismatched.
+            # We will disable explicit stop tokens for Vision tasks and rely on the model's EOS.
+            # [Unified Inference Setup]
             if is_vision_task:
-                # [Vision Task]
-                # 必须使用 create_chat_completion，因为 image 处理逻辑封装在 chat_handler 中
-                # 我们尝试强制修正 chat_format，但主要依赖 handler
+                # Vision Mode
+                # 1. Stop Tokens: Disable explicit stop tokens to prevent false positives (0-token output).
+                #    Vision models (like Qwen-VL) often trigger stop tokens prematurely if we force them.
+                stop_tokens = None
                 
-                # 尝试临时覆盖 format (如果支持)
-                # model.chat_format = 'chatml' 
+                # 2. Repetition Penalty:
+                # - If structure is needed (Tags/Filename), use mild penalty (1.05) to prevent infinite tag loops.
+                # - If no structure, use 1.0 (no penalty) to allow natural captioning flow.
+                repetition_penalty = 1.05 if (apply_template and needs_structure) else 1.0
                 
-                output = model.create_chat_completion(
-                    messages=messages, 
-                    max_tokens=max_tokens, 
-                    temperature=safe_temperature, 
-                    repeat_penalty=repetition_penalty, 
-                    seed=seed,
-                    stop=stop_tokens
-                )
-                
-                if not output or 'choices' not in output or not output['choices']:
-                     raise ValueError("Empty response from model.")
-                
-                finish_reason = output['choices'][0].get('finish_reason', 'unknown')
-                usage = output.get('usage', {})
-                full_res = output['choices'][0]['message']['content']
-                
+                # Debug
+                if apply_template and needs_structure:
+                     print(f"\033[36m[UniversalAIChat] Vision + Structure: Penalty={repetition_penalty}, StopTokens=None\033[0m")
+
             else:
-                # [Text Task]
-                # User Request (via AI Advice): 
-                # 1. Abandon messages/create_chat_completion to avoid Llama-2 template errors.
-                # 2. Manually construct ChatML string with System/User roles.
-                # 3. Use create_completion (basic inference).
+                # Text Mode (Enhance / Chat)
+                # 1. Stop Tokens: Use standard ChatML/Llama stop tokens. Text models rely on these to stop.
+                #    Without this, complex instructions (like "5 sections") cause the model to loop or hallucinate.
+                stop_tokens = ["<|im_end|>", "<|endoftext|>"]
                 
-                prompt_parts = []
+                # 2. Repetition Penalty:
+                # - Always use mild penalty (1.1) for text enhancement to prevent loops.
+                repetition_penalty = 1.1
                 
-                # Part 1: System
-                if system_command_for_msg:
-                    prompt_parts.append(f"<|im_start|>system\n{system_command_for_msg}<|im_end|>\n")
-                
-                # Part 2: User
-                # current_user_content includes User Prompt + Extra Instructions + Footer
-                prompt_parts.append(f"<|im_start|>user\n{current_user_content}<|im_end|>\n")
-                
-                # Part 3: Assistant Start
-                prompt_parts.append("<|im_start|>assistant\n")
-                
-                final_prompt = "".join(prompt_parts)
-                
-                print(f"\033[36m[UniversalAIChat] Manual ChatML Prompt Constructed ({len(final_prompt)} chars)\033[0m")
-                # Debug: Print first 100 chars to verify format
-                print(f"\033[36m[UniversalAIChat] Prompt Head: {final_prompt[:100].replace(chr(10), '\\n')}...\033[0m")
-                
-                # 3. 调用 create_completion (Raw)
-                output = model.create_completion(
-                    prompt=final_prompt,
-                    max_tokens=max_tokens,
-                    temperature=safe_temperature,
-                    repeat_penalty=repetition_penalty,
-                    seed=seed,
-                    stop=stop_tokens
-                )
-                
-                if not output or 'choices' not in output or not output['choices']:
-                     raise ValueError("Empty response from model.")
+                print(f"\033[36m[UniversalAIChat] Text Mode: Penalty={repetition_penalty}, StopTokens={stop_tokens}\033[0m")
 
-                finish_reason = output['choices'][0].get('finish_reason', 'unknown')
-                usage = output.get('usage', {})
-                full_res = output['choices'][0]['text'] # create_completion 返回 'text' 字段
+            safe_temperature = min(max(temperature, 0.0), 2.0)
+            
+            # Vision Task uses create_chat_completion (mandatory for image handler)
+            # Text Task also uses it now for consistency, unless specific Qwen issues arise.
+            # (Previously we switched to manual ChatML for Text to avoid Llama template errors, but Qwen handles standard messages well if chat_format is set)
+            
+            # [Unified Inference]
+            # Use create_chat_completion for both Text and Vision tasks.
+            # This ensures compatibility with whatever chat_format is detected (ChatML, Llama-3, Vicuna, etc.)
+            
+            output = model.create_chat_completion(
+                messages=messages, 
+                max_tokens=max_tokens, 
+                temperature=safe_temperature, 
+                repeat_penalty=repetition_penalty, 
+                seed=seed,
+                stop=stop_tokens
+            )
+            if not output or 'choices' not in output or not output['choices']:
+                 raise ValueError("Empty response from model.")
+            full_res = output['choices'][0]['message']['content']
+            finish_reason = output['choices'][0].get('finish_reason', 'unknown')
+            usage = output.get('usage', {})
+
+
 
             
             print(f"\033[36m[UniversalAIChat] Usage: {usage}, Finish Reason: {finish_reason}\033[0m")
             
             if finish_reason == 'length':
-                print(f"\033[31m[UniversalAIChat] WARNING: Output Truncated! Context Limit Reached.\033[0m")
-                print(f"\033[33m[UniversalAIChat] Solution: Please increase 'n_ctx' in LoraHelper_Loader node (Current default is 2048, try 8192 or 16384).\033[0m")
-                full_res += "\n\n[SYSTEM: Output Truncated due to Context Limit (n_ctx). Please increase it in Loader node.]"
+                print(f"\033[31m[UniversalAIChat] WARNING: Output Truncated! Max Tokens or Context Limit Reached.\033[0m")
+                print(f"\033[33m[UniversalAIChat] Solution 1: Increase 'max_tokens' in THIS node (Chat) - likely the cause.\033[0m")
+                print(f"\033[33m[UniversalAIChat] Solution 2: Increase 'n_ctx' in Loader node (if input is very long).\033[0m")
+                full_res += "\n\n[SYSTEM: Output Truncated. Please increase 'max_tokens' (Chat Node) or 'n_ctx' (Loader Node).]"
             
             # [Post-Processing] 清理可能残留的 Token
             if full_res:
@@ -678,18 +588,24 @@ class UniversalAIChat:
             # [Anti-Repetition Guard]
             # 检测并移除 System Command 复读
             # 如果 full_res 以 system_command 开头（允许少量差异），则移除
-            if system_command and len(system_command) > 10:
+            if final_system_command and len(final_system_command) > 10:
                 # 简单的前缀检查
-                if full_res.strip().startswith(system_command.strip()[:20]):
+                if full_res.strip().startswith(final_system_command.strip()[:20]):
                     print(f"\033[33m[UniversalAIChat] Warning: System Command repetition detected at start. Attempting to clean...\033[0m")
                     # 尝试找到 System Command 的结束位置
                     # 这里假设 System Command 是完整的
-                    if system_command.strip() in full_res:
-                        full_res = full_res.replace(system_command.strip(), "", 1).strip()
+                    if final_system_command.strip() in full_res:
+                        temp_res = full_res.replace(final_system_command.strip(), "", 1).strip()
+                        if temp_res:
+                            full_res = temp_res
+                        else:
+                            # 如果移除后为空，说明模型只是复读了指令
+                            # 这种情况下，保留原内容可能更好，让用户看到“它复读了”，而不是“它没说话”
+                            print(f"\033[31m[UniversalAIChat] Warning: Model only repeated the instruction!\033[0m")
+                            # full_res = "[Error: Model only repeated the instruction]" # Optional
+                            pass 
                     else:
                         # 如果找不到完全匹配，可能是因为 Tokenization 导致的微小差异
-                        # 尝试移除前 N 个字符？风险较大。
-                        # 尝试匹配 SECTION 1 之前的内容
                         pass
             
             if not full_res:
@@ -711,212 +627,110 @@ class UniversalAIChat:
                  
                  full_res += "\n\n[SYSTEM ERROR]: Context Window Full (n_ctx too small). Please increase 'n_ctx' in the Loader node."
 
-        # 4. 智能截取 (Smart Truncation)
-        # 用户要求 gen_text 只包含 SECTION 1, 2, 3。
-        # 无论是否有 <think> 标签，如果检测到 "SECTION 1:"，则丢弃其之前的所有内容。
+        # 4. 输出解析 (Output Parsing)
+        # ==========================================================
         
-        # Step A: 标准 think 标签清理 (针对闭合的标签)
-        clean_text = re.sub(r'<think>.*?</think>', '', full_res, flags=re.DOTALL).strip()
-        
-        # [强化清理] 如果清理后仍以 <think> 开头 (说明没有闭合)，尝试暴力移除直到真正的正文
-        # 策略：如果找不到 </think>，但能找到 SECTION 1，则丢弃 SECTION 1 之前的所有内容
-        if clean_text.startswith('<think>'):
-             # 尝试寻找 </think> 的变体
-             end_think = clean_text.find('</think>')
-             if end_think != -1:
-                 clean_text = clean_text[end_think+8:].strip()
-             else:
-                 # 没找到闭合标签，依赖下面的 SECTION 锚点截取
-                 pass
-
-        # Step B: 智能锚点截取 (Smart Anchor Truncation)
-        # 策略升级：优先匹配“行首”的 SECTION 1，以避免匹配到文中引用的 SECTION 1。
-        # 同时放弃 rpartition (从后往前找)，改回从前往后找，防止因文末总结包含 SECTION 1 而导致整个正文被截断。
-        
-        # [Refined Logic] 排除 System Command 中的 "SECTION 1: 自然语言描述"
-        # 我们可以查找 "SECTION 1:" 且后面不紧跟 " 自然语言描述" 的情况
-        # 或者更通用地，查找 SECTION 1: 后面有换行或者非指令文本
-        
-        target_anchor_pattern = r'(?:^|\n)SECTION 1:(?!\s*自然语言描述)'
-        match = re.search(target_anchor_pattern, clean_text)
-        
-        if match:
-            # 从匹配到的位置开始截取
-            start_index = match.start()
-            # 精确处理：找到 "SECTION 1:" 的起始位置
-            real_start = clean_text.find("SECTION 1:", start_index)
-            clean_text = clean_text[real_start:]
-        else:
-            # Fallback for New Natural Format
-            # If no SECTION 1, we assume the text starts from the beginning (after think block)
-            pass
-
         # [Critical Correction] Monitor 数据流
-        # 用户纠正：Chat 应该把“文本原样不动”给 Monitor，连 think 过程都要保留。
-        # Monitor 负责整理原始对话历史。
-        # 而 Description/Tags/Filename 端口输出的是经过智能截取和分割的内容。
-        
-        # 因此，chat_history 使用 full_res (保留 <think> 标签和完整内容)
-        raw_clean_text = full_res
-            
-        chat_history = f"User: {display_up}\nAI: {raw_clean_text}"
+        # Chat 应该把“文本原样不动”给 Monitor，连 think 过程都要保留。
+        raw_output = f"User: {display_up}\nAI: {full_res}"
 
         if release_vram:
+            # [Fix] Explicitly close the llama.cpp model to release VRAM
+            # Simply gc.collect() is NOT enough for C++ bound objects.
+            try:
+                if hasattr(model, 'close'):
+                    model.close()
+                    print("\033[36m[UniversalAIChat] 🧹 Model Closed (VRAM Released).\033[0m")
+            except Exception as e:
+                print(f"\033[33m[UniversalAIChat] Warning during model close: {e}\033[0m")
+            
+            # Mark as closed so we can warn user next time
+            model._is_closed = True
+            
             gc.collect()
             torch.cuda.empty_cache()
-            
-        # 5. 内置 Splitter 逻辑 (Built-in Splitter)
-        # [Optimized for Natural Language Markers: Tags: / Filename:]
-        # Backward compatibility for SECTION 1/2/3 is maintained but deprecated.
+
+        # 5. 简单分割逻辑 (Simple Splitter)
+        # 既然 Splitter 节点已删除，这里必须承担起分割的任务。
+        # 配合新的 Trigger 格式：**description**:, **tags**:, **filename**:
         
-        out_desc = clean_text
+        # Step A: 清理 <think> 标签 (仅针对结构化输出端口)
+        clean_res = re.sub(r'<think>.*?</think>', '', full_res, flags=re.DOTALL).strip()
+        
+        # 处理未闭合的 <think>
+        if '<think>' in clean_res:
+            clean_res = clean_res.split('<think>')[0].strip()
+            
+        # Step B: 定义标记 (Markers)
+        # 必须与 Trigger 定义保持一致 (忽略大小写)
+        marker_desc = "**description**:"
+        marker_tags = "**tags**:"
+        marker_filename = "**filename**:"
+        
+        # 辅助函数：查找位置
+        def get_pos(marker, text):
+            m = re.search(re.escape(marker), text, re.IGNORECASE)
+            return m.start() if m else -1
+            
+        pos_desc = get_pos(marker_desc, clean_res)
+        pos_tags = get_pos(marker_tags, clean_res)
+        pos_filename = get_pos(marker_filename, clean_res)
+        
+        # Step C: 提取 Description
+        # 逻辑：
+        # 1. 如果找到 **description**:，从它后面开始。
+        # 2. 如果没找到，默认从头开始。
+        # 3. 截止到 **tags**: 或 **filename**: (谁在前算谁)。
+        
+        start_desc = 0
+        if pos_desc != -1:
+            start_desc = pos_desc + len(marker_desc)
+            
+        end_desc = len(clean_res)
+        candidates = []
+        if pos_tags != -1 and pos_tags > start_desc: candidates.append(pos_tags)
+        if pos_filename != -1 and pos_filename > start_desc: candidates.append(pos_filename)
+        
+        if candidates:
+            end_desc = min(candidates)
+            
+        out_desc = clean_res[start_desc:end_desc].strip()
+        
+        # Step D: 提取 Tags
         out_tags = ""
+        if enable_tag and pos_tags != -1:
+            start_tags = pos_tags + len(marker_tags)
+            end_tags = len(clean_res)
+            # 如果 filename 在 tags 后面，则截止到 filename
+            if pos_filename != -1 and pos_filename > start_tags:
+                end_tags = pos_filename
+            
+            raw_tags = clean_res[start_tags:end_tags].strip()
+            # 简单清理：换行变逗号
+            out_tags = raw_tags.replace("\n", ",")
+            
+        # Step E: 提取 Filename
         out_filename = ""
-        
-        # [Robust Cleaning] Remove potential start labels (Legacy & Natural & Structured)
-        # Handle cases like "SECTION 1:", "**Description:**", "### Analysis:", "[PART 1: Description]", etc.
-        # We use a comprehensive regex to strip these prefixes so out_desc starts with clean content.
-        clean_prefix_pattern = r'^\s*(?:SECTION 1[:：]?|(?:[#*\-_>]\s*|\[PART \d+:\s*)?(?:Description|Analysis|Caption|Prompt)(?:\*\*|__)?(?:\])?[:：]?)\s*'
-        clean_text = re.sub(clean_prefix_pattern, '', clean_text, flags=re.IGNORECASE).strip()
-        
-        # Logic: Find the first occurrence of "Tags:" or "Filename:" (or Legacy SECTION 2/3)
-        # Everything before that is Description.
-        
-        # Define Markers
-        # Priority: Legacy SECTION -> Natural Markers
-        # [Refined Safety Strategy]
-        # User Request: "I want Description to be PURE. If there are Tags/Filename/SECTIONs in the output, CUT THEM OUT, even if extraction is disabled."
-        #
-        # 1. Markers List: ALWAYS includes ALL potential metadata markers (Legacy & Natural).
-        #    - We match them strictly at line start to avoid false positives in description text.
-        #    - If a marker is found, we CUT the description there.
-        #
-        # 2. Extraction Logic:
-        #    - We only EXTRACT the content after the marker if the corresponding switch (enable_tags/filename) is ON.
-        #    - If switch is OFF, we discard the content (it's considered "junk" or "legacy pollution").
-        
-        # [Edge Case Fix - Comprehensive Markdown Support]
-        # [Extraction Strategy Update v3: The "Last Stand" Logic]
-        # User Question: "Is the first or the last one correct?"
-        # Answer: The LAST one is usually the refined, structural, and correct one.
-        # Why?
-        # 1. False Positives: "Tags:" might appear colloquially in the Description.
-        # 2. Self-Correction: The model might output a draft and then a final version.
-        # 3. Structure: The prompt demands Description -> Tags -> Filename. The structural markers are at the end.
-        
-        # [Fix for "Prompt Cut Failed"]
-        # In the user's case, the model output:
-        #   [First Content Block (looks like Tags)]
-        #   Filename: ...
-        #   ---
-        #   Description: ...
-        #   Tags: ...
-        #   Filename: ...
-        #
-        # The code correctly found the LAST Tags match (the second one) and the LAST Filename match (the second one).
-        # It then cut the description at the EARLIEST of these matches.
-        # However, the user's output had a "Description:" header in the middle!
-        # And the REAL description was AFTER that header.
-        
-        # This implies a "Draft -> Final" structure or "Metadata -> Description -> Metadata" structure.
-        # If the model explicitly outputs "Description:", we should trust that explicit header.
-        
-        # Strategy Update v4: Explicit Description Header Priority
-        # 1. Check if there is an explicit "Description:" header later in the text.
-        #    If found, the REAL description starts there. We should discard everything before it.
-        # 2. Then, apply the cut logic (stop at next Tags/Filename).
-        
-        md_prefix = r'(?:[#*\-_>]\s*|\[PART \d+:\s*)?'
-        md_suffix = r'(?:\*\*|__|\])?'
-        
-        # Detect explicit Description header
-        desc_header_pattern = rf'^{md_prefix}(?:Description|Analysis|Caption|Prompt){md_suffix}[:：]?\s*'
-        
-        # Find the LAST occurrence of "Description:" (in case of multiple drafts)
-        # We search line by line or using multiline regex
-        desc_matches = list(re.finditer(desc_header_pattern, clean_text, re.MULTILINE | re.IGNORECASE))
-        
-        if desc_matches:
-            # Found explicit headers!
-            # The real description likely starts after the LAST explicit header.
-            last_desc_header = desc_matches[-1]
-            start_pos = last_desc_header.end()
-            # Update clean_text to start from there
-            clean_text_for_desc = clean_text[start_pos:].strip()
-            # Also need to offset subsequent searches? 
-            # Actually, if we truncate clean_text, we must ensure Tags/Filename extraction still works on the FULL text?
-            # Or does Tags/Filename usually come AFTER the description?
-            # In the user's example: Description -> Tags -> Filename. Yes.
-            
-            # Let's use the truncated text for Description extraction
-            # But we should use the FULL text (starting from Description) for Tags/Filename to ensure we get the ones associated with THIS description.
-            
-            # So:
-            valid_content_start = start_pos
-        else:
-            valid_content_start = 0
-            clean_text_for_desc = clean_text
-            
-        # Define Patterns
-        tags_marker_pattern = rf'(?:SECTION 2[:：]?|{md_prefix}Tags{md_suffix}[:：])'
-        filename_marker_pattern = rf'(?:SECTION 3[:：]?|{md_prefix}Filename{md_suffix}[:：])'
-        
-        # Universal Stop: Next Marker or End of String
-        universal_stop_marker = rf'(?:\n\s*(?:SECTION [123][:：]?|{md_prefix}(?:Tags|Filename){md_suffix}[:：])|$)'
+        if enable_filename and pos_filename != -1:
+             start_fn = pos_filename + len(marker_filename)
+             raw_fn = clean_res[start_fn:].strip()
+             # 提取中括号内容
+             m = re.search(r'\[(.*?)\]', raw_fn)
+             if m:
+                 out_filename = m.group(1)
+             else:
+                 out_filename = raw_fn.split('\n')[0] # 没括号就取第一行
 
-        # Helper: Find First Match (since we are now looking relative to the valid start)
-        # Why First? Because we chopped off the previous drafts.
-        # But wait, the user's example had Tags at the very beginning too?
-        # User: "AI: 1girl... Filename... --- Description: ... Tags: ... Filename: ..."
-        # If we start after "Description:", we see "Tags: ... Filename: ...".
-        # So finding the First match in the truncated text is correct.
-        
-        def find_first_content(marker_pattern, text):
-            full_pattern = rf'({marker_pattern})\s*(.*?)(?={universal_stop_marker})'
-            match = re.search(full_pattern, text, re.DOTALL | re.IGNORECASE)
-            return match
-
-        # 1. Find Matches in the Valid Content Region
-        tags_match = find_first_content(tags_marker_pattern, clean_text_for_desc)
-        fn_match = find_first_content(filename_marker_pattern, clean_text_for_desc)
-        
-        # 2. Determine Description Cut Point (Relative to clean_text_for_desc)
-        cut_candidates = []
-        if tags_match: cut_candidates.append(tags_match.start())
-        if fn_match: cut_candidates.append(fn_match.start())
-        
-        if cut_candidates:
-            cut_pos = min(cut_candidates)
-            out_desc = clean_text_for_desc[:cut_pos].strip()
-        else:
-            out_desc = clean_text_for_desc.strip()
-            
-        # 3. Extract Content (If Enabled)
-        
-        if enable_tags_extraction and tags_match:
-            raw_tags = tags_match.group(2).strip()
-            # Clean tags
-            raw_tags = raw_tags.replace('\n', ',').replace('、', ',')
-            tags_list = [t.strip() for t in raw_tags.split(',') if t.strip()]
-            out_tags = ", ".join(tags_list)
-            
-        if enable_filename_extraction and fn_match:
-            raw_fn = fn_match.group(2).strip()
-            # Extract brackets
-            match_bracket = re.search(r'\[(.*?)\]', raw_fn)
-            if match_bracket:
-                out_filename = match_bracket.group(1).strip()
-            else:
-                out_filename = raw_fn
-
-        # 返回切分后的结果
-        return (out_desc, out_tags, out_filename, chat_history)
+        # ==========================================================
+        # 6. 输出结果 (Return)
+        # ==========================================================
+        return (out_desc, out_tags, out_filename, raw_output)
 
 # 4. 历史监控节点 (流水线排序)
 # ==========================================================
 # PROJECT: LoraHelper_Monitor (History Viewer)
 # MANDATORY UI ORDER (INPUT_TYPES):
-#   1. chat_history (Raw Text Input)
+#   1. raw_output (Raw Text Input)
 #
 # LOGIC DEFINITION:
 #   - Maintains a rolling buffer of last 5 chat interactions
@@ -929,7 +743,12 @@ class LH_History_Monitor:
 
     @classmethod
     def INPUT_TYPES(s):
-        return { "required": { "chat_history": ("STRING", {"forceInput": True}) } }
+        return { 
+            "required": { 
+                "raw_input": ("STRING", {"forceInput": True}),
+                "clear_history": ("BOOLEAN", {"default": False, "label_on": "Clear History", "label_off": "Keep History"})
+            } 
+        }
     
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("context",)
@@ -937,34 +756,39 @@ class LH_History_Monitor:
     FUNCTION = "update"
     CATEGORY = "custom_nodes/MyLoraNodes"
 
-    def update(self, chat_history):
+    def update(self, raw_input, clear_history):
+        # 0. Clear History Check
+        if clear_history:
+            self.history = []
+            # We still process the current input, but it will be the ONLY item in history.
+            print("\033[36m[LH_History_Monitor] History Cleared by User.\033[0m")
         # 1. 解析输入 (支持 JSON 或 纯文本)
         import json
         user_msg = ""
         ai_msg = ""
         
         # 尝试解析特定格式 "User: ... \nAI: ..."
-        if isinstance(chat_history, str) and chat_history.startswith("User:"):
+        if isinstance(raw_input, str) and raw_input.startswith("User:"):
              # 使用 split 分割，注意只分割第一个 "\nAI: "
-             parts = chat_history.split("\nAI: ", 1)
+             parts = raw_input.split("\nAI: ", 1)
              if len(parts) == 2:
                  user_msg = parts[0][5:].strip() # 去掉 "User: "
                  ai_msg = parts[1].strip()
              else:
                  user_msg = "Raw Input"
-                 ai_msg = str(chat_history)
+                 ai_msg = str(raw_input)
         else:
             try:
-                data = json.loads(chat_history)
+                data = json.loads(raw_input)
                 if isinstance(data, dict):
                     user_msg = data.get("user", "")
                     ai_msg = data.get("ai", "")
                 else:
                     user_msg = "Raw Input"
-                    ai_msg = str(chat_history)
+                    ai_msg = str(raw_input)
             except:
                  user_msg = "Raw Input"
-                 ai_msg = str(chat_history)
+                 ai_msg = str(raw_input)
         
         # 2. 更新历史 (去重)
         # 构造一个结构化对象存储

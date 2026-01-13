@@ -6,37 +6,30 @@ app.registerExtension({
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
 		if (nodeData.name === "LH_History_Monitor") {
 			function populate(text) {
-                // Clear existing widgets to avoid duplication/stale state
-				if (this.widgets) {
-					for (let i = 0; i < this.widgets.length; i++) {
-						this.widgets[i].onRemove?.();
-					}
-					this.widgets.length = 0;
-				}
+                // [Fix] Do NOT clear widgets if it's the "clear_history" switch!
+                // The node has input widgets (like the switch) that should be preserved.
+                // We only want to update the "display_text" widget.
 
-                // Ensure text is an array
-				const v = Array.isArray(text) ? text : [text];
-				
-                // Combine into a single string for better display as a single block (User preference usually)
-                // Or if user wants blocks, we can iterate. 
-                // Given the chat history context, a single large text area is usually better for copy-paste/viewing.
-                // But ShowText iterates. Let's join them to be safe and ensure one big box.
-                const joinedText = v.join("\n");
+                // Find existing display widget or create if missing
+                let displayWidget = this.widgets ? this.widgets.find(w => w.name === "display_text") : null;
+                
+                const joinedText = Array.isArray(text) ? text.join("\n") : text;
 
-                // Create standard ComfyUI STRING widget
-                // Using ComfyWidgets["STRING"] ensures correct event handling and DOM structure
-				const w = ComfyWidgets["STRING"](
-                    this, 
-                    "display_text", 
-                    ["STRING", { multiline: true }], 
-                    app
-                ).widget;
+                if (displayWidget) {
+                    displayWidget.value = joinedText;
+                } else {
+                    // Create if not exists (should be rare if onNodeCreated works)
+                    const w = ComfyWidgets["STRING"](
+                        this, 
+                        "display_text", 
+                        ["STRING", { multiline: true }], 
+                        app
+                    ).widget;
+                    w.inputEl.readOnly = true;
+                    w.inputEl.style.opacity = 0.6;
+                    w.value = joinedText;
+                }
 
-				w.inputEl.readOnly = true;
-				w.inputEl.style.opacity = 0.6;
-				w.value = joinedText;
-
-                // Auto-resize logic using standard computeSize
 				requestAnimationFrame(() => {
 					const sz = this.computeSize();
 					if (sz[0] < this.size[0]) {
@@ -72,7 +65,11 @@ app.registerExtension({
              const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function() {
                 onNodeCreated?.apply(this, arguments);
-                if (!this.widgets || this.widgets.length === 0) {
+                
+                // [Fix] Always ensure display_text widget exists, regardless of other widgets
+                const hasDisplay = this.widgets && this.widgets.some(w => w.name === "display_text");
+                
+                if (!hasDisplay) {
                      const w = ComfyWidgets["STRING"](
                         this, 
                         "display_text", 
