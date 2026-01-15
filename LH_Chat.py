@@ -289,7 +289,7 @@ class UniversalAIChat:
                 "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0, "step": 0.01}),
                 "repetition_penalty": ("FLOAT", {"default": 1.1, "min": 1.0, "max": 2.0, "step": 0.01}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff}),
-                "release_vram": ("BOOLEAN", {"default": True}),
+                "release_vram": ("BOOLEAN", {"default": False}),
             },
             "optional": {
                 "image": ("IMAGE",),
@@ -818,7 +818,7 @@ class UniversalAIChat_Legacy:
                 "temperature": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 2.0, "step": 0.01}),
                 "repetition_penalty": ("FLOAT", {"default": 1.1, "min": 1.0, "max": 2.0, "step": 0.01}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff}),
-                "release_vram": ("BOOLEAN", {"default": True}),
+                "release_vram": ("BOOLEAN", {"default": False}),
             },
             "optional": {
                 "image": ("IMAGE",),
