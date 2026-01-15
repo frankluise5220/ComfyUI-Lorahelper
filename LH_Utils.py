@@ -62,13 +62,15 @@ class LoRA_AllInOne_Saver:
         return {
             "required": {
                 "images": ("IMAGE", ),
-                "gen_prompt": ("STRING", {"forceInput": True}),
-                "lora_tags": ("STRING", {"forceInput": True}),
-                "filename_final": ("STRING", {"forceInput": True}),
                 "folder_path": ("STRING", {"default": "LoRA_Train_Data"}),
                 "filename_prefix": ("STRING", {"default": "Anran"}),
                 "trigger_word": ("STRING", {"default": "ChenAnran"}), 
                 "save_workflow": ("BOOLEAN", {"default": True}), # 功能 2：开关
+            },
+            "optional": {
+                "gen_prompt": ("STRING", {"forceInput": True}),
+                "lora_tags": ("STRING", {"forceInput": True}),
+                "filename_final": ("STRING", {"forceInput": True}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"}
         }
@@ -77,12 +79,15 @@ class LoRA_AllInOne_Saver:
     OUTPUT_NODE = True  
     CATEGORY = "custom_nodes/MyLoraNodes"
 
-    def save(self, images, gen_prompt, lora_tags, filename_final, folder_path, filename_prefix, trigger_word, save_workflow, prompt=None, extra_pnginfo=None):
+    def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
         # 0. 基础清理与智能验证
-        s_file = str(filename_final).strip()
+        # Handle optional inputs being None
+        # [CHANGE] We do NOT convert lora_tags/gen_prompt to "" here, because we need to detect None for file skipping.
         
-        # [智能修正] 如果输入的文件名过长（说明可能是误连了 Prompt 或模型输出了句子），则丢弃它
-        # 阈值设定：长度 > 80 或 单词数 > 8 (放宽一点以免误杀长单词)
+        s_file = str(filename_final).strip() if filename_final else ""
+        
+        # 如果输入的文件名过长（说明可能是误连了 Prompt 或模型输出了句子），则丢弃它
+        # 智能修正 1：太长/太多词，丢弃
         if len(s_file) > 80 or len(s_file.split()) > 8:
              print(f"\033[33m[LoRA_Saver] Warning: Input filename is too long (Likely a sentence). Fallback to prefix only.\033[0m")
              s_file = ""
@@ -140,9 +145,13 @@ class LoRA_AllInOne_Saver:
             # ------------------------------------------
 
             if i == 0:
-                with open(os.path.join(full_path, f"{safe_name}_{timestamp}.txt"), "w", encoding="utf-8") as f:
-                    f.write(f"{trigger_word}, {lora_tags}".strip(", "))
-                with open(os.path.join(full_path, f"{safe_name}_{timestamp}_log.txt"), "w", encoding="utf-8") as f:
-                    f.write(str(gen_prompt))
+                # [Fix] Only save text files if inputs are connected (not None)
+                if lora_tags is not None:
+                    with open(os.path.join(full_path, f"{safe_name}_{timestamp}.txt"), "w", encoding="utf-8") as f:
+                        f.write(f"{trigger_word}, {lora_tags}".strip(", "))
+                
+                if gen_prompt is not None:
+                    with open(os.path.join(full_path, f"{safe_name}_{timestamp}_log.txt"), "w", encoding="utf-8") as f:
+                        f.write(str(gen_prompt))
                     
         return {"ui": {"images": results}} # 这里也从 [] 修复为了 results
