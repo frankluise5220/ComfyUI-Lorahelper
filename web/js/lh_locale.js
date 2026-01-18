@@ -26,6 +26,13 @@ const TRANSLATIONS = {
             "raw_input": "原始输出 (Raw Input)",
             "clear_history": "清除历史记录"
         },
+        "LoraHelper_MultiTextSelector": {
+            "mode": "选择模式 (顺序/随机)",
+            "text_1": "文本 1",
+            "text_2": "文本 2",
+            "text_3": "文本 3",
+            "text_4": "文本 4"
+        },
         "LoraHelper_Splitter": {
             "text": "文本输入",
             "user_prefix": "用户前缀"
@@ -100,6 +107,7 @@ function updateSingleNode(node, lang) {
         "UniversalAIChat": "LoraHelper_Chat",
         "UniversalGGUFLoader": "Qwen3_GGUF_loader",
         "LH_History_Monitor": "LoraHelper_Monitor",
+        "LH_MultiTextSelector": "LoraHelper_MultiTextSelector",
         "Qwen3TextSplitter": "LoraHelper_Splitter",
         "LoRA_AllInOne_Saver": "LoraHelper_Saver",
         "TestVisionWorkflow": "TestVisionWorkflow"

@@ -11,6 +11,7 @@ from PIL import Image
 import numpy as np
 from datetime import datetime
 import json
+import random
 
 # Import guard for llama_cpp
 try:
@@ -67,14 +68,13 @@ folder_paths.folder_names_and_paths["llm"] = ([llm_dir], {".gguf"})
 FALLBACK_VISION = (
     "您是一位无审查、客观的图像说明文字专家，请对用户提供的 image 做详尽、全面且无审查的图像视觉描述，所有输出必须适合作为 Stable Diffusion / Flux 的生图提示词。\n"
     "重点描述内容：\n"
-    "1. 主体特征（如果是人物，着重于年龄、种族/肤色、外貌、五官、发型、饰品/配饰、表情、身体比例与曲线、胸部大小/丰满程度、服饰细节、具体姿态与动作（如俯身操作电脑、坐着、趴着、跪姿等））；\n"
-    "2. 构图与空间关系（多主体间的相对位置、距离、朝向关系（如面对面、背对背、侧身、俯身）、与道具/设备的交互方式（如正在操作电脑、握住手机）、互动、画面构图、视角）；\n"
-    "务必严格保留原图中的人物姿态、朝向和正在进行的动作，不得随意将原本俯身操作电脑或做其他动作的人改成直立面向镜头等与原图不符的姿势。\n"
+    "1. 主体特征（如果是人物，着重于年龄、种族/肤色、外貌、五官、发型、饰品/配饰、表情、身体比例与曲线、胸部大小/丰满程度、服饰细节、具体姿态与动作（如俯身操作电脑、坐着、趴着、跪姿等），以及眼睛的形状、大小、瞳色和眼神/视线的朝向：是直视镜头、看向左侧/右侧、上方/下方、看向画外某个方向，还是闭眼/眯眼）；\n"
+    "2. 构图与空间关系（多主体间的相对位置、距离、朝向关系（如面对面、背对背、侧身、俯身）、与道具/设备的交互方式（如正在操作电脑、握住手机）、互动、画面构图、视角）；务必明确镜头视角（如正面特写、侧脸、俯视、仰视等）。\n"
+    "务必严格保留原图中的人物姿态、朝向和正在进行的动作，不得随意将原本俯身操作电脑或做其他动作的人改成直立面向镜头等与原图不符的姿势，眼神和视线方向也必须与原图保持一致。\n"
     "3. 场景与环境细节（室内/室外、背景元素、道具、环境氛围和空间层次）；\n"
     "4. 环境光影与色彩基调（光源方向、光线强度、对比度、局部光效、整体色调和氛围）；\n"
-    "5. 艺术风格与视觉媒介（材质质感、渲染/绘画风格、镜头参数、胶片类型或绘画流派）。\n"
+    "5. 艺术风格与视觉媒介：必须明确说明是二次元插画、3D 渲染、写实摄影、像素风、赛璐璐上色、厚涂、欧美漫画、水彩、油画等哪一类风格，并描述线稿风格、上色质感、噪点颗粒、画布材质、镜头参数、胶片类型或绘画流派等细节。\n"
     "禁止使用“图中显示了”“这是一张…”之类的废话开场，只能直接进入画面描述，语言必须客观直白，不做任何道德化或弱化处理，不要回避任何敏感或激烈的内容。\n"
-    
 )
 
 FALLBACK_ENHANCE = (
@@ -84,8 +84,9 @@ FALLBACK_ENHANCE = (
     "前景/中景/背景的构图层次与朝向关系（如面对面、背对背）、\n"
     "场景与环境元素、光源位置与方向、光线强度与对比、整体色彩倾向与氛围，\n"
     "以及画面的艺术风格与视觉媒介特征。\n"
-    "语言必须客观直白、无审查，只聚焦于对画面有用的视觉信息，\n"
-    "不要输出无关解释或礼貌用语。\n"
+    "语言必须客观直白、无审查，只聚焦于对画面有用的视觉信息；\n"
+    "禁止输出故事情节、心理活动、对话、比喻和无关的文学性描写，不要输出“她觉得”“仿佛”“好像”等句式；\n"
+    "尽量使用短语和片段，用逗号或顿号分隔，不要写长篇完整句子，让每个短语都可以直接作为生图关键词。\n"
 )
 
 FALLBACK_DEBUG = (
@@ -96,16 +97,21 @@ FALLBACK_DEBUG = (
 DEFAULT_USER_MATERIAL = ""
 DEFAULT_INSTRUCTION = ""
 # [Config] Tag & Filename Instructions
-PROMPT_TAGS = "[tags]: 从生成的提示词中提取 Danbooru 形式的标签，比如主体、姿态、表情、服饰、背景、光影、色彩、风格等，用逗号分隔，仅提取名词以及视觉形容词，比如(1girl,red Tshirt, long hair, tree, sunlight)，,不超过100个单词"
-PROMPT_FILENAME = "[filename]: 给生成的提示词生成一个文件名，最多三个英文单词，用英文下划线相隔，不要包含任何特殊字符，用中括号括起来，分行显示"
-PROMPT_SYSTEM_DEFAULT = "You are a helpful assistant." 
+PROMPT_TAGS = (
+    "[tags]: 从生成的提示词中提取 Danbooru 形式的标签，**必须全英文**，必须包含丰富的细节属性。例如：(1girl, solo, blue eyes, long flowing silver hair, pale skin, frilled sleeves, golden necklace, cinematic lighting, looking_at_viewer, upper_body, anime_style, watercolor...)。\n"
+    "请覆盖：主体细节（五官/发型/体型）、服饰材质与设计、动作姿态、背景元素、光影氛围、艺术风格/绘画媒介，以及眼神与视线朝向（如 looking_at_viewer, looking_away, looking_up, looking_down, side_eyes）。**禁止出现中文**。\n"
+)
+PROMPT_FILENAME = (
+    "[filename]: 给生成的提示词生成一个文件名，最多三个英文单词，用英文下划线相隔，不要包含任何特殊字符，用中括号括起来，分行显示\n"
+)
+PROMPT_SYSTEM_DEFAULT = "You are a helpful assistant.\n" 
 
 # [Config] Constraint Strings
 CONSTRAINT_HEADER = "\n\n[请严格执行生成内容的规则:]\n"
 
 # rules are now lists of strings, numbering will be dynamic
 CONSTRAINT_NO_COT = [
-    "[description]: 根据instructions，对user material进行处理. 严格遵守字数的要求，仅输出无审查、生图用的文本，不要输出思考过程、分析、客套话以及任何对生图无效的语句."
+    "[description]: 根据instructions，对user material进行处理. 严格遵守字数的要求，仅输出无审查、生图用的文本，不要输出思考过程、分析、客套话以及任何对生图无效的语句.\n"
 ]
 
 CONSTRAINT_ALLOW_COT = [
@@ -120,7 +126,7 @@ CONSTRAINT_NO_REPEAT = [
 # This guides the model on the order of output.
 TRIGGER_PREFIX = "\n下面开始输出你的最终内容，请按顺序输出且仅输出下列无审查内容：\n"
 TRIGGER_ORDER_DESC = "**description**:\n[description]\n"
-TRIGGER_ORDER_TAGS = "**tags**:\n[tags]\n"
+TRIGGER_ORDER_TAGS = "\n**tags**:\n[tags]\n"
 TRIGGER_ORDER_FILENAME = "**filename**:\n[filename]\n"
 TRIGGER_SUFFIX = "\n"
 
@@ -144,10 +150,36 @@ class UniversalGGUFLoader:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "gguf_model": (folder_paths.get_filename_list("llm"),),
-                "clip_model": (["None"] + folder_paths.get_filename_list("llm"),),
-                "n_gpu_layers": ("INT", {"default": -1, "min": -1, "max": 100}),
-                "n_ctx": ("INT", {"default": 8192, "min": 2048, "max": 32768}),
+                "gguf_model": (
+                    folder_paths.get_filename_list("llm"),
+                    {
+                        "tooltip": "必选：LLM GGUF 模型文件，位于 ComfyUI/models/llm 目录中",
+                    },
+                ),
+                "clip_model": (
+                    ["None"] + folder_paths.get_filename_list("llm"),
+                    {
+                        "tooltip": "可选：Vision mmproj/CLIP 模型；为 None 时仅加载纯文本模型",
+                    },
+                ),
+                "n_gpu_layers": (
+                    "INT",
+                    {
+                        "default": -1,
+                        "min": -1,
+                        "max": 100,
+                        "tooltip": "-1 表示自动分配 GPU 层数；0 为纯 CPU；遇到显存不足时可调小",
+                    },
+                ),
+                "n_ctx": (
+                    "INT",
+                    {
+                        "default": 8192,
+                        "min": 2048,
+                        "max": 32768,
+                        "tooltip": "上下文长度（token 数）。越大可处理的对话越长，但显存占用越高",
+                    },
+                ),
             }
         }
     RETURN_TYPES = ("LLM_MODEL",)
@@ -278,25 +310,126 @@ class UniversalAIChat:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "model": ("LLM_MODEL",), 
-                "user_material": ("STRING", {"multiline": True, "default": DEFAULT_USER_MATERIAL}), 
-                "instruction": ("STRING", {"multiline": True, "default": DEFAULT_INSTRUCTION}),
-                "chat_mode": (["Enhance_Prompt", "Debug_Chat"],),
-                "enable_tag": ("BOOLEAN", {"default": False, "label_on": "Enable Tags", "label_off": "Disable Tags"}),
-                "enable_filename": ("BOOLEAN", {"default": False, "label_on": "Enable Filename", "label_off": "Disable Filename"}),
-                "enable_cot": ("BOOLEAN", {"default": False, "label_on": "Enable Thinking (CoT)", "label_off": "Disable Thinking"}),
-                "max_tokens": ("INT", {"default": 1024, "min": 1, "max": 8192}),
-                "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0, "step": 0.01}),
-                "repetition_penalty": ("FLOAT", {"default": 1.1, "min": 1.0, "max": 2.0, "step": 0.01}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff}),
-                "release_vram": ("BOOLEAN", {"default": False}),
+                "model": (
+                    "LLM_MODEL",
+                    {
+                        "tooltip": "来自 UniversalGGUFLoader 的已加载 LLM 模型",
+                    },
+                ),
+                "user_material": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": DEFAULT_USER_MATERIAL,
+                        "tooltip": "用户素材文本。反推图片时会被忽略，仅在扩写/调试模式中使用",
+                    },
+                ),
+                "instruction": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": DEFAULT_INSTRUCTION,
+                        "tooltip": "系统指令/风格设定。留空时使用内置默认说明",
+                    },
+                ),
+                "chat_mode": (
+                    ["Enhance_Prompt", "Debug_Chat"],
+                    {
+                        "tooltip": "Enhance_Prompt：提示词扩写；Debug_Chat：调试/普通对话，不做结构化输出",
+                    },
+                ),
+                "max_tokens": (
+                    "INT",
+                    {
+                        "default": 1024,
+                        "min": 1,
+                        "max": 8192,
+                        "tooltip": "本次回答的最大片段长度（token）。越大越容易写长文，也更耗时",
+                    },
+                ),
+                "temperature": (
+                    "FLOAT",
+                    {
+                        "default": 0.7,
+                        "min": 0.0,
+                        "max": 2.0,
+                        "step": 0.01,
+                        "tooltip": "采样温度。数值越高越随机，越低越保守。推荐 0.6–0.9",
+                    },
+                ),
+                "repetition_penalty": (
+                    "FLOAT",
+                    {
+                        "default": 1.1,
+                        "min": 1.0,
+                        "max": 2.0,
+                        "step": 0.01,
+                        "tooltip": "重复惩罚系数。>1 会减少重复句子。常用范围 1.05–1.2",
+                    },
+                ),
+                "seed": (
+                    "INT",
+                    {
+                        "default": -1,
+                        "min": -1,
+                        "max": 0xffffffffffffffff,
+                        "tooltip": "-1 表示随机种子；固定某个值可复现相同输出",
+                    },
+                ),
+                "release_vram": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "勾选后每次生成结束都会关闭模型释放显存，但下次调用会重新加载模型，速度较慢",
+                    },
+                ),
             },
             "optional": {
-                "image": ("IMAGE",),
-                "min_p": ("FLOAT", {"default": 0.05, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "mirostat_mode": ("INT", {"default": 0, "min": 0, "max": 2}),
-                "mirostat_tau": ("FLOAT", {"default": 5.0, "min": 0.0, "max": 10.0, "step": 0.1}),
-                "mirostat_eta": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "image": (
+                    "IMAGE",
+                    {
+                        "tooltip": "连接图片后自动进入 Vision 反推模式，忽略文本素材，仅使用图像+指令",
+                    },
+                ),
+                "min_p": (
+                    "FLOAT",
+                    {
+                        "default": 0.05,
+                        "min": 0.0,
+                        "max": 1.0,
+                        "step": 0.01,
+                        "tooltip": "Min-P 采样阈值，控制低概率词的截断。推荐 0.05–0.15",
+                    },
+                ),
+                "mirostat_mode": (
+                    "INT",
+                    {
+                        "default": 0,
+                        "min": 0,
+                        "max": 2,
+                        "tooltip": "Mirostat 采样模式：0=关闭，1/2=自适应采样。一般保持 0 即可",
+                    },
+                ),
+                "mirostat_tau": (
+                    "FLOAT",
+                    {
+                        "default": 5.0,
+                        "min": 0.0,
+                        "max": 10.0,
+                        "step": 0.1,
+                        "tooltip": "Mirostat 目标困惑度参数。仅在开启 Mirostat 时生效，常用 5",
+                    },
+                ),
+                "mirostat_eta": (
+                    "FLOAT",
+                    {
+                        "default": 0.1,
+                        "min": 0.0,
+                        "max": 1.0,
+                        "step": 0.01,
+                        "tooltip": "Mirostat 学习率参数。仅在开启 Mirostat 时生效，常用 0.1",
+                    },
+                ),
             }
         }
     
@@ -368,7 +501,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
 """
         return None
     
-    def chat(self, model, user_material, instruction, chat_mode, enable_tag, enable_filename, enable_cot, max_tokens, temperature, repetition_penalty, seed, release_vram, min_p=0.05, mirostat_mode=0, mirostat_tau=5.0, mirostat_eta=0.1, image=None):
+    def chat(self, model, user_material, instruction, chat_mode, max_tokens, temperature, repetition_penalty, seed, release_vram, min_p=0.05, mirostat_mode=0, mirostat_tau=5.0, mirostat_eta=0.1, image=None):
         # 0. 基础防御性处理 (Defensive Check)
         if user_material is None: user_material = ""
         if instruction is None: instruction = ""
@@ -436,10 +569,12 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         # Widget Default Value (视为“空”)
         WIDGET_DEFAULT_SC = ""
 
-        # Mode Logic
-        # Priority: Image > Enhance > Debug
+        # 默认始终生成 tags 和 filename（用户不用就不接线）
+        enable_tag = True
+        enable_filename = True
+
         is_vision_task = image is not None
-        current_mode = "VISION" if is_vision_task else chat_mode # "Enhance_Prompt" or "Debug_Chat"
+        current_mode = "VISION" if is_vision_task else chat_mode
         
         # Check SC status
         sc_stripped = instruction.strip()
@@ -447,10 +582,9 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         
         # Prepare Variables
         final_system_command = instruction
-        final_user_content = "" # For text part
+        final_user_content = ""
         apply_template = False
-        
-        # Mode Specific Logic
+
         if is_vision_task:
             if not getattr(model, '_has_vision_handler', False):
                  err_msg = "[SYSTEM ERROR] Vision Task requested but no Vision Handler (CLIP/MMProj) is loaded.\nPlease make sure you selected a CLIP/Vision model in the Loader node."
@@ -475,7 +609,6 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             apply_template = True
             
         elif current_mode == "Enhance_Prompt":
-            # [Mode 2: Prompt Enhance]
             final_user_content = f"{LABEL_USER_INPUT}\n{user_material}"
             
             if is_sc_empty:
@@ -487,7 +620,6 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
 
             
         elif current_mode == "Debug_Chat":
-            # [Mode 3: Debug]
             final_user_content = user_material
 
             if is_sc_empty:
@@ -497,7 +629,6 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             
             enable_tag = False
             enable_filename = False
-            enable_cot = True 
             apply_template = False
             
         # ==========================================================
@@ -509,11 +640,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         if apply_template:
             rules = []
             rules.extend(CONSTRAINT_NO_REPEAT)
-
-            if not enable_cot:
-                rules.extend(CONSTRAINT_NO_COT)
-            else:
-                rules.extend(CONSTRAINT_ALLOW_COT)
+            rules.extend(CONSTRAINT_ALLOW_COT)
 
             if enable_tag:
                 rules.append(PROMPT_TAGS)
@@ -713,42 +840,36 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
 
 
         # 5. 分割逻辑 (Simple Splitter)
-        clean_res = re.sub(r'<think>.*?</think>', '', full_res, flags=re.DOTALL).strip()
-        if '<think>' in clean_res:
-            clean_res = clean_res.split('<think>')[0].strip()
+        clean_res = full_res.strip()
             
         marker_desc = "**description**:"
         marker_tags = "**tags**:"
         marker_filename = "**filename**:"
         
         def get_pos(marker, text):
-            # Find all occurrences
+            think_spans = [(m.start(), m.end()) for m in re.finditer(r'<think>.*?</think>', text, re.DOTALL)]
+            def in_think(pos):
+                for s, e in think_spans:
+                    if s <= pos < e:
+                        return True
+                return False
             matches = [m for m in re.finditer(re.escape(marker), text, re.IGNORECASE)]
             if not matches:
                 return -1
-            
-            # Smart Filter: Ignore occurrences that look like Template Echo
-            # Template usually looks like "**description**:\n[description]"
             valid_matches = []
             for m in matches:
                 start = m.start()
-                # Check next 20 chars for placeholder
                 snippet = text[start + len(marker):start + len(marker) + 20]
+                if in_think(start):
+                    continue
                 if "[description]" in snippet or "[tags]" in snippet or "[filename]" in snippet:
-                    continue # Likely a prompt echo
+                    continue
                 valid_matches.append(m)
-            
-            # If we filtered everything (or nothing left), try fallback to LAST match (assuming it's the output)
             if not valid_matches:
-                 # If all matches looked like templates, maybe the model really outputted the template?
-                 # Or maybe we were too strict. 
-                 # But if we have multiple matches, the last one is most likely the AI output.
                  if len(matches) > 1:
                      return matches[-1].start()
                  return matches[0].start()
-            
-            # If we have valid matches, take the FIRST one (Option 1)
-            return valid_matches[0].start()
+            return valid_matches[-1].start()
             
         pos_desc = get_pos(marker_desc, clean_res)
         pos_tags = get_pos(marker_tags, clean_res)
@@ -775,6 +896,10 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
                 end_tags = len(clean_res)
                 if pos_filename != -1 and pos_filename > start_tags:
                     end_tags = pos_filename
+                # [Robustness] Also stop at description if it appears after tags (out of order)
+                if pos_desc != -1 and pos_desc > start_tags:
+                    end_tags = min(end_tags, pos_desc)
+                    
                 raw_tags = clean_res[start_tags:end_tags].strip()
                 out_tags = raw_tags.replace("\n", ",")
         else:
@@ -836,6 +961,128 @@ class UniversalAIChat_Legacy:
 
     def chat(self, model, user_material, instruction, chat_mode, enable_tag, enable_filename, enable_cot, max_tokens, temperature, repetition_penalty, seed, release_vram, image=None):
         return ("Legacy Node - Shelved", "", "", "This node is deprecated. Please use the new UniversalAIChat node.")
+
+
+class LH_MultiTextSelector:
+    def __init__(self):
+        self.index = 0
+        self._spintax_pattern = re.compile(r"\{([^{}]+)\}")
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "mode": (
+                    ["Sequential", "Random"],
+                    {
+                        "tooltip": "多文本选择模式：Sequential=按顺序轮流；Random=每次随机选择一个文本",
+                    },
+                ),
+                "text_1": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "",
+                        "tooltip": "第一个候选文本",
+                    },
+                ),
+                "text_2": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "",
+                        "tooltip": "第二个候选文本",
+                    },
+                ),
+                "text_3": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "",
+                        "tooltip": "第三个候选文本",
+                    },
+                ),
+                "text_4": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "",
+                        "tooltip": "第四个候选文本",
+                    },
+                ),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("text",)
+    FUNCTION = "select"
+    CATEGORY = "custom_nodes/MyLoraNodes"
+
+    @classmethod
+    def IS_CHANGED(s, **kwargs):
+        return float("nan")
+
+    def _apply_spintax(self, text):
+        if not isinstance(text, str):
+            return text
+
+        def repl(match):
+            raw = match.group(1)
+            tokens = [p for p in raw.split("|") if p]
+            if not tokens:
+                return ""
+
+            weighted = []
+            total = 0.0
+            for token in tokens:
+                value = token
+                weight = 1.0
+                if "::" in token:
+                    w_str, val = token.split("::", 1)
+                    w_str = w_str.strip()
+                    value = val
+                    try:
+                        weight = float(w_str)
+                    except Exception:
+                        weight = 1.0
+                value = value
+                if weight <= 0:
+                    continue
+                weighted.append((value, weight))
+                total += weight
+
+            if not weighted:
+                return ""
+
+            r = random.random() * total
+            acc = 0.0
+            for val, w in weighted:
+                acc += w
+                if r <= acc:
+                    return val
+            return weighted[-1][0]
+
+        prev = None
+        while prev != text and self._spintax_pattern.search(text):
+            prev = text
+            text = self._spintax_pattern.sub(repl, text)
+        return text
+
+    def select(self, mode, text_1, text_2, text_3, text_4):
+        items = []
+        for t in (text_1, text_2, text_3, text_4):
+            if isinstance(t, str) and t.strip() != "":
+                items.append(t)
+        if not items:
+            return ("",)
+        if mode == "Random":
+            chosen = random.choice(items)
+        else:
+            idx = self.index % len(items)
+            chosen = items[idx]
+            self.index += 1
+        chosen = self._apply_spintax(chosen)
+        return (chosen,)
 
 
 # 4. 历史监控节点 (流水线排序)

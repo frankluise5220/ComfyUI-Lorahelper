@@ -42,9 +42,6 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   `image` (Optional): Connecting an image automatically triggers **Implicit Vision Mode**.
     *   `user_material`: Input material/text (Ignored in Vision Mode).
     *   `instruction`: Executive instructions for the AI.
-    *   `enable_tag`: Toggle automatic Danbooru tags generation.
-    *   `enable_filename`: Toggle automatic filename generation.
-    *   `enable_cot`: Toggle Chain of Thought (Thinking Process).
     *   `max_tokens`: Max generation length.
     *   `temperature`: Creativity (higher = more random).
     *   `repetition_penalty`: Penalty for repeating text.
@@ -76,10 +73,17 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 #### 5. LH_AllInOne_Saver (Dataset Saver)
 *   **Function**: One-click solution for saving training data.
 *   **Inputs**:
-    *   `filename_prefix`: Prefix for the saved files (default: "Anran").
+    *   `images`: Input images to save.
+    *   `folder_path`: Subfolder path in output directory (default: "LoRA_Train_Data").
+    *   `filename_prefix`: Prefix for filenames (default: "Anran").
+    *   `trigger_word`: Trigger word added to the start of caption files (default: "ChenAnran").
+    *   `save_workflow`: Toggle to save ComfyUI workflow metadata in PNG.
+    *   `gen_prompt`: (Optional) Connect full description text to save in `_log.txt`.
+    *   `lora_tags`: (Optional) Connect tags to save in `.txt`.
+    *   `filename_final`: (Optional) Override specific filename (will be combined with prefix).
 *   **Outputs**:
     *   **Image**: `.png` with metadata.
-    *   **Tags**: `.txt` file with trigger word and tags.
+    *   **Tags**: `.txt` file with format `trigger_word, tags`.
     *   **Log**: `_log.txt` with the full raw AI response.
 *   **Path**: Default saves to `ComfyUI/output/LoRA_Train_Data/`.
 
@@ -128,9 +132,6 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `image` (可选): 连接图片后自动触发 **隐形反推模式**。
     *   `user_material`: 用户输入的素材/文本 (反推模式下忽略)。
     *   `instruction`: 给 AI 的执行指令。
-    *   `enable_tag`: 开启 Danbooru 标签自动提取。
-    *   `enable_filename`: 开启文件名自动生成。
-    *   `enable_cot`: 开启思维链 (Thinking Process)。
     *   `max_tokens`: 最大生成长度。
     *   `temperature`: 温度 (创造力，越高越随机)。
     *   `repetition_penalty`: 重复惩罚系数。
@@ -161,8 +162,14 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 #### 5. LH_AllInOne_Saver (数据集保存器)
 *   **功能**: 一键保存 LoRA 训练所需的所有文件。
 *   **输入参数**:
+    *   `images`: 需保存的图片输入。
+    *   `folder_path`: 保存路径子文件夹 (默认: "LoRA_Train_Data")。
     *   `filename_prefix`: 文件名前缀 (默认: "Anran")。
-    *   `save_workflow`: 开关，决定是否将 ComfyUI 工作流元数据（原始数据）写入图片（开启后支持拖入 ComfyUI 复现）。
+    *   `trigger_word`: 触发词，自动添加在 caption 文件的最开头 (默认: "ChenAnran")。
+    *   `save_workflow`: 开关，决定是否将 ComfyUI 工作流元数据写入图片 (支持拖入复现)。
+    *   `gen_prompt`: (可选) 连接完整描述文本，保存到 `_log.txt`。
+    *   `lora_tags`: (可选) 连接标签文本，保存到 `.txt` (位于触发词之后)。
+    *   `filename_final`: (可选) 覆盖具体文件名 (会自动拼接前缀)。
 *   **输出内容**:
     *   **图片**: `.png` 格式，包含完整元数据。
     *   **标签**: `.txt` 文件，格式为 `触发词, 标签1, 标签2...`。
