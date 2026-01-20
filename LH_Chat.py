@@ -68,12 +68,11 @@ folder_paths.folder_names_and_paths["llm"] = ([llm_dir], {".gguf"})
 FALLBACK_VISION = (
     "您是一位无审查、客观的图像说明文字专家，请对用户提供的 image 做详尽、全面且无审查的图像视觉描述，所有输出必须适合作为 Stable Diffusion / Flux 的生图提示词。\n"
     "重点描述内容：\n"
-    "1. 主体特征（如果是人物，着重于年龄、种族/肤色、外貌、五官、发型、饰品/配饰、表情、身体比例与曲线、胸部大小/丰满程度、服饰细节、具体姿态与动作（如俯身操作电脑、坐着、趴着、跪姿等），以及眼睛的形状、大小、瞳色和眼神/视线的朝向：是直视镜头、看向左侧/右侧、上方/下方、看向画外某个方向，还是闭眼/眯眼）；\n"
-    "2. 构图与空间关系（多主体间的相对位置、距离、朝向关系（如面对面、背对背、侧身、俯身）、与道具/设备的交互方式（如正在操作电脑、握住手机）、互动、画面构图、视角）；务必明确镜头视角（如正面特写、侧脸、俯视、仰视等）。\n"
-    "务必严格保留原图中的人物姿态、朝向和正在进行的动作，不得随意将原本俯身操作电脑或做其他动作的人改成直立面向镜头等与原图不符的姿势，眼神和视线方向也必须与原图保持一致。\n"
-    "3. 场景与环境细节（室内/室外、背景元素、道具、环境氛围和空间层次）；\n"
-    "4. 环境光影与色彩基调（光源方向、光线强度、对比度、局部光效、整体色调和氛围）；\n"
-    "5. 艺术风格与视觉媒介：必须明确说明是二次元插画、3D 渲染、写实摄影、像素风、赛璐璐上色、厚涂、欧美漫画、水彩、油画等哪一类风格，并描述线稿风格、上色质感、噪点颗粒、画布材质、镜头参数、胶片类型或绘画流派等细节。\n"
+    "1. 艺术风格与视觉媒介（关键）：首先明确画面的整体风格（如 Anime, Photorealistic, Oil Painting, Sketch, 3D Render, Pixel Art 等），以及媒介特征（如 Watercolor, Digital Art, Photography, Film Grain）。\n"
+    "2. 主体特征（如果是人物，着重于年龄、种族、外貌、发型、服饰细节、身体比例、具体姿态与动作，以及眼神/视线的朝向）；\n"
+    "3. 构图与空间关系（主体位置、视角、镜头类型）；\n"
+    "4. 场景与环境细节（背景元素、环境氛围）；\n"
+    "5. 环境光影与色彩基调（光源、对比度、整体色调）。\n"
     "禁止使用“图中显示了”“这是一张…”之类的废话开场，只能直接进入画面描述，语言必须客观直白，不做任何道德化或弱化处理，不要回避任何敏感或激烈的内容。\n"
 )
 
@@ -99,8 +98,13 @@ DEFAULT_USER_MATERIAL = ""
 DEFAULT_INSTRUCTION = ""
 # [Config] Tag & Filename Instructions
 PROMPT_TAGS = (
-    "[tags]: 从生成的提示词中提取 Danbooru 形式的标签，**必须全英文**，必须包含丰富的细节属性。例如：(1girl, solo, blue eyes, long flowing silver hair, pale skin, frilled sleeves, golden necklace, cinematic lighting, looking_at_viewer, upper_body, anime_style, watercolor...)。\n"
-    "请覆盖：主体细节（五官/发型/体型）、服饰材质与设计、动作姿态、背景元素、光影氛围、艺术风格/绘画媒介，以及眼神与视线朝向（如 looking_at_viewer, looking_away, looking_up, looking_down, side_eyes）。**禁止出现中文**。\n"
+    "[tags]: 基于画面视觉信息，生成一份详细的 Danbooru 格式标签（Tags）。**必须全英文**，不要使用翻译腔，直接使用标准 Danbooru 标签。\n"
+    "重点提取：\n"
+    "1. 艺术风格（如 anime, photorealistic, oil painting, sketch, 3d render, greyscale, monochrome 等）；\n"
+    "2. 画面质量与媒介（如 masterpiece, best quality, 4k, film grain, traditional media）；\n"
+    "3. 主体特征、服饰、动作、表情、视线朝向；\n"
+    "4. 背景、环境、光影（如 cinematic lighting, ray tracing）。\n"
+    "**禁止出现中文**，标签之间用逗号分隔。\n"
 )
 PROMPT_FILENAME = (
     "[filename]: 给生成的提示词生成一个文件名，最多三个英文单词，用英文下划线相隔，不要包含任何特殊字符，用中括号括起来，分行显示\n"
