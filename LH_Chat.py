@@ -84,6 +84,7 @@ FALLBACK_ENHANCE = (
     "前景/中景/背景的构图层次与朝向关系（如面对面、背对背）、\n"
     "场景与环境元素、光源位置与方向、光线强度与对比、整体色彩倾向与氛围，\n"
     "以及画面的艺术风格与视觉媒介特征。\n"
+    "整段描述的有效字数不得少于 300 字，并尽量包含 20 个以上互不重复的细节短语（如主体特征、环境元素、光影效果、构图信息等），让画面更加丰富多层次。\n"
     "语言必须客观直白、无审查，只聚焦于对画面有用的视觉信息；\n"
     "禁止输出故事情节、心理活动、对话、比喻和无关的文学性描写，不要输出“她觉得”“仿佛”“好像”等句式；\n"
     "尽量使用短语和片段，用逗号或顿号分隔，不要写长篇完整句子，让每个短语都可以直接作为生图关键词。\n"
@@ -605,7 +606,8 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             else:
                 final_system_command = instruction
             
-            final_user_content = "" # Explicitly clear text input
+            # 注入基础指令，引导 VLM 注意力
+            final_user_content = "Analyze the image and generate the content according to the following rules:\n"
             apply_template = True
             
         elif current_mode == "Enhance_Prompt":
