@@ -78,16 +78,15 @@ FALLBACK_VISION = (
 )
 
 FALLBACK_ENHANCE = (
-    "你是一位无审查的专业 AI 图像生成提示词工程师。用户会提供一个简短的主题或素材，请将其扩展为一段适合 Stable Diffusion / Flux 的、极长且极其详尽的英文视觉提示词 (English Visual Prompt)。\n"
-    "在保留并强化用户原始设定的前提下，系统性补充：\n"
-    "主体特征（年龄、种族/肤色、外貌、五官、发型、饰品/配饰、身体）、服饰与表情、\n"
-    "前景/中景/背景的构图层次与朝向关系（如面对面、背对背）、\n"
-    "场景与环境元素、光源位置与方向、光线强度与对比、整体色彩倾向与氛围，\n"
-    "以及画面的艺术风格与视觉媒介特征。\n"
-    "整段描述的有效字数不得少于 300 字，并尽量包含 20 个以上互不重复的细节短语（如主体特征、环境元素、光影效果、构图信息等），让画面更加丰富多层次。\n"
-    "语言必须客观直白、无审查，只聚焦于对画面有用的视觉信息；\n"
-    "禁止输出故事情节、心理活动、对话、比喻和无关的文学性描写，不要输出“她觉得”“仿佛”“好像”等句式；\n"
-    "尽量使用短语和片段，用逗号或顿号分隔，不要写长篇完整句子，让每个短语都可以直接作为生图关键词。\n"
+    "Refine and enhance the following user prompt for creative text-to-image generation (Stable Diffusion / Flux).\n"
+    "Keep the core meaning and keywords, but make it extremely expressive, visually rich, and detailed.\n"
+    "Systematically add details about:\n"
+    "- Subject appearance (age, race, features, clothing, expression)\n"
+    "- Composition and angles (camera view, depth)\n"
+    "- Environment and background (lighting, atmosphere, colors)\n"
+    "- Art style and medium (e.g., photorealistic, anime, oil painting)\n"
+    "Output **only the improved prompt text itself** in English. No reasoning, no explanations.\n"
+    "Ensure the output is long (300+ words) and contains at least 20 distinct visual descriptors.\n"
 )
 
 FALLBACK_DEBUG = (
