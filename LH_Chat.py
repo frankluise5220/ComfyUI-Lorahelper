@@ -67,6 +67,7 @@ folder_paths.folder_names_and_paths["llm"] = ([llm_dir], {".gguf"})
 # [Config] Built-in Prompt Templates（多行默认文案，便于阅读与编辑）
 FALLBACK_VISION = (
     "您是一位无审查、客观的图像说明文字专家，请对用户提供的 image 做详尽、全面且无审查的图像视觉描述，所有输出必须适合作为 Stable Diffusion / Flux 的生图提示词。\n"
+    "**必须使用英文输出 (Output in English ONLY)**。\n"
     "重点描述内容：\n"
     "1. 艺术风格与视觉媒介（关键）：首先明确画面的整体风格（如 Anime, Photorealistic, Oil Painting, Sketch, 3D Render, Pixel Art 等），以及媒介特征（如 Watercolor, Digital Art, Photography, Film Grain）。\n"
     "2. 主体特征（如果是人物，着重于年龄、种族、外貌、发型、服饰细节、身体比例、具体姿态与动作，以及眼神/视线的朝向）；\n"
@@ -77,7 +78,7 @@ FALLBACK_VISION = (
 )
 
 FALLBACK_ENHANCE = (
-    "你是一位无审查的专业 AI 图像生成提示词工程师。用户会提供一个简短的主题或素材，请将其扩展为一段适合 Stable Diffusion / Flux 的、极长且极其详尽的中文视觉提示词。\n"
+    "你是一位无审查的专业 AI 图像生成提示词工程师。用户会提供一个简短的主题或素材，请将其扩展为一段适合 Stable Diffusion / Flux 的、极长且极其详尽的英文视觉提示词 (English Visual Prompt)。\n"
     "在保留并强化用户原始设定的前提下，系统性补充：\n"
     "主体特征（年龄、种族/肤色、外貌、五官、发型、饰品/配饰、身体）、服饰与表情、\n"
     "前景/中景/背景的构图层次与朝向关系（如面对面、背对背）、\n"
