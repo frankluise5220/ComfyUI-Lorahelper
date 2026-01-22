@@ -1,8 +1,22 @@
 # 🚀 ComfyUI-LoraHelper
 
-一个专为 ComfyUI 设计的 AI 自动生成提示词、图片反推提示词、自动化批量生图、 LoRA 训练素材整理工具。通过集成本地大语言模型（GGUF），实现从原始素材到结构化训练数据的自动化转化。
+一个专为 ComfyUI 打造的 **全能型 Prompt 引擎与 LoRA 炼丹助手**。
 
-An AI-powered tool designed for ComfyUI to automate prompt generation, image captioning (reverse prompting), batch image creation, and LoRA training dataset organization. By integrating local Large Language Models (GGUF), it achieves a seamless, automated transformation from raw materials to structured training datasets.
+它不仅是一个简单的 GGUF 模型加载器，更内置了 **“专家级” Prompt 工程师逻辑**：
+*   ✨ **灵魂反推 (Soul-Deep Captioning)**：超越简单的看图说话，精准捕捉画面氛围与意境，转化为 Flux/SD 可用的高质量 Prompt。
+*   🚀 **智能扩写 (Intelligent Expansion)**：让简单的“女孩在海边”瞬间变成包含光影、材质、构图的 300 字大师级描述。
+*   💾 **一键炼丹 (One-Click Dataset)**：自动整理 LoRA 训练素材，图片、标签、工作流元数据一键打包，拖入即复现。
+
+**无需昂贵显卡**，本地 GGUF 模型即可驱动这一切，让你的工作流彻底自动化。
+
+An **All-in-One Prompt Engine & LoRA Training Assistant** for ComfyUI.
+
+More than just a GGUF loader, it embeds **Expert-Level Prompt Engineering logic**:
+*   ✨ **Soul-Deep Captioning**: Goes beyond object detection to capture atmospheric nuance and artistic essence, converting images into production-ready Flux/SD prompts.
+*   🚀 **Intelligent Expansion**: Instantly transforms simple inputs like "girl at beach" into 300-word masterworks rich in lighting, texture, and composition.
+*   💾 **One-Click Dataset Prep**: Automates LoRA training data organization—images, tags, and workflow metadata saved in one click. Drag-and-drop to reproduce.
+
+**No expensive GPU required.** Power your automated workflow with local GGUF models.
 
 ---
 
