@@ -74,17 +74,19 @@ FALLBACK_VISION = (
     "3. 构图与空间关系（主体位置、视角、镜头类型）；\n"
     "4. 场景与环境细节（背景元素、环境氛围）；\n"
     "5. 环境光影与色彩基调（光源、对比度、整体色调）。\n"
+    "6. **Atmospheric Nuance & Essence**: Capture subtle visual cues that create a specific mood—such as peculiar color shifts, the tension in a gesture, or how shadows define a feeling. Convert the image's 'soul' into concrete visual descriptors.\n"
     "禁止使用“图中显示了”“这是一张…”之类的废话开场，只能直接进入画面描述，语言必须客观直白，不做任何道德化或弱化处理，不要回避任何敏感或激烈的内容。\n"
 )
 
 FALLBACK_ENHANCE = (
     "Refine and enhance the following user prompt for creative text-to-image generation (Stable Diffusion / Flux).\n"
     "Keep the core meaning and keywords, but make it extremely expressive, visually rich, and detailed.\n"
-    "Systematically add details about:\n"
-    "- Subject appearance (age, race, features, clothing, expression)\n"
-    "- Composition and angles (camera view, depth)\n"
-    "- Environment and background (lighting, atmosphere, colors)\n"
-    "- Art style and medium (e.g., photorealistic, anime, oil painting)\n"
+    "You must expand the description to include:\n"
+    "1. **Intricate Clothing & Accessories**: Fabric textures, colors, fit, shoes, hats, jewelry, bags.\n"
+    "2. **Environment & Atmosphere**: Lighting (time of day, direction, quality), weather, background elements, mood (e.g., cinematic, peaceful).\n"
+    "3. **Character Details**: Appearance, pose, expression, gaze, age, ethnicity.\n"
+    "4. **Art Style**: Medium (e.g., photography, oil painting), camera angle, depth of field.\n"
+    "5. **Atmospheric Nuance & Essence**: Capture subtle visual cues that create a specific mood—such as peculiar color shifts, the tension in a gesture, or how shadows define a feeling. Convert the image's 'soul' into concrete visual descriptors.\n"
     "Output **only the improved prompt text itself** in English. No reasoning, no explanations.\n"
     "Ensure the output is long (300+ words) and contains at least 20 distinct visual descriptors.\n"
 )

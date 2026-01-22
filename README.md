@@ -28,6 +28,7 @@ An AI-powered tool designed for ComfyUI to automate prompt generation, image cap
 
 #### 1. LH_GGUFLoader (GGUF Model Loader)
 *   **Function**: Loads `.gguf` format LLM models.
+*   **Supported Models**: Extensive support for mainstream VLM/LLM GGUF models, including **Qwen2.5-VL / Qwen2-VL**, **Llama 3.2 Vision**, **Yi-VL**, **Llava 1.5/1.6**, and other GGUF-compatible models.
 *   **Path**: Place your models in `ComfyUI/models/llm/`.
 *   **Features**:
     *   **GGUF Model**: Select your main LLM.
@@ -71,7 +72,11 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 *   **Status**: This node has been removed as `LH_AIChat` now fully handles output splitting internally.
 
 #### 5. LH_AllInOne_Saver (Dataset Saver)
-*   **Function**: One-click solution for saving training data.
+*   **Function**: One-click solution for saving training data, prompts, tags, and workflows.
+*   **Features**:
+    *   **One-Click Save**: Simultaneously saves Images, Caption text, Log files, and ComfyUI Workflow metadata.
+    *   **Workflow Embedding**: Supports saving the full ComfyUI workflow into the PNG, allowing drag-and-drop to reproduce the generation.
+    *   **Flexible Naming**: Supports custom prefixes, filename overrides, and auto-incrementing.
 *   **Inputs**:
     *   `images`: Input images to save.
     *   `folder_path`: Subfolder path in output directory (default: "LoRA_Train_Data").
@@ -82,7 +87,7 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   `lora_tags`: (Optional) Connect tags to save in `.txt`.
     *   `filename_final`: (Optional) Override specific filename (will be combined with prefix).
 *   **Outputs**:
-    *   **Image**: `.png` with metadata.
+    *   **Image**: `.png` with metadata (Workflow).
     *   **Tags**: `.txt` file with format `trigger_word, tags`.
     *   **Log**: `_log.txt` with the full raw AI response.
 *   **Path**: Default saves to `ComfyUI/output/LoRA_Train_Data/`.
@@ -160,18 +165,22 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **状态**: 该节点已被移除，`LH_AIChat` 现已内置完整的自动切分功能。
 
 #### 5. LH_AllInOne_Saver (数据集保存器)
-*   **功能**: 一键保存 LoRA 训练所需的所有文件。
+*   **功能**: 一键保存 LoRA 训练所需的所有文件（Prompt、Tags、工作流）。
+*   **特性**:
+    *   **一键保存**: 同时保存图片、标签文本、日志文件和 ComfyUI 工作流元数据。
+    *   **工作流嵌入**: 支持将完整的 ComfyUI 工作流嵌入 PNG 图片，拖入界面即可完美复现。
+    *   **灵活命名**: 支持自定义前缀、覆盖文件名和自动递增。
 *   **输入参数**:
     *   `images`: 需保存的图片输入。
     *   `folder_path`: 保存路径子文件夹 (默认: "LoRA_Train_Data")。
-    *   `filename_prefix`: 文件名前缀 (默认: "Anran")。
-    *   `trigger_word`: 触发词，自动添加在 caption 文件的最开头 (默认: "ChenAnran")。
+    *   `filename_prefix`: 文件名前缀 (默认: "Anran").
+    *   `trigger_word`: 触发词，自动添加在 caption 文件的最开头 (默认: "ChenAnran").
     *   `save_workflow`: 开关，决定是否将 ComfyUI 工作流元数据写入图片 (支持拖入复现)。
     *   `gen_prompt`: (可选) 连接完整描述文本，保存到 `_log.txt`。
     *   `lora_tags`: (可选) 连接标签文本，保存到 `.txt` (位于触发词之后)。
     *   `filename_final`: (可选) 覆盖具体文件名 (会自动拼接前缀)。
 *   **输出内容**:
-    *   **图片**: `.png` 格式，包含完整元数据。
+    *   **图片**: `.png` 格式，包含完整元数据（工作流）。
     *   **标签**: `.txt` 文件，格式为 `触发词, 标签1, 标签2...`。
     *   **日志**: `_log.txt` 文件，记录 AI 的原始完整回复（可以接入任何想要保存的文本）。
 *   **路径**: 默认保存在 `ComfyUI/output/LoRA_Train_Data/`，支持自定义子文件夹。
