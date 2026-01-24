@@ -80,7 +80,15 @@ class LoRA_AllInOne_Saver:
     CATEGORY = "custom_nodes/MyLoraNodes"
 
     def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
-        # 0. 基础清理与智能验证
+        # 0. 路径清理 (Sanitization) - 修复维护者提出的安全问题
+        # 移除可能导致路径穿越的 ".." 字符，并清理前后空格
+        folder_path = folder_path.strip().replace("..", "")
+        # 移除非法字符，防止系统报错
+        folder_path = re.sub(r'[\\:*?"<>|]', '', folder_path)
+        
+        # 如果清理后为空，给个默认名
+        if not folder_path:
+            folder_path = "LoRA_Train_Data"
         # Handle optional inputs being None
         # [CHANGE] We do NOT convert lora_tags/gen_prompt to "" here, because we need to detect None for file skipping.
         
