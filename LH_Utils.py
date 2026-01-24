@@ -80,7 +80,15 @@ class LoRA_AllInOne_Saver:
     CATEGORY = "custom_nodes/MyLoraNodes"
 
     def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
-        # 0. 基础清理与智能验证
+        # 0. 路径清理 (Sanitization) - 修复维护者提出的安全问题
+        # 移除可能导致路径穿越的 ".." 字符，并清理前后空格
+        folder_path = folder_path.strip().replace("..", "")
+        # 移除非法字符，防止系统报错
+        folder_path = re.sub(r'[\\:*?"<>|]', '', folder_path)
+        
+        # 如果清理后为空，给个默认名
+        if not folder_path:
+            folder_path = "LoRA_Train_Data"
         # Handle optional inputs being None
         # [CHANGE] We do NOT convert lora_tags/gen_prompt to "" here, because we need to detect None for file skipping.
         
@@ -117,7 +125,16 @@ class LoRA_AllInOne_Saver:
         if not safe_name:
             safe_name = "LH_AutoSave"
         
-        full_path = os.path.join(self.output_dir, folder_path) if not os.path.isabs(folder_path) else folder_path
+        # [SECURITY FIX] 强制使用相对路径，禁止绝对路径，防止路径穿越
+        # Force relative path logic to ensure we stay within ComfyUI output directory
+        if os.path.isabs(folder_path):
+            # 如果用户传了绝对路径，我们只取最后一部分作为子文件夹名
+            # 或者直接忽略盘符，强制变为相对路径
+            # 这里选择简单粗暴的方案：把冒号和斜杠都去掉，变成一个长文件夹名，确保安全
+            print(f"\033[33m[LoRA_Saver] Warning: Absolute path detected. Converting '{folder_path}' to relative path for security.\033[0m")
+            folder_path = re.sub(r'[:]', '', folder_path).lstrip('/\\')
+            
+        full_path = os.path.join(self.output_dir, folder_path)
         os.makedirs(full_path, exist_ok=True)
         
         timestamp = int(time.time())
