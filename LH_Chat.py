@@ -11,6 +11,7 @@ from PIL import Image
 import numpy as np
 from datetime import datetime
 import json
+import requests
 import random
 
 # Import guard for llama_cpp
@@ -304,6 +305,121 @@ class UniversalGGUFLoader:
         return (model,)
 
 # ==========================================================
+# 2.5 UniversalOllamaLoader (New - Ollama Support)
+# ==========================================================
+class OllamaModelWrapper:
+    def __init__(self, model_name, base_url, timeout=120):
+        self.model_name = model_name
+        self.base_url = base_url.rstrip('/')
+        self.timeout = timeout
+        self._is_closed = False
+        self._has_vision_handler = False 
+        self._model_filename = model_name
+        self._init_params = {} # Dummy
+
+    def n_ctx(self):
+        return 8192 
+
+    def reload(self):
+        # Ollama is a service, no need to "reload" strictly, but we can check connection
+        try:
+            requests.get(self.base_url, timeout=5)
+            self._is_closed = False
+        except:
+            raise RuntimeError("Ollama service unreachable during reload.")
+
+    def create_chat_completion(self, messages, max_tokens=None, temperature=0.7, top_p=0.9, stop=None, **kwargs):
+        url = f"{self.base_url}/api/chat"
+        
+        ollama_messages = []
+        for msg in messages:
+            o_msg = {"role": msg["role"], "content": ""}
+            if isinstance(msg["content"], list):
+                text_content = ""
+                images = []
+                for part in msg["content"]:
+                    if part["type"] == "text":
+                        text_content += part["text"]
+                    elif part["type"] == "image_url":
+                        url_str = part["image_url"]["url"]
+                        if url_str.startswith("data:image/"):
+                            base64_img = url_str.split(",")[1]
+                            images.append(base64_img)
+                o_msg["content"] = text_content
+                if images:
+                    o_msg["images"] = images
+            else:
+                o_msg["content"] = msg["content"]
+            ollama_messages.append(o_msg)
+
+        payload = {
+            "model": self.model_name,
+            "messages": ollama_messages,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "top_p": top_p,
+            }
+        }
+        
+        if max_tokens:
+            payload["options"]["num_predict"] = max_tokens
+        if stop:
+            payload["options"]["stop"] = stop
+            
+        if "repeat_penalty" in kwargs:
+            payload["options"]["repeat_penalty"] = kwargs["repeat_penalty"]
+        if "seed" in kwargs and kwargs["seed"] != -1:
+            payload["options"]["seed"] = kwargs["seed"]
+        
+        if "min_p" in kwargs:
+             payload["options"]["min_p"] = kwargs["min_p"]
+
+        if "mirostat" in kwargs:
+             payload["options"]["mirostat"] = kwargs["mirostat"]
+             
+        try:
+            response = requests.post(url, json=payload, timeout=self.timeout)
+            response.raise_for_status()
+            res_json = response.json()
+            
+            content = res_json.get("message", {}).get("content", "")
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": content
+                        },
+                        "finish_reason": "stop" if res_json.get("done") else "length"
+                    }
+                ],
+                "usage": {}
+            }
+            
+        except Exception as e:
+            raise RuntimeError(f"Ollama API Error: {e}")
+
+class UniversalOllamaLoader:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "ollama_url": ("STRING", {"default": "http://127.0.0.1:11434"}),
+                "model_name": ("STRING", {"default": "deepseek-r1:8b"}), 
+                "is_vision_model": ("BOOLEAN", {"default": False}),
+            }
+        }
+    RETURN_TYPES = ("LLM_MODEL",)
+    RETURN_NAMES = ("model",)
+    FUNCTION = "load_ollama"
+    CATEGORY = "custom_nodes/MyLoraNodes"
+
+    def load_ollama(self, ollama_url, model_name, is_vision_model):
+        model = OllamaModelWrapper(model_name, ollama_url)
+        model._has_vision_handler = is_vision_model
+        return (model,)
+
+# ==========================================================
 # 3. UniversalAIChat (NEW - Formerly LH_LlamaInstruct)
 # ==========================================================
 # PROJECT: UniversalAIChat
@@ -530,7 +646,13 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
                  need_reload = True
 
         if need_reload:
-             if hasattr(model, '_init_params'):
+             if hasattr(model, 'reload'):
+                 try:
+                     model.reload()
+                 except Exception as e:
+                     print(f"\033[31m[UniversalAIChat] Reload failed: {e}\033[0m")
+                     raise ValueError(f"Model reload failed: {e}")
+             elif hasattr(model, '_init_params'):
                  print("\033[33m[UniversalAIChat] Model is closed or invalid. Reloading...\033[0m")
                  from llama_cpp import Llama
                  init_p = model._init_params
