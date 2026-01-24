@@ -18,27 +18,45 @@ class Qwen3TextSplitter:
 
     def split(self, text, user_prefix):
         raw = str(text).strip() if text else ""
-        p_match = re.search(r'SECTION 1.*?[:：]\s*(.*?)(?=SECTION 2|SECTION 3|\[|$)', raw, re.DOTALL | re.IGNORECASE)
+        
+        # --- 1. Generate Prompt (Description) ---
+        # Supports both new (**description**) and legacy (SECTION 1) formats
+        p_match = re.search(r'(?:\*\*description\*\*|SECTION 1).*?[:：]\s*(.*?)(?=\*\*tags\*\*|SECTION 2|SECTION 3|\*\*filename\*\*|\[|$)', raw, re.DOTALL | re.IGNORECASE)
         gen_p = p_match.group(1).strip() if p_match else raw.split('\n\n')[0].strip()
         
-        # 优化 SECTION 2 提取逻辑，防止吞掉 SECTION 3
-        # 使用更严格的断言，并二次清洗
-        tags_match = re.search(r'SECTION 2.*?[:：]\s*(.*?)(?=\s*SECTION 3|\s*\[|$)', raw, re.DOTALL | re.IGNORECASE)
+        # --- 2. Lora Tags ---
+        # Supports both new (**tags**) and legacy (SECTION 2) formats
+        tags_match = re.search(r'(?:\*\*tags\*\*|SECTION 2).*?[:：]\s*(.*?)(?=\*\*filename\*\*|SECTION 3|\s*\[|$)', raw, re.DOTALL | re.IGNORECASE)
         lora_tags = ""
         if tags_match:
             raw_tags = tags_match.group(1)
-            # 二次保障：如果正则漏了，手动截断
-            if "SECTION 3" in raw_tags.upper():
-                raw_tags = re.split(r'SECTION 3', raw_tags, flags=re.IGNORECASE)[0]
+            # Cleanup: Ensure we didn't capture the next section header
+            if "SECTION 3" in raw_tags.upper() or "**FILENAME**" in raw_tags.upper():
+                raw_tags = re.split(r'SECTION 3|\*\*filename\*\*', raw_tags, flags=re.IGNORECASE)[0]
             
             tags_src = re.sub(r':\s*\d+\.?\d*|[()\[\]{}]', '', raw_tags)
             tokens = [t.strip() for t in re.split(r'[,\n;，；]', tags_src) if 2 < len(t.strip()) < 50]
-            # 过滤掉包含 "SECTION" 的 token
-            tokens = [t for t in tokens if "SECTION" not in t.upper()]
+            # Filter out keywords
+            tokens = [t for t in tokens if "SECTION" not in t.upper() and "**" not in t]
             lora_tags = ", ".join(list(dict.fromkeys(tokens)))
 
-        t_match = re.search(r'(?:SECTION 3.*?[:：]\s*)?\[([^\]]+)\]', raw, re.DOTALL | re.IGNORECASE)
-        title = re.sub(r"[\[\]{}'\"`’]", '', t_match.group(1)).strip() if t_match else f"Auto_{int(time.time())}"
+        # --- 3. Filename ---
+        # Supports [filename] pattern, optionally prefixed by headers
+        t_match = re.search(r'(?:(?:\*\*filename\*\*|SECTION 3).*?[:：]\s*)?\[([^\]]+)\]', raw, re.DOTALL | re.IGNORECASE)
+        
+        title = ""
+        if t_match:
+             title = t_match.group(1)
+        else:
+             # Fallback: Try to catch filename without brackets if header exists
+             f_match = re.search(r'(?:\*\*filename\*\*|SECTION 3).*?[:：]\s*([^\n]+)', raw, re.IGNORECASE)
+             if f_match:
+                 title = f_match.group(1)
+
+        title = re.sub(r"[\[\]{}'\"`’]", '', title).strip()
+        if not title: 
+            title = f"Auto_{int(time.time())}"
+            
         return (gen_p, lora_tags, f"{user_prefix}_{title[:50]}")
 
 # ==========================================================
