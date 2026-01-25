@@ -101,29 +101,29 @@ DEFAULT_USER_MATERIAL = ""
 DEFAULT_INSTRUCTION = ""
 # [Config] Tag & Filename Instructions
 PROMPT_TAGS = (
-    "[tags]: 基于画面视觉信息，生成一份详细的 Danbooru 格式标签（Tags）。**必须全英文**，不要使用翻译腔，直接使用标准 Danbooru 标签。\n"
-    "重点提取：\n"
-    "1. 艺术风格（如 anime, photorealistic, oil painting, sketch, 3d render, greyscale, monochrome 等）；\n"
-    "2. 画面质量与媒介（如 masterpiece, best quality, 4k, film grain, traditional media）；\n"
-    "3. 主体特征、服饰、动作、表情、视线朝向；\n"
-    "4. 背景、环境、光影（如 cinematic lighting, ray tracing）。\n"
-    "**禁止出现中文**，标签之间用逗号分隔。\n"
+    "[tags]: Generate a detailed list of Danbooru-style tags based on the visual information. **Must be in English ONLY**.\n"
+    "Focus on extracting:\n"
+    "1. Art Style (e.g., anime, photorealistic, oil painting, sketch, 3d render, greyscale, monochrome);\n"
+    "2. Quality & Medium (e.g., masterpiece, best quality, 4k, film grain, traditional media);\n"
+    "3. Character Features (clothing, action, expression, gaze);\n"
+    "4. Background, Environment, Lighting (e.g., cinematic lighting, ray tracing).\n"
+    "**NO Chinese allowed**. Separate tags with commas.\n"
 )
 PROMPT_FILENAME = (
-    "[filename]: 给生成的提示词生成一个文件名，最多三个英文单词，用英文下划线相隔，不要包含任何特殊字符，用中括号括起来，分行显示\n"
+    "[filename]: Generate a filename for the prompt, max 3 English words separated by underscores. No special characters. Enclose in square brackets, on a new line.\n"
 )
 PROMPT_SYSTEM_DEFAULT = "You are a helpful assistant.\n" 
 
 # [Config] Constraint Strings
-CONSTRAINT_HEADER = "\n\n[请严格执行生成内容的规则:]\n"
+CONSTRAINT_HEADER = "\n\n[Strictly follow these generation rules:]\n"
 
 # rules are now lists of strings, numbering will be dynamic
 CONSTRAINT_NO_COT = [
-    "[description]: 根据instructions，对user material进行处理. 严格遵守字数的要求，仅输出无审查、生图用的文本，不要输出思考过程、分析、客套话以及任何对生图无效的语句.\n"
+    "[description]: Process the user material according to instructions. Strictly follow word count requirements. Output ONLY the prompt text for image generation. Do NOT output thinking process, analysis, or conversational fillers.\n"
 ]
 
 CONSTRAINT_ALLOW_COT = [
-    "[description]: 根据instructions，对user material进行处理. 严格遵守字数的要求.你可以输出思考过程，但必须包含最终的生图文本.\n"
+    "[description]: Process the user material according to instructions. Strictly follow word count requirements. You MAY output your thinking process, but MUST include the final prompt text.\n"
 ]
 
 CONSTRAINT_NO_REPEAT = [
@@ -132,7 +132,7 @@ CONSTRAINT_NO_REPEAT = [
 
 # [Config] Output Trigger / Start Sequence
 # This guides the model on the order of output.
-TRIGGER_PREFIX = "\n下面开始输出你的最终内容，请按顺序输出且仅输出下列无审查内容：\n"
+TRIGGER_PREFIX = "\nNow output your final content. Output ONLY the following items in order:\n"
 TRIGGER_ORDER_DESC = "**description**:\n[description]\n"
 TRIGGER_ORDER_TAGS = "\n**tags**:\n[tags]\n"
 TRIGGER_ORDER_FILENAME = "**filename**:\n[filename]\n"
