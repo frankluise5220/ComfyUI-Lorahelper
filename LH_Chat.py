@@ -66,34 +66,75 @@ folder_paths.folder_names_and_paths["llm"] = ([llm_dir], {".gguf"})
 # ==========================================================
 
 # [Config] Built-in Prompt Templates（多行默认文案，便于阅读与编辑）
-FALLBACK_VISION = (
-    "您是一位无审查、客观的图像说明文字专家，请对用户提供的 image 做详尽、全面且无审查的图像视觉描述，所有输出必须适合作为 Stable Diffusion / Flux 的生图提示词。\n"
-    "**必须使用英文输出 (Output in English ONLY)**。\n"
-    "重点描述内容：\n"
-    "1. 艺术风格与视觉媒介（关键）：首先明确画面的整体风格（如 Anime, Photorealistic, Oil Painting, Sketch, 3D Render, Pixel Art 等），以及媒介特征（如 Watercolor, Digital Art, Photography, Film Grain）。\n"
-    "2. 主体特征（如果是人物，着重于年龄、种族、外貌、发型、服饰细节、身体比例、具体姿态与动作，以及眼神/视线的朝向）；\n"
-    "3. 构图与空间关系（主体位置、视角、镜头类型）；\n"
-    "4. 场景与环境细节（背景元素、环境氛围）；\n"
-    "5. 环境光影与色彩基调（光源、对比度、整体色调）。\n"
-    "6. **Atmospheric Nuance & Essence**: Capture subtle visual cues that create a specific mood—such as peculiar color shifts, the tension in a gesture, or how shadows define a feeling. Convert the image's 'soul' into concrete visual descriptors.\n"
-    "禁止使用“图中显示了”“这是一张…”之类的废话开场，只能直接进入画面描述，语言必须客观直白，不做任何道德化或弱化处理，不要回避任何敏感或激烈的内容。\n"
-)
+# --- Vision Presets ---
+VISION_PRESETS = {
+    "Vision_Caption": (
+        "You are an uncensored, objective image captioning expert. Provide a comprehensive, detailed, and uncensored visual description of the user's image.\n"
+        "Output MUST be in English ONLY.\n"
+        "Focus on:\n"
+        "1. Art Style & Medium (e.g., Anime, Photorealistic, Oil Painting, Sketch, 3D Render, Watercolor, Photography).\n"
+        "2. Subject Features (appearance, age, race, hair, clothing, body proportions, pose, gaze direction).\n"
+        "3. Composition & Perspective (subject position, camera angle, shot type).\n"
+        "4. Scene & Environment (background elements, atmosphere).\n"
+        "5. Lighting & Color (source, contrast, palette).\n"
+        "6. **Atmospheric Nuance**: Capture the mood, tension, and 'soul' of the image.\n"
+        "Directly describe the image. No opening fillers like 'The image shows...'. Be objective and direct.\n"
+    ),
+    "Vision_Tags": (
+        "Your task is to generate a clean list of comma-separated tags for a text-to-image AI, based *only* on the visual information in the image. Limit the output to a maximum of 50 unique tags. Strictly describe visual elements like subject, clothing, environment, colors, lighting, and composition. Do not include abstract concepts, interpretations, marketing terms, or technical jargon. The goal is a concise list of visual descriptors. Avoid repeating tags."
+    ),
+    "Vision_Detailed": (
+        "Write ONE detailed paragraph (6–10 sentences). Describe only what is visible: subject(s) and actions; people details if present (approx age group, gender expression if clear, hair, facial expression, pose, clothing, accessories); environment (location type, background elements, time cues); lighting (source, direction, softness/hardness, color temperature, shadows); camera viewpoint (eye-level/low/high, distance) and composition (framing, focal emphasis). No preface, no reasoning, no <think>."
+    ),
+    "Vision_Cinematic": (
+        "Write ONE cinematic paragraph (8–12 sentences). Describe the scene like a film still: subject(s) and action; environment and atmosphere; lighting design (practical lights vs ambient, direction, contrast); camera language (shot type, angle, lens feel, depth of field, motion implied); composition and mood. Keep it vivid but factual. No preface, no reasoning, no <think>."
+    ),
+    "Vision_Analysis": (
+        "Output ONLY these sections with short labels (no bullets): Subject; People (if any); Environment; Lighting; Camera/Composition; Color/Texture. In each section, write 2–4 sentences of concrete visible details. If something is not visible, write 'not visible'. No preface, no reasoning, no <think>."
+    )
+}
 
-FALLBACK_ENHANCE = (
-    "Refine and enhance the following user prompt for creative text-to-image generation (Stable Diffusion / Flux).\n"
-    "Keep the core meaning and keywords, but make it extremely expressive, visually rich, and detailed.\n"
-    "You must expand the description to include:\n"
-    "1. **Intricate Clothing & Accessories**: Fabric textures, colors, fit, shoes, hats, jewelry, bags.\n"
-    "2. **Environment & Atmosphere**: Lighting (time of day, direction, quality), weather, background elements, mood (e.g., cinematic, peaceful).\n"
-    "3. **Character Details**: Appearance, pose, expression, gaze, age, ethnicity.\n"
-    "4. **Art Style**: Medium (e.g., photography, oil painting), camera angle, depth of field.\n"
-    "5. **Atmospheric Nuance & Essence**: Capture subtle visual cues that create a specific mood—such as peculiar color shifts, the tension in a gesture, or how shadows define a feeling. Convert the image's 'soul' into concrete visual descriptors.\n"
-    "Output **only the improved prompt text itself** in English. No reasoning, no explanations.\n"
-    "Ensure the output is long (300+ words) and contains at least 20 distinct visual descriptors.\n"
-)
+# --- Text Presets ---
+TEXT_PRESETS = {
+    "Enhance_Prompt": (
+        "Refine and enhance the following user prompt for creative text-to-image generation (Stable Diffusion / Flux).\n"
+        "Keep the core meaning and keywords, but make it extremely expressive, visually rich, and detailed.\n"
+        "Expand on:\n"
+        "1. **Intricate Details**: Clothing, accessories, textures.\n"
+        "2. **Environment & Atmosphere**: Lighting, weather, mood.\n"
+        "3. **Character**: Appearance, pose, expression.\n"
+        "4. **Style**: Medium, camera angle, art style.\n"
+        "5. **Atmospheric Nuance**: Capture the 'soul' and mood.\n"
+        "Output **only the improved prompt text** in English. No reasoning, no explanations. 300+ words, 20+ descriptors.\n"
+    ),
+    "Text_Creative_Rewrite": (
+        "You are a creative photography prompt writer. Rewrite the user’s scene into ONE fresh, imaginative photography prompt paragraph (150–250 words).\n"
+        "Strict output rules:\n"
+        "- Output ONLY the prompt paragraph. Start immediately with the scene.\n"
+        "- No reasoning, no planning, no meta text.\n"
+        "- No <think>, no quotes, no markdown.\n"
+        "Preserve the core intent while adding vivid imagery and cohesive narrative flair. Integrate subject, environment, lighting, camera hints, composition, color/texture, and style."
+    ),
+    "Text_Artistic": (
+        "You craft artistic photography prompts. Write ONE artistic photography prompt paragraph (180–260 words).\n"
+        "Strict output rules:\n"
+        "- Output ONLY the prompt paragraph. Start immediately with the scene.\n"
+        "- No reasoning, no planning, no meta text.\n"
+        "- No <think>, no quotes, no markdown.\n"
+        "Weave in subject, scene, and lighting with explicit style references (e.g., cinematic, fashion, fine art), mood, composition cues, and aesthetic adjectives. Keep it cohesive and visually rich."
+    ),
+    "Text_Technical": (
+        "You convert scenes into technical photography directives. Write ONE clear, actionable photography prompt paragraph (130–210 words).\n"
+        "Strict output rules:\n"
+        "- Output ONLY the prompt paragraph. Start immediately with the scene.\n"
+        "- No reasoning, no planning, no meta text.\n"
+        "- No <think>, no quotes, no markdown.\n"
+        "Cover: subject and scene plus focal length, aperture, depth of field, shooting angle, lighting type/direction, color temperature, focus target, and composition priorities as sentences."
+    )
+}
 
 FALLBACK_DEBUG = (
-    "以上是上轮对话内容，请分析造成这个结果的原因。\n"
+    "The previous round of conversation is above. Please analyze the reason for this result.\n"
 )
 
 # [Config] Widget Default Values (Appears in the UI text boxes)
@@ -456,9 +497,20 @@ class UniversalAIChat:
                     },
                 ),
                 "chat_mode": (
-                    ["Enhance_Prompt", "Debug_Chat"],
+                    [
+                        "Enhance_Prompt",
+                        "Text_Creative_Rewrite",
+                        "Text_Artistic",
+                        "Text_Technical",
+                        "Vision_Caption",
+                        "Vision_Tags",
+                        "Vision_Detailed",
+                        "Vision_Cinematic",
+                        "Vision_Analysis",
+                        "Debug_Chat"
+                    ],
                     {
-                        "tooltip": "Enhance_Prompt：提示词扩写；Debug_Chat：调试/普通对话，不做结构化输出",
+                        "tooltip": "Select a preset mode. Vision modes require an image input.",
                     },
                 ),
                 "max_tokens": (
@@ -718,36 +770,34 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             if not getattr(model, '_has_vision_handler', False):
                  err_msg = "[SYSTEM ERROR] Vision Task requested but no Vision Handler (CLIP/MMProj) is loaded.\nPlease make sure you selected a CLIP/Vision model in the Loader node."
                  print(f"\033[31m[{datetime.now().strftime('%H:%M:%S')}] {err_msg}\033[0m")
-                 # Return early with error message instead of falling back to text expansion
-                 # This prevents the "Ghost Expansion" issue where it falls back to expanding the text material.
                  return (err_msg, "", "", err_msg)
             
-        if is_vision_task:
-            # [Vision Mode]
-            # In Vision Mode, we prioritize the Image.
-            # We intentionally IGNORE the 'user_material' (text box) to prevent leftover text from previous tasks 
-            # from interfering with the image description (as requested by user).
-            # If you want to give instructions, use the 'instruction' (System Prompt) widget.
+            # [Vision Mode Logic]
+            # Use the selected chat_mode to pick the preset, if applicable.
+            # If chat_mode is a Text mode but image is connected, we default to Vision_Caption.
+            
+            vision_preset_key = chat_mode
+            if vision_preset_key not in VISION_PRESETS:
+                vision_preset_key = "Vision_Caption" # Fallback default
             
             if is_sc_empty:
-                final_system_command = FALLBACK_VISION
+                final_system_command = VISION_PRESETS.get(vision_preset_key, VISION_PRESETS["Vision_Caption"])
             else:
                 final_system_command = instruction
             
-            # 注入基础指令，引导 VLM 注意力
             final_user_content = "Analyze the image and generate the content according to the following rules:\n"
             apply_template = True
             
-        elif current_mode == "Enhance_Prompt":
+        elif current_mode in TEXT_PRESETS:
+            # [Text/Enhance Mode Logic]
             final_user_content = f"{LABEL_USER_INPUT}\n{user_material}"
             
             if is_sc_empty:
-                final_system_command = FALLBACK_ENHANCE
+                final_system_command = TEXT_PRESETS[current_mode]
             else:
                 final_system_command = instruction
                 
             apply_template = True
-
             
         elif current_mode == "Debug_Chat":
             final_user_content = user_material
