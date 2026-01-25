@@ -556,8 +556,8 @@ class UniversalAIChat:
             }
         }
     
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("prompt", "tags", "filename", "raw_output", "think_process")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("prompt", "tags", "filename", "raw_output")
     FUNCTION = "chat"
     CATEGORY = "custom_nodes/MyLoraNodes"
 
@@ -1019,6 +1019,10 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             
         out_desc = clean_res[start_desc:end_desc].strip()
         
+        # Clean <think> tags from prompt output (out_desc)
+        # We don't want the thinking process in the actual prompt.
+        out_desc = re.sub(r'<think>.*?</think>', '', out_desc, flags=re.DOTALL).strip()
+        
         out_tags = ""
         if enable_tag:
             if pos_tags != -1:
@@ -1048,16 +1052,10 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         else:
             out_filename = ""
 
-        # Extract think process
-        think_content = ""
-        think_matches = re.findall(r'<think>(.*?)</think>', full_res, re.DOTALL)
-        if think_matches:
-            think_content = "\n\n".join(think_matches)
-
         # ==========================================================
         # 6. 输出结果 (Return)
         # ==========================================================
-        return (out_desc, out_tags, out_filename, raw_output, think_content)
+        return (out_desc, out_tags, out_filename, raw_output)
 
 
 # ==========================================================
