@@ -80,11 +80,17 @@ VISION_PRESETS = {
         "6. **Atmospheric Nuance**: Capture the mood, tension, and 'soul' of the image.\n"
         "Directly describe the image. No opening fillers like 'The image shows...'. Be objective and direct.\n"
     ),
+    "Vision_Simple": (
+        "Analyze the image and write a single concise sentence that describes the main subject and setting. Keep it grounded in visible details only. Output in English."
+    ),
     "Vision_Tags": (
         "Your task is to generate a clean list of comma-separated tags for a text-to-image AI, based *only* on the visual information in the image. Limit the output to a maximum of 50 unique tags. Strictly describe visual elements like subject, clothing, environment, colors, lighting, and composition. Do not include abstract concepts, interpretations, marketing terms, or technical jargon. The goal is a concise list of visual descriptors. Avoid repeating tags."
     ),
     "Vision_Detailed": (
         "Write ONE detailed paragraph (6–10 sentences). Describe only what is visible: subject(s) and actions; people details if present (approx age group, gender expression if clear, hair, facial expression, pose, clothing, accessories); environment (location type, background elements, time cues); lighting (source, direction, softness/hardness, color temperature, shadows); camera viewpoint (eye-level/low/high, distance) and composition (framing, focal emphasis). No preface, no reasoning, no <think>."
+    ),
+    "Vision_Ultra": (
+        "Write ONE ultra-detailed paragraph (10–16 sentences, ~180–320 words). Stay grounded in visible details. Include: subject micro-details (materials, textures, patterns, wear, reflections); people details if present (hair, skin tones, makeup, jewelry, fabric types, fit); environment depth (foreground/midground/background, signage/props, surface materials); lighting analysis (key/fill/back light, direction, softness, highlights, shadow shape); camera perspective (angle, lens feel, depth of field) and composition (leading lines, negative space, symmetry/asymmetry, visual hierarchy). No preface, no reasoning, no <think>."
     ),
     "Vision_Cinematic": (
         "Write ONE cinematic paragraph (8–12 sentences). Describe the scene like a film still: subject(s) and action; environment and atmosphere; lighting design (practical lights vs ambient, direction, contrast); camera language (shot type, angle, lens feel, depth of field, motion implied); composition and mood. Keep it vivid but factual. No preface, no reasoning, no <think>."
@@ -106,6 +112,12 @@ TEXT_PRESETS = {
         "4. **Style**: Medium, camera angle, art style.\n"
         "5. **Atmospheric Nuance**: Capture the 'soul' and mood.\n"
         "Output **only the improved prompt text** in English. No reasoning, no explanations. 300+ words, 20+ descriptors.\n"
+    ),
+    "Text_Refine": (
+        "Write ONE clear, concise photography prompt paragraph (120–200 words) that preserves the user’s intent and subject details. Focus on visual facts: subject, action, environment, lighting, and camera. Remove redundancy. Output in English only. No preface, no reasoning, no <think>."
+    ),
+    "Text_Translation": (
+        "You are a professional prompt translator. Translate the user's input into high-quality English for text-to-image generation. Ensure accurate terminology for art styles, lighting, and visual elements. Maintain the original meaning but optimize phrasing for AI comprehension. Output ONLY the English translation. No explanations."
     ),
     "Text_Creative_Rewrite": (
         "You are a creative photography prompt writer. Rewrite the user’s scene into ONE fresh, imaginative photography prompt paragraph (150–250 words).\n"
@@ -499,14 +511,18 @@ class UniversalAIChat:
                 "chat_mode": (
                     [
                         "Enhance_Prompt",
+                        "Text_Refine",
+                        "Text_Translation",
                         "Text_Creative_Rewrite",
                         "Text_Artistic",
                         "Text_Technical",
+                        "Vision_Simple",
                         "Vision_Caption",
-                        "Vision_Tags",
                         "Vision_Detailed",
+                        "Vision_Ultra",
                         "Vision_Cinematic",
                         "Vision_Analysis",
+                        "Vision_Tags",
                         "Debug_Chat"
                     ],
                     {
