@@ -228,11 +228,11 @@ LABEL_USER_INPUT = "[User Material]:"
 # ==========================================================
 # Helper: Dynamic Prompts Processor
 # ==========================================================
-def process_dynamic_prompts(text, seed=None):
+def process_dynamic_prompts(text, seed=None, process_random=True):
     """
     Process Dynamic Prompts syntax:
     1. Wildcards: __name__ -> reads from wildcards/name.txt
-    2. Inline Random: {a|b|c} -> random choice
+    2. Inline Random: {a|b|c} -> random choice (Optional)
     """
     if not text:
         return ""
@@ -287,17 +287,18 @@ def process_dynamic_prompts(text, seed=None):
         text = new_text
 
     # 2. Inline Random Processing ({a|b|c})
-    # Recursive replacement for nested brackets
-    def replace_inline_match(match):
-        options = match.group(1).split("|")
-        return rng.choice(options).strip()
+    if process_random:
+        # Recursive replacement for nested brackets
+        def replace_inline_match(match):
+            options = match.group(1).split("|")
+            return rng.choice(options).strip()
 
-    for _ in range(max_depth):
-        # Match innermost {} pair: {([^{}]+)}
-        new_text = re.sub(r"\{([^{}]+)\}", replace_inline_match, text)
-        if new_text == text:
-            break
-        text = new_text
+        for _ in range(max_depth):
+            # Match innermost {} pair: {([^{}]+)}
+            new_text = re.sub(r"\{([^{}]+)\}", replace_inline_match, text)
+            if new_text == text:
+                break
+            text = new_text
         
     return text
 
@@ -1356,6 +1357,9 @@ class LH_MultiTextSelector:
                         "tooltip": "第四个候选文本",
                     },
                 ),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "随机种子 (用于控制Wildcards选择)"}),
             }
         }
 
@@ -1414,20 +1418,30 @@ class LH_MultiTextSelector:
             text = self._spintax_pattern.sub(repl, text)
         return text
 
-    def select(self, mode, text_1, text_2, text_3, text_4):
+    def select(self, mode, text_1, text_2, text_3, text_4, seed=-1):
         items = []
         for t in (text_1, text_2, text_3, text_4):
             if isinstance(t, str) and t.strip() != "":
                 items.append(t)
         if not items:
             return ("",)
+            
         if mode == "Random":
-            chosen = random.choice(items)
+            # Use seed if provided for reproducibility
+            rng = random.Random(seed) if seed != -1 else random.Random()
+            chosen = rng.choice(items)
         else:
             idx = self.index % len(items)
             chosen = items[idx]
             self.index += 1
+            
+        # 1. Process Wildcards (Dynamic Prompts)
+        # We disable internal random processing here to let _apply_spintax handle {} with weights
+        chosen = process_dynamic_prompts(chosen, seed, process_random=False)
+        
+        # 2. Process Spintax (Inline Random with weights)
         chosen = self._apply_spintax(chosen)
+        
         return (chosen,)
 
 
