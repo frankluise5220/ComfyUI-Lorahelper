@@ -55,10 +55,35 @@ except ImportError:
     LlamaGrammar = None
 
 # 1. 路径注册
-llm_dir = os.path.join(folder_paths.models_dir, "llm")
-if not os.path.exists(llm_dir):
-    os.makedirs(llm_dir, exist_ok=True)
-folder_paths.folder_names_and_paths["llm"] = ([llm_dir], {".gguf"})
+# Support multiple LLM directory names (lowercase/uppercase/plural)
+llm_candidates = ["llm", "LLM", "llms", "LLMs", "GGUF", "gguf"]
+valid_llm_paths = []
+
+for candidate in llm_candidates:
+    p = os.path.join(folder_paths.models_dir, candidate)
+    if os.path.exists(p):
+        valid_llm_paths.append(p)
+
+# Ensure default 'llm' exists
+default_llm_dir = os.path.join(folder_paths.models_dir, "llm")
+if not os.path.exists(default_llm_dir):
+    try:
+        os.makedirs(default_llm_dir, exist_ok=True)
+    except Exception:
+        pass
+
+if default_llm_dir not in valid_llm_paths and os.path.exists(default_llm_dir):
+    valid_llm_paths.append(default_llm_dir)
+
+# Register paths
+if "llm" in folder_paths.folder_names_and_paths:
+    current_paths, current_exts = folder_paths.folder_names_and_paths["llm"]
+    for p in valid_llm_paths:
+        if p not in current_paths:
+            current_paths.append(p)
+    current_exts.add(".gguf")
+else:
+    folder_paths.folder_names_and_paths["llm"] = (valid_llm_paths, {".gguf"})
 
 # ==========================================================
 # [GLOBAL CONFIGURATION]
@@ -80,11 +105,14 @@ VISION_PRESETS = {
         "6. **Atmospheric Nuance**: Capture the mood, tension, and 'soul' of the image.\n"
         "Directly describe the image. No opening fillers like 'The image shows...'. Be objective and direct.\n"
     ),
-    "Vision_Simple": (
-        "Analyze the image and write a single concise sentence that describes the main subject and setting. Keep it grounded in visible details only. Output in English."
+    "Vision_Natural (FLUX/SD3)": (
+        "Describe this image as if you are explaining it to a blind person. Start directly with the main subject. Be descriptive but natural. Focus on the physical appearance, the action, the lighting, and the overall mood. Use simple, clear English sentences. Avoid 'The image shows' or list-style descriptions."
     ),
-    "Vision_Tags": (
-        "Your task is to generate a clean list of comma-separated tags for a text-to-image AI, based *only* on the visual information in the image. Limit the output to a maximum of 50 unique tags. Strictly describe visual elements like subject, clothing, environment, colors, lighting, and composition. Do not include abstract concepts, interpretations, marketing terms, or technical jargon. The goal is a concise list of visual descriptors. Avoid repeating tags."
+    "Vision_Tags (Danbooru)": (
+        "Analyze the image and output a list of Danbooru-style tags. Focus on: 1. Character (name if known, gender, hair color/style, eye color, skin tone). 2. Clothing (detailed breakdown). 3. Pose and Action. 4. Background and Objects. 5. Art Style and Medium. Format: tag1, tag2, tag3... No sentences, only tags."
+    ),
+    "Vision_Cinematic (Midjourney)": (
+        "Analyze this image from a professional photographer's perspective. Describe the: 1. Subject and Action (concise). 2. Lighting (key light, fill light, shadows, color temperature). 3. Camera Settings (shot type, angle, depth of field, potential lens type). 4. Color Grading (palette, mood, film stock feel). Combine this into a single, high-quality prompt suitable for a text-to-image AI."
     ),
     "Vision_Detailed": (
         "Write ONE detailed paragraph (6–10 sentences). Describe only what is visible: subject(s) and actions; people details if present (approx age group, gender expression if clear, hair, facial expression, pose, clothing, accessories); environment (location type, background elements, time cues); lighting (source, direction, softness/hardness, color temperature, shadows); camera viewpoint (eye-level/low/high, distance) and composition (framing, focal emphasis). No preface, no reasoning, no <think>."
@@ -102,7 +130,7 @@ VISION_PRESETS = {
 
 # --- Text Presets ---
 TEXT_PRESETS = {
-    "Enhance_Prompt": (
+    "Enhance_Prompt (Creative)": (
         "Refine and enhance the following user prompt for creative text-to-image generation (Stable Diffusion / Flux).\n"
         "Keep the core meaning and keywords, but make it extremely expressive, visually rich, and detailed.\n"
         "Expand on:\n"
@@ -214,7 +242,7 @@ class UniversalGGUFLoader:
                 "gguf_model": (
                     folder_paths.get_filename_list("llm"),
                     {
-                        "tooltip": "必选：LLM GGUF 模型文件，位于 ComfyUI/models/llm 目录中",
+                        "tooltip": "必选：LLM GGUF 模型文件，支持 ComfyUI/models/ 下的 llm, LLM, GGUF 等目录",
                     },
                 ),
                 "clip_model": (
@@ -303,9 +331,10 @@ class UniversalGGUFLoader:
                 else:
                     print(f"\033[31m[UniversalGGUFLoader] Error: Failed to load ANY compatible Vision Handler for: {clip_model}\033[0m")
                     print("\033[33m[UniversalGGUFLoader] Possible reasons:\n"
-                          "1. The 'mmproj' file is corrupted or incompatible with installed llama-cpp-python.\n"
-                          "2. You are using a model type (e.g. Qwen-VL) that requires a specific handler not yet auto-detected.\n"
-                          "3. Update llama-cpp-python to the latest version.\033[0m")
+                          "1. Mismatched Version: You are trying to use a 2B mmproj with a 7B model (or vice versa). MUST match exactly!\n"
+                          "2. The 'mmproj' file is corrupted or incompatible with installed llama-cpp-python.\n"
+                          "3. You are using a model type (e.g. Qwen-VL) that requires a specific handler not yet auto-detected.\n"
+                          "4. Update llama-cpp-python to the latest version.\033[0m")
                     print("\033[33m[UniversalGGUFLoader] Continuing in Text-Only mode...\033[0m")
                     chat_handler = None
             else:
@@ -510,23 +539,17 @@ class UniversalAIChat:
                 ),
                 "chat_mode": (
                     [
-                        "Enhance_Prompt",
-                        "Text_Refine",
-                        "Text_Translation",
-                        "Text_Creative_Rewrite",
-                        "Text_Artistic",
-                        "Text_Technical",
-                        "Vision_Simple",
-                        "Vision_Caption",
-                        "Vision_Detailed",
-                        "Vision_Ultra",
-                        "Vision_Cinematic",
-                        "Vision_Analysis",
-                        "Vision_Tags",
-                        "Debug_Chat"
+                        "Auto_Mode (Default)",
+                        "Vision_Caption (Standard)",
+                        "Vision_Natural (FLUX/SD3)",
+                        "Vision_Tags (Danbooru)",
+                        "Vision_Cinematic (Midjourney)",
+                        "Enhance_Prompt (Creative)",
+                        "Debug_Chat (Raw)"
                     ],
                     {
-                        "tooltip": "Select a preset mode. Vision modes require an image input.",
+                        "default": "Auto_Mode (Default)",
+                        "tooltip": "Auto_Mode: 自动模式 (连图用 Vision_Caption, 没图用 Enhance_Prompt)\nVision_Caption: 标准反推，详尽客观\nVision_Natural: 自然语言风格，适合FLUX\nVision_Tags: 仅输出标签，适合二次元\nVision_Cinematic: 摄影师视角，重光影氛围\nEnhance_Prompt: 文本扩写润色\nDebug_Chat: 纯指令模式",
                     },
                 ),
                 "max_tokens": (
@@ -535,7 +558,7 @@ class UniversalAIChat:
                         "default": 1024,
                         "min": 1,
                         "max": 8192,
-                        "tooltip": "本次回答的最大片段长度（token）。越大越容易写长文，也更耗时",
+                        "tooltip": "本次回答的最大片段长度（token）。注意：数值越大，生成内容越长，耗时也会显著增加（尤其是开启思维链的模型）",
                     },
                 ),
                 "temperature": (
@@ -766,12 +789,10 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         # Widget Default Value (视为“空”)
         WIDGET_DEFAULT_SC = ""
 
-        # 默认始终生成 tags 和 filename（用户不用就不接线）
         enable_tag = True
         enable_filename = True
 
         is_vision_task = image is not None
-        current_mode = "VISION" if is_vision_task else chat_mode
         
         # Check SC status
         sc_stripped = instruction.strip()
@@ -782,6 +803,42 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         final_user_content = ""
         apply_template = False
 
+        eff_max_tokens = max_tokens
+
+        # [Auto-Adjust for Vision]
+        # If image is connected, vision tasks generally require more tokens.
+        # We ensure a safe minimum (1024).
+        if is_vision_task and eff_max_tokens < 1024:
+            eff_max_tokens = 1024
+
+        # [Safety Cap] Ensure max_tokens doesn't exceed model context limit
+        try:
+            ctx_limit = model.n_ctx()
+            # Reserve tokens for Input (Image + System Prompt + User Text)
+            # Vision models use ~1024 tokens for image embeddings typically
+            reserved_input = 1536 if is_vision_task else 512
+            
+            safe_max = ctx_limit - reserved_input
+            if safe_max < 256: safe_max = 256 # Minimum floor
+            
+            if eff_max_tokens > safe_max:
+                print(f"\033[33m[UniversalAIChat] Auto-Adjust: max_tokens ({eff_max_tokens}) reduced to {safe_max} to fit within context window ({ctx_limit}).\033[0m")
+                eff_max_tokens = safe_max
+        except:
+            pass
+
+        # [Auto Mode Logic]
+        # If instruction is EMPTY -> Use Preset (and apply template)
+        # If instruction is CUSTOM -> Only apply template if tags/filename are requested
+        
+        if is_sc_empty:
+             apply_template = True
+        else:
+             if enable_tag or enable_filename:
+                 apply_template = True
+             else:
+                 apply_template = False
+
         if is_vision_task:
             if not getattr(model, '_has_vision_handler', False):
                  err_msg = "[SYSTEM ERROR] Vision Task requested but no Vision Handler (CLIP/MMProj) is loaded.\nPlease make sure you selected a CLIP/Vision model in the Loader node."
@@ -789,43 +846,48 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
                  return (err_msg, "", "", err_msg)
             
             # [Vision Mode Logic]
-            # Use the selected chat_mode to pick the preset, if applicable.
-            # If chat_mode is a Text mode but image is connected, we default to Vision_Caption.
+            current_mode = "VISION"
             
-            vision_preset_key = chat_mode
-            if vision_preset_key not in VISION_PRESETS:
-                vision_preset_key = "Vision_Caption" # Fallback default
+            # Determine Preset
+            preset_key = "Vision_Caption" # Default
+            if chat_mode in VISION_PRESETS:
+                preset_key = chat_mode
+            elif chat_mode == "Auto_Mode (Default)":
+                preset_key = "Vision_Caption"
             
-            if is_sc_empty:
-                final_system_command = VISION_PRESETS.get(vision_preset_key, VISION_PRESETS["Vision_Caption"])
-            else:
+            # If user provided custom instruction, use it. Otherwise use preset.
+            if not is_sc_empty:
                 final_system_command = instruction
+            else:
+                final_system_command = VISION_PRESETS.get(preset_key, VISION_PRESETS["Vision_Caption"])
             
             final_user_content = "Analyze the image and generate the content according to the following rules:\n"
-            apply_template = True
             
-        elif current_mode in TEXT_PRESETS:
+        else:
             # [Text/Enhance Mode Logic]
+            current_mode = "TEXT"
             final_user_content = f"{LABEL_USER_INPUT}\n{user_material}"
             
-            if is_sc_empty:
-                final_system_command = TEXT_PRESETS[current_mode]
-            else:
-                final_system_command = instruction
+            # Determine Preset
+            preset_key = "Enhance_Prompt (Creative)" # Default
+            if chat_mode in TEXT_PRESETS:
+                preset_key = chat_mode
+            elif chat_mode == "Auto_Mode (Default)":
+                preset_key = "Enhance_Prompt (Creative)"
                 
-            apply_template = True
-            
-        elif current_mode == "Debug_Chat":
-            final_user_content = user_material
-
-            if is_sc_empty:
-                final_system_command = FALLBACK_DEBUG
-            else:
+            if not is_sc_empty:
                 final_system_command = instruction
-            
-            enable_tag = False
-            enable_filename = False
-            apply_template = False
+            else:
+                final_system_command = TEXT_PRESETS.get(preset_key, TEXT_PRESETS["Enhance_Prompt (Creative)"])
+
+        if chat_mode == "Debug_Chat (Raw)":
+             if not is_sc_empty:
+                 final_system_command = instruction
+             else:
+                 final_system_command = FALLBACK_DEBUG
+             # In Debug mode, we usually don't force templates unless user asks
+             apply_template = False
+
             
         # ==========================================================
         # 2. 模板构建 (Template Construction)
@@ -959,7 +1021,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
                         # [Fix] top_p should not be assigned min_p value. We use default top_p=0.9 and let min_p handle truncation.
                         output = model.create_chat_completion(
                             messages=messages, 
-                            max_tokens=max_tokens, 
+                            max_tokens=eff_max_tokens, 
                             temperature=safe_temperature, 
                             repeat_penalty=repetition_penalty, 
                             top_p=0.9, 
@@ -997,7 +1059,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             usage = output.get('usage', {})
 
             if finish_reason == 'length':
-                full_res += "\n\n[SYSTEM: Output Truncated. Max Tokens Reached.]"
+                full_res += "\n\n[SYSTEM: Output Truncated. Max Tokens Reached. Increase 'max_tokens' in widget.]"
             
             # [Post-Processing]
             if full_res:
