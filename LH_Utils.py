@@ -47,9 +47,9 @@ class LoRA_AllInOne_Saver:
 
     def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
         # 0. 路径清理 (Sanitization) - 修复安全漏洞 (Security Fix)
-        # 使用 os.path.commonpath 进行严格的路径遍历检测
+        # 使用 os.path.commonpath 进行严格的路径遍历检测 (Refined Logic)
         
-        # 获取绝对路径的输出基准目录
+        # 1. 获取规范化的根目录
         base_output_dir = os.path.abspath(self.output_dir)
         
         # 处理用户输入的 folder_path
@@ -58,33 +58,30 @@ class LoRA_AllInOne_Saver:
         folder_path = folder_path.strip()
         
         # 简单清理非法字符 (Windows不支持的字符)，但保留路径分隔符 / 和 \ 以支持子目录
-        # 仅移除 * ? " < > | : 
         folder_path = re.sub(r'[*?"<>|:]', '', folder_path)
         
-        # 防止绝对路径被 os.path.join 处理（绝对路径会丢弃前面的基准路径）
-        if os.path.isabs(folder_path):
-             # 简单的处理方式：去掉盘符，去掉开头的斜杠，强制转为相对路径
-             drive, tail = os.path.splitdrive(folder_path)
-             folder_path = tail.lstrip(os.sep + '/')
+        # 2. 计算并规范化目标路径
+        # 无论用户输入是相对还是绝对，都先合并。
+        # 注意：如果 folder_path 是绝对路径，os.path.join 会丢弃 base_output_dir，
+        # 但这没关系，因为下面的 commonpath 检查会拦截这种情况。
+        requested_path = os.path.join(base_output_dir, folder_path)
+        normalized_dest = os.path.abspath(os.path.normpath(requested_path))
         
-        # 构造目标绝对路径
-        # os.path.normpath 会处理 .. 和多余的斜杠
-        target_path = os.path.abspath(os.path.join(base_output_dir, folder_path))
-        
-        # [SECURITY CHECK] 确保 target_path 是 base_output_dir 的子目录
+        # 3. 核心安全检查：验证最终路径是否在 base_output_dir 之内
         try:
-            common = os.path.commonpath([base_output_dir, target_path])
-        except ValueError:
-            common = ""
-            
-        if common != base_output_dir:
-            print(f"\033[31m[LoRA_Saver] Security Alert: Path traversal attempt detected! '{folder_path}' -> '{target_path}'. Fallback to default.\033[0m")
-            full_path = os.path.join(base_output_dir, "LoRA_Train_Data")
-            folder_path = "LoRA_Train_Data"
-        else:
-            full_path = target_path
-            # 更新 folder_path 为相对路径，确保 metadata 记录整洁
-            folder_path = os.path.relpath(full_path, base_output_dir)
+            if os.path.commonpath([base_output_dir, normalized_dest]) != base_output_dir:
+                print(f"\033[31m[LoRA_Saver] Security Alert: Access to path '{folder_path}' rejected (Out of bounds). Fallback to default.\033[0m")
+                # 如果越界，强制回退到默认安全目录
+                full_path = os.path.join(base_output_dir, "LoRA_Train_Data")
+                folder_path = "LoRA_Train_Data"
+            else:
+                full_path = normalized_dest
+                # 更新 folder_path 为相对路径，确保 metadata 记录整洁
+                folder_path = os.path.relpath(full_path, base_output_dir)
+        except Exception:
+             # 发生任何路径解析错误，回退到安全目录
+             full_path = os.path.join(base_output_dir, "LoRA_Train_Data")
+             folder_path = "LoRA_Train_Data"
 
         os.makedirs(full_path, exist_ok=True)
         
