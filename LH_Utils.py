@@ -46,17 +46,47 @@ class LoRA_AllInOne_Saver:
     CATEGORY = "custom_nodes/MyLoraNodes"
 
     def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
-        # 0. 路径清理 (Sanitization) - 修复维护者提出的安全问题
-        # 移除可能导致路径穿越的 ".." 字符，并清理前后空格
-        folder_path = folder_path.strip().replace("..", "")
-        # 移除非法字符，防止系统报错
-        folder_path = re.sub(r'[\\:*?"<>|]', '', folder_path)
+        # 0. 路径清理 (Sanitization) - 修复安全漏洞 (Security Fix)
+        # 使用 os.path.commonpath 进行严格的路径遍历检测
         
-        # 如果清理后为空，给个默认名
+        # 获取绝对路径的输出基准目录
+        base_output_dir = os.path.abspath(self.output_dir)
+        
+        # 处理用户输入的 folder_path
         if not folder_path:
             folder_path = "LoRA_Train_Data"
-        # Handle optional inputs being None
-        # [CHANGE] We do NOT convert lora_tags/gen_prompt to "" here, because we need to detect None for file skipping.
+        folder_path = folder_path.strip()
+        
+        # 简单清理非法字符 (Windows不支持的字符)，但保留路径分隔符 / 和 \ 以支持子目录
+        # 仅移除 * ? " < > | : 
+        folder_path = re.sub(r'[*?"<>|:]', '', folder_path)
+        
+        # 防止绝对路径被 os.path.join 处理（绝对路径会丢弃前面的基准路径）
+        if os.path.isabs(folder_path):
+             # 简单的处理方式：去掉盘符，去掉开头的斜杠，强制转为相对路径
+             drive, tail = os.path.splitdrive(folder_path)
+             folder_path = tail.lstrip(os.sep + '/')
+        
+        # 构造目标绝对路径
+        # os.path.normpath 会处理 .. 和多余的斜杠
+        target_path = os.path.abspath(os.path.join(base_output_dir, folder_path))
+        
+        # [SECURITY CHECK] 确保 target_path 是 base_output_dir 的子目录
+        try:
+            common = os.path.commonpath([base_output_dir, target_path])
+        except ValueError:
+            common = ""
+            
+        if common != base_output_dir:
+            print(f"\033[31m[LoRA_Saver] Security Alert: Path traversal attempt detected! '{folder_path}' -> '{target_path}'. Fallback to default.\033[0m")
+            full_path = os.path.join(base_output_dir, "LoRA_Train_Data")
+            folder_path = "LoRA_Train_Data"
+        else:
+            full_path = target_path
+            # 更新 folder_path 为相对路径，确保 metadata 记录整洁
+            folder_path = os.path.relpath(full_path, base_output_dir)
+
+        os.makedirs(full_path, exist_ok=True)
         
         s_file = str(filename_final).strip() if filename_final else ""
         
@@ -90,18 +120,6 @@ class LoRA_AllInOne_Saver:
         # [最后一道防线] 如果清理后safe_name为空（例如前缀全是非法字符），强制给默认值
         if not safe_name:
             safe_name = "LH_AutoSave"
-        
-        # [SECURITY FIX] 强制使用相对路径，禁止绝对路径，防止路径穿越
-        # Force relative path logic to ensure we stay within ComfyUI output directory
-        if os.path.isabs(folder_path):
-            # 如果用户传了绝对路径，我们只取最后一部分作为子文件夹名
-            # 或者直接忽略盘符，强制变为相对路径
-            # 这里选择简单粗暴的方案：把冒号和斜杠都去掉，变成一个长文件夹名，确保安全
-            print(f"\033[33m[LoRA_Saver] Warning: Absolute path detected. Converting '{folder_path}' to relative path for security.\033[0m")
-            folder_path = re.sub(r'[:]', '', folder_path).lstrip('/\\')
-            
-        full_path = os.path.join(self.output_dir, folder_path)
-        os.makedirs(full_path, exist_ok=True)
         
         timestamp = int(time.time())
         results = [] # 这里开始修复
