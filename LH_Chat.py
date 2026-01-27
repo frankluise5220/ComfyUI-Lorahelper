@@ -225,6 +225,82 @@ TRIGGER_SUFFIX = "\n"
 # Used to wrap the user's input so the model knows what it is.
 LABEL_USER_INPUT = "[User Material]:"
 
+# ==========================================================
+# Helper: Dynamic Prompts Processor
+# ==========================================================
+def process_dynamic_prompts(text, seed=None):
+    """
+    Process Dynamic Prompts syntax:
+    1. Wildcards: __name__ -> reads from wildcards/name.txt
+    2. Inline Random: {a|b|c} -> random choice
+    """
+    if not text:
+        return ""
+    
+    # Use a local random instance for reproducibility if seed is provided
+    rng = random.Random(seed) if seed is not None and seed != -1 else random.Random()
+    
+    # Define Wildcard Search Paths
+    base_path = folder_paths.base_path
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    wildcard_dirs = [
+        os.path.join(base_path, "wildcards"), # Standard ComfyUI wildcards
+        os.path.join(current_dir, "wildcards"), # Plugin internal wildcards
+        # Try to find DynamicPrompts custom node path
+        os.path.join(base_path, "custom_nodes", "ComfyUI-DynamicPrompts", "wildcards")
+    ]
+    
+    # 1. Wildcards Processing (__name__)
+    # Recursive replacement to handle nested wildcards (limit depth)
+    max_depth = 10
+    
+    def get_wildcard_content(name):
+        # Secure filename (alphanumeric + underscore + hyphen)
+        safe_name = re.sub(r'[^\w\-]', '', name)
+        filename = f"{safe_name}.txt"
+        
+        for wd in wildcard_dirs:
+            p = os.path.join(wd, filename)
+            if os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        lines = [line.strip() for line in f if line.strip()]
+                    if lines:
+                        return rng.choice(lines)
+                except Exception:
+                    pass
+        return None
+
+    def replace_wildcard_match(match):
+        name = match.group(1)
+        content = get_wildcard_content(name)
+        # If found, return content; otherwise keep original string
+        return content if content is not None else match.group(0)
+
+    for _ in range(max_depth):
+        # Match __word__ but avoid greedy matching if possible
+        # Regex: __([a-zA-Z0-9_\-\s]+)__
+        new_text = re.sub(r"__([a-zA-Z0-9_\-\s]+)__", replace_wildcard_match, text)
+        if new_text == text:
+            break
+        text = new_text
+
+    # 2. Inline Random Processing ({a|b|c})
+    # Recursive replacement for nested brackets
+    def replace_inline_match(match):
+        options = match.group(1).split("|")
+        return rng.choice(options).strip()
+
+    for _ in range(max_depth):
+        # Match innermost {} pair: {([^{}]+)}
+        new_text = re.sub(r"\{([^{}]+)\}", replace_inline_match, text)
+        if new_text == text:
+            break
+        text = new_text
+        
+    return text
+
 
 # 2. 模型加载节点
 # ==========================================================
@@ -721,6 +797,12 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         # 0. 基础防御性处理 (Defensive Check)
         if user_material is None: user_material = ""
         if instruction is None: instruction = ""
+
+        # [NEW] Dynamic Prompts Processing
+        # Process user_material and instruction for wildcards and random choices
+        # We pass the seed to ensure reproducibility if seed is fixed.
+        user_material = process_dynamic_prompts(user_material, seed)
+        instruction = process_dynamic_prompts(instruction, seed)
 
         # Ensure model is loaded
         if model is None:
