@@ -106,6 +106,17 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Log**: `_log.txt` with the full raw AI response.
 *   **Path**: Default saves to `ComfyUI/output/LoRA_Train_Data/`.
 
+#### 6. LH_MultiTextSelector (Dynamic Prompt Generator)
+*   **Function**: A powerful text selector with support for Dynamic Prompts syntax.
+*   **Features**:
+    *   **4-Slot Selection**: Input up to 4 text candidates.
+    *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through them).
+    *   **Dynamic Syntax**:
+        *   **Inline Random**: `{cat|dog|bird}` - Randomly chooses one option.
+        *   **Weighted Random**: `{0.8::cat|0.2::dog}` - Weighted probability.
+        *   **Wildcards**: `__colors__` - Reads from `wildcards/colors.txt` (supports recursive lookup in `ComfyUI/wildcards` or plugin's `wildcards` folder).
+    *   **Seed Control**: Ensure reproducible results for your random prompts.
+
 ## 💡 Best Practice
 
 It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.com/adieyal/comfyui-dynamicprompts)**:
@@ -198,6 +209,17 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **标签**: `.txt` 文件，格式为 `触发词, 标签1, 标签2...`。
     *   **日志**: `_log.txt` 文件，记录 AI 的原始完整回复（可以接入任何想要保存的文本）。
 *   **路径**: 默认保存在 `ComfyUI/output/LoRA_Train_Data/`，支持自定义子文件夹。
+
+#### 6. LH_MultiTextSelector (动态提示词生成器)
+*   **功能**: 支持动态语法 (Dynamic Prompts) 的多功能文本选择器。
+*   **特性**:
+    *   **4路选择**: 支持输入 4 个候选文本框。
+    *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环)。
+    *   **动态语法支持**:
+        *   **内联随机**: `{cat|dog|bird}` - 随机选择其中一个。
+        *   **权重随机**: `{0.8::cat|0.2::dog}` - 按概率选择。
+        *   **通配符 (Wildcards)**: `__colors__` - 读取 `wildcards/colors.txt` 文件的内容 (支持递归查找 `ComfyUI/wildcards` 或本插件内置目录)。
+    *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
 ---
 
