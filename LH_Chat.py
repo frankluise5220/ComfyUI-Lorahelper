@@ -54,28 +54,27 @@ except ImportError:
     Qwen2VLChatHandler = None
     LlamaGrammar = None
 
-# 1. 路径注册
-# Support multiple LLM directory names (lowercase/uppercase/plural)
-llm_candidates = ["llm", "LLM", "llms", "LLMs", "GGUF", "gguf"]
+# ==========================================================
+# 1. 路径注册 (Path Registration) - 重构版
+# ==========================================================
+
+# 候选文件夹名称，涵盖了大多数用户的命名习惯
+llm_candidates = ["llm", "LLM", "llms", "LLMs", "GGUF", "gguf", "llama", "llama_cpp"]
 valid_llm_paths = []
 
+# 扫描 models 目录下已存在的物理路径
 for candidate in llm_candidates:
     p = os.path.join(folder_paths.models_dir, candidate)
     if os.path.exists(p):
         valid_llm_paths.append(p)
 
-# Ensure default 'llm' exists
-default_llm_dir = os.path.join(folder_paths.models_dir, "llm")
-if not os.path.exists(default_llm_dir):
-    try:
-        os.makedirs(default_llm_dir, exist_ok=True)
-    except Exception:
-        pass
+# 如果物理路径全都不存在，仅提供默认引用，不再强行创建文件夹 (os.makedirs 已移除)
+if not valid_llm_paths:
+    default_path = os.path.join(folder_paths.models_dir, "llm")
+    valid_llm_paths.append(default_path)
+    print(f"\033[33m[ComfyUI-Lorahelper] 注意：未找到 LLM 目录。默认指向: {default_path}，请手动创建并放入模型。\033[0m")
 
-if default_llm_dir not in valid_llm_paths and os.path.exists(default_llm_dir):
-    valid_llm_paths.append(default_llm_dir)
-
-# Register paths
+# 注册到 ComfyUI 全局路径管理器
 if "llm" in folder_paths.folder_names_and_paths:
     current_paths, current_exts = folder_paths.folder_names_and_paths["llm"]
     for p in valid_llm_paths:
@@ -84,6 +83,9 @@ if "llm" in folder_paths.folder_names_and_paths:
     current_exts.add(".gguf")
 else:
     folder_paths.folder_names_and_paths["llm"] = (valid_llm_paths, {".gguf"})
+
+# 在控制台输出结果，方便调试
+print(f"\033[32m[ComfyUI-Lorahelper] LLM 路径加载成功: {valid_llm_paths}\033[0m")
 
 # ==========================================================
 # [GLOBAL CONFIGURATION]
@@ -282,7 +284,7 @@ class UniversalGGUFLoader:
         
         model_path = folder_paths.get_full_path("llm", gguf_model)
         if not model_path or not os.path.exists(model_path):
-             raise FileNotFoundError(f"Model file not found: {gguf_model}")
+             raise FileNotFoundError(f"找不到模型文件: {gguf_model}。请检查该文件是否确实存在于您的 models/llm (或 GGUF, llama 等) 目录中。")
 
         # Setup Chat Handler for Vision (CLIP/MMProj)
         # Loader 直接加载 CLIP，保持逻辑统一
