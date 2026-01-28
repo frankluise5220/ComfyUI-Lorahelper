@@ -2,7 +2,11 @@ import os
 import time
 import re
 import json
-import numpy as np
+import random
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 import folder_paths
@@ -122,7 +126,13 @@ class LoRA_AllInOne_Saver:
         results = [] # 这里开始修复
         
         for i, image in enumerate(images):
-            img = Image.fromarray((255. * image.cpu().numpy()).clip(0, 255).astype(np.uint8))
+            if np:
+                img = Image.fromarray((255. * image.cpu().numpy()).clip(0, 255).astype(np.uint8))
+            else:
+                 # Fallback if numpy is missing (though torch usually requires numpy, this is safe)
+                 import torch
+                 img = Image.fromarray((255. * image.cpu()).clip(0, 255).to(torch.uint8).numpy())
+
             file_basename = f"{safe_name}_{timestamp}_{i:02d}"
             save_filename = f"{file_basename}.png"
             
@@ -153,3 +163,161 @@ class LoRA_AllInOne_Saver:
                         f.write(str(gen_prompt))
                     
         return {"ui": {"images": results}} # 这里也从 [] 修复为了 results
+
+# ==========================================================
+# Helper: Dynamic Prompts Processor
+# ==========================================================
+def _get_wildcard_content(name, wildcard_dirs, rng):
+    # Security: Prevent path traversal
+    if any(x in name for x in ["..", ":"]) or name.startswith(("/", "\\")): return None
+    
+    # Allow alphanumeric, underscore, hyphen, space, slash, backslash, dot
+    safe_name = re.sub(r'[^\w\-\s/.\\]', '', name)
+    
+    for wd in wildcard_dirs:
+        p = os.path.normpath(os.path.join(wd, f"{safe_name}.txt"))
+        if os.path.isfile(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    # Allow empty lines (empty choices) but skip comments
+                    lines = [line.strip() for line in f if not line.strip().startswith("#")]
+                if lines: return rng.choice(lines)
+            except Exception: pass
+    return None
+
+def process_dynamic_prompts(text, seed=None, process_random=True):
+    """
+    Process Dynamic Prompts syntax:
+    1. Wildcards: __name__ -> reads from wildcards/name.txt
+    2. Inline Random: {a|b|c} -> random choice (Optional)
+    """
+    if not text: return ""
+
+    # Global cleanup of invisible characters that might cause regex failure
+    # \u200b: Zero-width space, \uFEFF: BOM, \u200c: ZWNJ, \u200d: ZWJ, \u2060: Word Joiner
+    for char in ['\u200b', '\uFEFF', '\u200c', '\u200d', '\u2060']:
+        text = text.replace(char, '')
+    
+    rng = random.Random(seed) if seed is not None and seed != -1 else random.Random()
+    
+    # Define Wildcard Search Paths
+    base_path = folder_paths.base_path
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    wildcard_dirs = [
+        os.path.join(base_path, "wildcards"), 
+        os.path.join(current_dir, "wildcards"), 
+        os.path.join(base_path, "custom_nodes", "ComfyUI-DynamicPrompts", "wildcards")
+    ]
+    
+    # 1. Wildcards Processing (__name__)
+    for _ in range(10): # Max recursive depth
+        def _repl_wildcard(m):
+            content = _get_wildcard_content(m.group(1), wildcard_dirs, rng)
+            return content if content is not None else m.group(0)
+            
+        # Support Unicode characters (including Chinese) by using \w
+        new_text = re.sub(r"__([\w\-\s/.\\]+)__", _repl_wildcard, text)
+        if new_text == text: break
+        text = new_text
+
+    # 2. Inline Random Processing ({a|b|c})
+    if process_random:
+        # Loop to handle nested brackets (innermost first)
+        # Using a loop allows handling structures like {A|{B|C}}
+        for _ in range(20): # Increased depth limit for complex nesting
+            found_match = False
+            
+            def _repl_inline(m):
+                nonlocal found_match
+                found_match = True
+                content = m.group(1).strip()
+                
+                # Use simple split since we process innermost first, meaning no nested braces should exist here.
+                # If they do, it's malformed input, and smart split won't save it logically anyway.
+                opts = content.split("|")
+                choices, weights = [], []
+                
+                for opt in opts:
+                    opt = opt.strip()
+                    # Allow empty options (e.g. {A|}) -> empty string choice
+                    if not opt and len(opts) > 1:
+                        weights.append(1.0)
+                        choices.append("")
+                        continue
+                    if not opt: continue
+                    
+                    # Regex: Allow leading whitespace, Capture Weight, Match ::, Capture Content
+                    match = re.match(r'^\s*(\d+(?:\.\d+)?)\s*::\s*(.*)$', opt, re.DOTALL)
+                    
+                    parsed = False
+                    if match:
+                        try:
+                            w_val = float(match.group(1))
+                            c_val = match.group(2).strip()
+                            weights.append(w_val)
+                            choices.append(c_val)
+                            parsed = True
+                        except ValueError: pass
+                    
+                    if not parsed:
+                        # Fallback: Check if :: exists and try manual parsing for robustness
+                        # This handles cases where regex fails due to weird invisible chars or format issues
+                        if "::" in opt:
+                            try:
+                                parts = opt.split("::", 1)
+                                w_candidate = parts[0].strip()
+                                # Allow simple number check
+                                if re.match(r'^\d+(\.\d+)?$', w_candidate):
+                                    w_val = float(w_candidate)
+                                    c_val = parts[1].strip()
+                                    weights.append(w_val)
+                                    choices.append(c_val)
+                                    parsed = True
+                            except: pass
+                    
+                    if not parsed:
+                        weights.append(1.0)
+                        choices.append(opt)
+                
+                if not choices: return ""
+                
+                # Weighted Random Selection
+                if sum(weights) <= 0: return rng.choice(choices)
+                return rng.choices(choices, weights=weights, k=1)[0]
+
+            # Regex to find innermost braces: { followed by anything not { or } followed by }
+            # [^{}] matches newlines automatically, so DOTALL is not strictly needed for the outer find,
+            # but we use it for safety.
+            new_text = re.sub(r"\{([^{}]+)\}", _repl_inline, text)
+            
+            if new_text == text:
+                break
+            text = new_text
+            
+    return text
+
+# ==========================================================
+# New: Simple Text Node (Raw String)
+# ==========================================================
+class LH_SimpleText:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "text": ("STRING", {"default": "", "multiline": True}),
+            },
+            "optional": {
+                "force_input": ("STRING", {"forceInput": True, "tooltip": "Optional input to override text"}),
+            }
+        }
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "execute"
+    CATEGORY = "custom_nodes/MyLoraNodes"
+    OUTPUT_NODE = True
+
+    def execute(self, text, force_input=None):
+        # Prioritize connected input if available
+        final_text = force_input if force_input is not None else text
+        
+        # Return both the string for connection and the UI update
+        return {"ui": {"text": [final_text]}, "result": (final_text,)}

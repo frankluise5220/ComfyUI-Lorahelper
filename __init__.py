@@ -1,6 +1,6 @@
 from .LH_Chat import UniversalAIChat, UniversalGGUFLoader, UniversalOllamaLoader, LH_History_Monitor, LH_MultiTextSelector
 from .LH_LlamaInstruct import LH_LlamaInstruct
-from .LH_Utils import LoRA_AllInOne_Saver
+from .LH_Utils import LoRA_AllInOne_Saver, LH_SimpleText
 
 NODE_CLASS_MAPPINGS = {
     "UniversalGGUFLoader": UniversalGGUFLoader,
@@ -10,6 +10,7 @@ NODE_CLASS_MAPPINGS = {
     "LH_History_Monitor": LH_History_Monitor,
     "LH_MultiTextSelector": LH_MultiTextSelector,
     "LoRA_AllInOne_Saver": LoRA_AllInOne_Saver,
+    "LH_SimpleText": LH_SimpleText,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -20,6 +21,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LH_History_Monitor": "LH_History_Monitor",
     "LH_MultiTextSelector": "LH_MultiTextSelector",
     "LoRA_AllInOne_Saver": "LH_AllInOne_Saver",
+    "LH_SimpleText": "LH_SimpleText (Raw)",
 }
 
 WEB_DIRECTORY = "./web"

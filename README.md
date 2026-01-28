@@ -60,6 +60,7 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   `max_tokens`: Max generation length.
     *   `temperature`: Creativity (higher = more random).
     *   `repetition_penalty`: Penalty for repeating text.
+    *   `force_chinese`: (Boolean) Appends a Chinese translation directive to the system prompt, ensuring detailed Chinese output.
     *   `seed`: Random seed for reproducibility.
     *   `release_vram`: Auto-release VRAM after generation.
 *   **Outputs**:
@@ -111,11 +112,23 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 *   **Features**:
     *   **4-Slot Selection**: Input up to 4 text candidates.
     *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through them).
-    *   **Dynamic Syntax**:
-        *   **Inline Random**: `{cat|dog|bird}` - Randomly chooses one option.
-        *   **Weighted Random**: `{0.8::cat|0.2::dog}` - Weighted probability.
-        *   **Wildcards**: `__colors__` - Reads from `wildcards/colors.txt` (supports recursive lookup in `ComfyUI/wildcards` or plugin's `wildcards` folder).
     *   **Seed Control**: Ensure reproducible results for your random prompts.
+
+#### 7. LH_SimpleText (Raw Text)
+*   **Function**: A pure, unadulterated multiline text node.
+*   **Features**:
+    *   **What You See Is What You Get**: No preprocessing, no hidden formatting.
+    *   **Real-time Feedback**: Displays received text immediately in the UI.
+    *   **Ideal For**: Connecting raw text to `user_material` to avoid "smart" text box interference.
+
+### 🎨 Global Feature: Dynamic Prompts Engine
+*   **Supported Nodes**: `LH_AIChat`, `LH_MultiTextSelector`, `LH_SimpleText` (via Utils).
+*   **Advanced Syntax**:
+    *   **Recursive Wildcards**: `__colors__` - Reads from `.txt` files (supports recursive lookup in `ComfyUI/wildcards` or plugin's `wildcards` folder).
+    *   **Deep Nesting**: `{A|{B|C}}` - Supports complex nested choices up to 20 levels.
+    *   **Weighted Choices**: `{80::Red|20::Blue}` - Robust probability control.
+    *   **Full Unicode**: Perfect support for **Chinese/Japanese** characters in wildcards and content.
+    *   **Auto-Cleaning**: Automatically removes invisible characters (Zero-Width Space) that often cause parsing errors.
 
 ## 💡 Best Practice
 
@@ -165,6 +178,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `max_tokens`: 最大生成长度。
     *   `temperature`: 温度 (创造力，越高越随机)。
     *   `repetition_penalty`: 重复惩罚系数。
+    *   `force_chinese`: (布尔值) 强制开启中文模式，在系统指令中追加翻译要求，确保输出详尽的中文内容。
     *   `seed`: 随机种子 (控制结果一致性)。
     *   `release_vram`: 生成后自动释放显存。
 *   **输出端口**:
@@ -215,11 +229,23 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **特性**:
     *   **4路选择**: 支持输入 4 个候选文本框。
     *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环)。
-    *   **动态语法支持**:
-        *   **内联随机**: `{cat|dog|bird}` - 随机选择其中一个。
-        *   **权重随机**: `{0.8::cat|0.2::dog}` - 按概率选择。
-        *   **通配符 (Wildcards)**: `__colors__` - 读取 `wildcards/colors.txt` 文件的内容 (支持递归查找 `ComfyUI/wildcards` 或本插件内置目录)。
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
+
+#### 7. LH_SimpleText (原生文本)
+*   **功能**: 一个纯净的、所见即所得的多行文本节点。
+*   **特性**:
+    *   **原汁原味**: 不做任何预处理，保留文本最原始的格式。
+    *   **实时反馈**: 支持前端实时显示接收到的文本内容。
+    *   **用途**: 最适合作为 `user_material` 的输入源，避免被普通文本框的“智能”格式化干扰。
+
+### 🎨 全局特性：动态提示词引擎 (Dynamic Prompts Engine)
+*   **支持节点**: `LH_AIChat`, `LH_MultiTextSelector` 等所有核心节点。
+*   **进阶语法**:
+    *   **递归通配符**: `__colors__` - 读取 `.txt` 文件 (支持递归查找 `ComfyUI/wildcards` 或本插件内置目录)。
+    *   **深度嵌套**: `{A|{B|C}}` - 支持高达 20 层嵌套选择。
+    *   **权重抽卡**: `{80::红|20::蓝}` - 鲁棒的概率控制。
+    *   **全语种支持**: 完美支持 **中文/日文** 通配符文件名和内容。
+    *   **自动清洗**: 自动移除导致报错的隐形字符 (Zero-Width Space)，让复制粘贴更省心。
 
 ---
 

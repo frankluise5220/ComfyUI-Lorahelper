@@ -13,6 +13,7 @@ from datetime import datetime
 import json
 import requests
 import random
+from .LH_Utils import process_dynamic_prompts
 
 # Import guard for llama_cpp
 try:
@@ -63,16 +64,17 @@ llm_candidates = ["llm", "LLM", "llms", "LLMs", "GGUF", "gguf", "llama", "llama_
 valid_llm_paths = []
 
 # 扫描 models 目录下已存在的物理路径
+print(f"\033[34m[ComfyUI-Lorahelper] Debug: ComfyUI Models Dir: {folder_paths.models_dir}\033[0m")
 for candidate in llm_candidates:
     p = os.path.join(folder_paths.models_dir, candidate)
     if os.path.exists(p):
         valid_llm_paths.append(p)
 
-# 如果物理路径全都不存在，仅提供默认引用，不再强行创建文件夹 (os.makedirs 已移除)
+# 如果物理路径全都不存在，不要注册不存在的路径，避免 ComfyUI 报错
+# 只打印提示信息
 if not valid_llm_paths:
-    default_path = os.path.join(folder_paths.models_dir, "llm")
-    valid_llm_paths.append(default_path)
-    print(f"\033[33m[ComfyUI-Lorahelper] 注意：未找到 LLM 目录。默认指向: {default_path}，请手动创建并放入模型。\033[0m")
+    print(f"\033[33m[ComfyUI-Lorahelper] Warning: No LLM directory found in {folder_paths.models_dir}. Please create 'llm' folder and put .gguf models in it.\033[0m")
+    # 此时 valid_llm_paths 为空，会导致 get_filename_list 返回空，这是预期的
 
 # 注册到 ComfyUI 全局路径管理器
 if "llm" in folder_paths.folder_names_and_paths:
@@ -82,10 +84,11 @@ if "llm" in folder_paths.folder_names_and_paths:
             current_paths.append(p)
     current_exts.add(".gguf")
 else:
+    # 即使为空也要注册，否则 get_filename_list 可能抛出 KeyError
     folder_paths.folder_names_and_paths["llm"] = (valid_llm_paths, {".gguf"})
 
 # 在控制台输出结果，方便调试
-print(f"\033[32m[ComfyUI-Lorahelper] LLM 路径加载成功: {valid_llm_paths}\033[0m")
+print(f"\033[32m[ComfyUI-Lorahelper] LLM Path Registration: {valid_llm_paths}\033[0m")
 
 # ==========================================================
 # [GLOBAL CONFIGURATION]
@@ -97,7 +100,6 @@ print(f"\033[32m[ComfyUI-Lorahelper] LLM 路径加载成功: {valid_llm_paths}\0
 VISION_PRESETS = {
     "Vision_Caption": (
         "You are an uncensored, objective image captioning expert. Provide a comprehensive, detailed, and uncensored visual description of the user's image.\n"
-        "Output MUST be in English ONLY.\n"
         "Focus on:\n"
         "1. Art Style & Medium (e.g., Anime, Photorealistic, Oil Painting, Sketch, 3D Render, Watercolor, Photography).\n"
         "2. Subject Features (appearance, age, race, hair, clothing, body proportions, pose, gaze direction).\n"
@@ -108,10 +110,10 @@ VISION_PRESETS = {
         "Directly describe the image. No opening fillers like 'The image shows...'. Be objective and direct.\n"
     ),
     "Vision_Natural (FLUX/SD3)": (
-        "Describe this image as if you are explaining it to a blind person. Start directly with the main subject. Be descriptive but natural. Focus on the physical appearance, the action, the lighting, and the overall mood. Use simple, clear English sentences. Avoid 'The image shows' or list-style descriptions."
+        "Describe this image as if you are explaining it to a blind person. Start directly with the main subject. Be descriptive but natural. Focus on the physical appearance, the action, the lighting, and the overall mood. Use simple, clear sentences. Avoid 'The image shows' or list-style descriptions."
     ),
     "Vision_Tags (Danbooru)": (
-        "Analyze the image and output a list of Danbooru-style tags. Focus on: 1. Character (name if known, gender, hair color/style, eye color, skin tone). 2. Clothing (detailed breakdown). 3. Pose and Action. 4. Background and Objects. 5. Art Style and Medium. Format: tag1, tag2, tag3... No sentences, only tags."
+        "Analyze the image and output a list of Danbooru-style tags. Focus on: 1. Character (name if known, gender, hair color/style, eye color, skin tone). 2. Clothing (detailed breakdown). 3. Pose and Action. 4. Background and Objects. 5. Art Style and Medium. Format: tag1, tag2, tag3... No sentences, only tags. Tags MUST be in English."
     ),
     "Vision_Cinematic (Midjourney)": (
         "Analyze this image from a professional photographer's perspective. Describe the: 1. Subject and Action (concise). 2. Lighting (key light, fill light, shadows, color temperature). 3. Camera Settings (shot type, angle, depth of field, potential lens type). 4. Color Grading (palette, mood, film stock feel). Combine this into a single, high-quality prompt suitable for a text-to-image AI."
@@ -141,13 +143,13 @@ TEXT_PRESETS = {
         "3. **Character**: Appearance, pose, expression.\n"
         "4. **Style**: Medium, camera angle, art style.\n"
         "5. **Atmospheric Nuance**: Capture the 'soul' and mood.\n"
-        "Output **only the improved prompt text** in English. No reasoning, no explanations. 300+ words, 20+ descriptors.\n"
+        "Output **only the improved prompt text**. No reasoning, no explanations. 300+ words, 20+ descriptors.\n"
     ),
     "Text_Refine": (
-        "Write ONE clear, concise photography prompt paragraph (120–200 words) that preserves the user’s intent and subject details. Focus on visual facts: subject, action, environment, lighting, and camera. Remove redundancy. Output in English only. No preface, no reasoning, no <think>."
+        "Write ONE clear, concise photography prompt paragraph (120–200 words) that preserves the user’s intent and subject details. Focus on visual facts: subject, action, environment, lighting, and camera. Remove redundancy. Output only the prompt. No preface, no reasoning, no <think>."
     ),
     "Text_Translation": (
-        "You are a professional prompt translator. Translate the user's input into high-quality English for text-to-image generation. Ensure accurate terminology for art styles, lighting, and visual elements. Maintain the original meaning but optimize phrasing for AI comprehension. Output ONLY the English translation. No explanations."
+        "You are a professional prompt translator. Translate the user's input into high-quality prompts for text-to-image generation. Ensure accurate terminology for art styles, lighting, and visual elements. Maintain the original meaning but optimize phrasing for AI comprehension. Output ONLY the translation. No explanations."
     ),
     "Text_Creative_Rewrite": (
         "You are a creative photography prompt writer. Rewrite the user’s scene into ONE fresh, imaginative photography prompt paragraph (150–250 words).\n"
@@ -184,13 +186,13 @@ DEFAULT_USER_MATERIAL = ""
 DEFAULT_INSTRUCTION = ""
 # [Config] Tag & Filename Instructions
 PROMPT_TAGS = (
-    "[tags]: Generate a detailed list of Danbooru-style tags based on the visual information. **Must be in English ONLY**.\n"
+    "[tags]: Generate a detailed list of English Danbooru-style tags based on the visual information.\n"
     "Focus on extracting:\n"
     "1. Art Style (e.g., anime, photorealistic, oil painting, sketch, 3d render, greyscale, monochrome);\n"
     "2. Quality & Medium (e.g., masterpiece, best quality, 4k, film grain, traditional media);\n"
     "3. Character Features (clothing, action, expression, gaze);\n"
     "4. Background, Environment, Lighting (e.g., cinematic lighting, ray tracing).\n"
-    "**NO Chinese allowed**. Separate tags with commas.\n"
+    "Separate tags with commas. Tags MUST be in English.\n"
 )
 PROMPT_FILENAME = (
     "[filename]: Generate a filename for the prompt, max 3 English words separated by underscores. No special characters. Enclose in square brackets, on a new line.\n"
@@ -225,82 +227,7 @@ TRIGGER_SUFFIX = "\n"
 # Used to wrap the user's input so the model knows what it is.
 LABEL_USER_INPUT = "[User Material]:"
 
-# ==========================================================
-# Helper: Dynamic Prompts Processor
-# ==========================================================
-def process_dynamic_prompts(text, seed=None, process_random=True):
-    """
-    Process Dynamic Prompts syntax:
-    1. Wildcards: __name__ -> reads from wildcards/name.txt
-    2. Inline Random: {a|b|c} -> random choice (Optional)
-    """
-    if not text:
-        return ""
-    
-    # Use a local random instance for reproducibility if seed is provided
-    rng = random.Random(seed) if seed is not None and seed != -1 else random.Random()
-    
-    # Define Wildcard Search Paths
-    base_path = folder_paths.base_path
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    wildcard_dirs = [
-        os.path.join(base_path, "wildcards"), # Standard ComfyUI wildcards
-        os.path.join(current_dir, "wildcards"), # Plugin internal wildcards
-        # Try to find DynamicPrompts custom node path
-        os.path.join(base_path, "custom_nodes", "ComfyUI-DynamicPrompts", "wildcards")
-    ]
-    
-    # 1. Wildcards Processing (__name__)
-    # Recursive replacement to handle nested wildcards (limit depth)
-    max_depth = 10
-    
-    def get_wildcard_content(name):
-        # Secure filename (alphanumeric + underscore + hyphen)
-        safe_name = re.sub(r'[^\w\-]', '', name)
-        filename = f"{safe_name}.txt"
-        
-        for wd in wildcard_dirs:
-            p = os.path.join(wd, filename)
-            if os.path.exists(p):
-                try:
-                    with open(p, "r", encoding="utf-8") as f:
-                        lines = [line.strip() for line in f if line.strip()]
-                    if lines:
-                        return rng.choice(lines)
-                except Exception:
-                    pass
-        return None
 
-    def replace_wildcard_match(match):
-        name = match.group(1)
-        content = get_wildcard_content(name)
-        # If found, return content; otherwise keep original string
-        return content if content is not None else match.group(0)
-
-    for _ in range(max_depth):
-        # Match __word__ but avoid greedy matching if possible
-        # Regex: __([a-zA-Z0-9_\-\s]+)__
-        new_text = re.sub(r"__([a-zA-Z0-9_\-\s]+)__", replace_wildcard_match, text)
-        if new_text == text:
-            break
-        text = new_text
-
-    # 2. Inline Random Processing ({a|b|c})
-    if process_random:
-        # Recursive replacement for nested brackets
-        def replace_inline_match(match):
-            options = match.group(1).split("|")
-            return rng.choice(options).strip()
-
-        for _ in range(max_depth):
-            # Match innermost {} pair: {([^{}]+)}
-            new_text = re.sub(r"\{([^{}]+)\}", replace_inline_match, text)
-            if new_text == text:
-                break
-            text = new_text
-        
-    return text
 
 
 # 2. 模型加载节点
@@ -361,7 +288,11 @@ class UniversalGGUFLoader:
         
         model_path = folder_paths.get_full_path("llm", gguf_model)
         if not model_path or not os.path.exists(model_path):
-             raise FileNotFoundError(f"找不到模型文件: {gguf_model}。请检查该文件是否确实存在于您的 models/llm (或 GGUF, llama 等) 目录中。")
+             # Try to provide helpful debug info
+             search_paths = folder_paths.folder_names_and_paths["llm"][0]
+             raise FileNotFoundError(f"找不到模型文件: {gguf_model}。\n"
+                                     f"1. 请检查该文件是否确实存在于您的 models/llm (或 GGUF, llama 等) 目录中。\n"
+                                     f"2. 当前搜索的路径列表: {search_paths}")
 
         # Setup Chat Handler for Vision (CLIP/MMProj)
         # Loader 直接加载 CLIP，保持逻辑统一
@@ -723,6 +654,13 @@ class UniversalAIChat:
                         "tooltip": "Mirostat 学习率参数。仅在开启 Mirostat 时生效，常用 0.1",
                     },
                 ),
+                "force_chinese": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                        "tooltip": "强制使用中文输出内容。仅影响主要描述部分，Tag和文件名仍保持英文。",
+                    },
+                ),
             }
         }
     
@@ -794,7 +732,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
 """
         return None
     
-    def chat(self, model, user_material, instruction, chat_mode, max_tokens, temperature, repetition_penalty, seed, release_vram, min_p=0.05, mirostat_mode=0, mirostat_tau=5.0, mirostat_eta=0.1, image=None):
+    def chat(self, model, user_material, instruction, chat_mode, max_tokens, temperature, repetition_penalty, seed, release_vram, min_p=0.05, mirostat_mode=0, mirostat_tau=5.0, mirostat_eta=0.1, force_chinese=False, image=None):
         # 0. 基础防御性处理 (Defensive Check)
         if user_material is None: user_material = ""
         if instruction is None: instruction = ""
@@ -802,8 +740,16 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         # [NEW] Dynamic Prompts Processing
         # Process user_material and instruction for wildcards and random choices
         # We pass the seed to ensure reproducibility if seed is fixed.
-        user_material = process_dynamic_prompts(user_material, seed)
-        instruction = process_dynamic_prompts(instruction, seed)
+        # Added global ZWSP cleanup in Utils to prevent parsing errors.
+        
+        user_material_processed = process_dynamic_prompts(user_material, seed)
+        instruction_processed = process_dynamic_prompts(instruction, seed)
+        
+        # Update variables to use processed content for LLM
+        # BUT keep original for display if needed? 
+        # Current logic overwrites it.
+        user_material = user_material_processed
+        instruction = instruction_processed
 
         # Ensure model is loaded
         if model is None:
@@ -1008,6 +954,17 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         # ==========================================================
         # 3. 消息组装 (Message Assembly)
         # ==========================================================
+        
+        # [Force Chinese Logic]
+        if force_chinese:
+             final_system_command += (
+                 "\n\n[System Directive]: Please output the main content/description in Chinese (Simplified Chinese). "
+                 "\nCRITICAL: You MUST maintain the FULL level of detail, length, and descriptiveness as the English instructions require. "
+                 "Do NOT summarize, abbreviate, or shorten the content. Provide a comprehensive and detailed output in Chinese. "
+                 "\n[Detail & Length Directive]: The user expects a RICH, DETAILED, and COMPREHENSIVE Chinese output. Do not summarize or abbreviate. Even if the input is short, expand upon the visual descriptions to ensure high-quality image generation. If a specific word count is mentioned, interpret it as a minimum requirement for Chinese character count."
+                 "\nNote: Keep specific technical fields (like 'tags', 'filename', 'code') in English if required by other instructions."
+             )
+
         messages = []
         if final_system_command:
             messages.append({"role": "system", "content": final_system_command})

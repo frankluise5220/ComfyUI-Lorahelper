@@ -14,13 +14,19 @@ const TRANSLATIONS = {
             "enable_tag": "启用标签提取",
             "enable_filename": "启用文件名生成",
             "seed": "种子 (Seed)",
-            "release_vram": "自动释放显存"
+            "release_vram": "自动释放显存",
+            "force_chinese": "强制中文输出"
         },
         "Qwen3_GGUF_loader": {
             "gguf_model": "GGUF模型",
             "clip_model": "CLIP视觉模型",
             "n_gpu_layers": "GPU层数 (-1为全部)",
             "n_ctx": "最大上下文 (n_ctx)"
+        },
+        "LoraHelper_CloudLoader": {
+            "api_key": "API 密钥 (API Key)",
+            "base_url": "API 地址 (Base URL)",
+            "model_name": "模型名称 (Model Name)"
         },
         "LoraHelper_Monitor": {
             "raw_input": "原始输出 (Raw Input)",
@@ -106,6 +112,7 @@ function updateSingleNode(node, lang) {
     const NODE_TYPE_MAP = {
         "UniversalAIChat": "LoraHelper_Chat",
         "UniversalGGUFLoader": "Qwen3_GGUF_loader",
+        "UniversalCloudLoader": "LoraHelper_CloudLoader",
         "LH_History_Monitor": "LoraHelper_Monitor",
         "LH_MultiTextSelector": "LoraHelper_MultiTextSelector",
         "Qwen3TextSplitter": "LoraHelper_Splitter",
