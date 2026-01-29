@@ -1,6 +1,6 @@
 [project]
 name = "lorahelper"
-description = "LLM-based chat nodes for image description, tagging and prompt enhancement using GGUF models"
+description = "A specialized toolkit for image captioning (reverse prompting), prompt enrichment, and automated batch generation using GGUF and Ollama models."
 version = "1.0.0"
 license = {file = "LICENSE"} 
 # classifiers = [
@@ -29,7 +29,7 @@ Documentation = "https://github.com/frankluise5220/ComfyUI-Lorahelper/wiki"
 "Bug Tracker" = "https://github.com/frankluise5220/ComfyUI-Lorahelper/issues"
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "frankluise5220"
 DisplayName = "ComfyUI-Lorahelper"
 Icon = ""
 includes = [] 
