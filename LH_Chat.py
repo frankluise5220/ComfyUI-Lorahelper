@@ -65,7 +65,7 @@ llm_candidates = ["llm", "LLM", "llms", "LLMs", "GGUF", "gguf", "llama", "llama_
 valid_llm_paths = []
 
 # 扫描 models 目录下已存在的物理路径
-print(f"\033[34m[ComfyUI-Lorahelper] Debug: ComfyUI Models Dir: {folder_paths.models_dir}\033[0m")
+# print(f"\033[34m[ComfyUI-Lorahelper] Debug: ComfyUI Models Dir: {folder_paths.models_dir}\033[0m")
 for candidate in llm_candidates:
     p = os.path.join(folder_paths.models_dir, candidate)
     if os.path.exists(p):
@@ -89,7 +89,7 @@ else:
     folder_paths.folder_names_and_paths["llm"] = (valid_llm_paths, {".gguf"})
 
 # 在控制台输出结果，方便调试
-print(f"\033[32m[ComfyUI-Lorahelper] LLM Path Registration: {valid_llm_paths}\033[0m")
+# print(f"\033[32m[ComfyUI-Lorahelper] LLM Path Registration: {valid_llm_paths}\033[0m")
 
 # ==========================================================
 # [GLOBAL CONFIGURATION]
@@ -100,15 +100,19 @@ print(f"\033[32m[ComfyUI-Lorahelper] LLM Path Registration: {valid_llm_paths}\03
 # --- Vision Presets ---
 VISION_PRESETS = {
     "Vision_Caption": (
-        "You are an uncensored, objective image captioning expert. Provide a comprehensive, detailed, and uncensored visual description of the user's image.\n"
-        "Focus on:\n"
-        "1. Art Style & Medium (e.g., Anime, Photorealistic, Oil Painting, Sketch, 3D Render, Watercolor, Photography).\n"
-        "2. Subject Features (appearance, age, race, hair, clothing, body proportions, pose, gaze direction).\n"
-        "3. Composition & Perspective (subject position, camera angle, shot type).\n"
-        "4. Scene & Environment (background elements, atmosphere).\n"
-        "5. Lighting & Color (source, contrast, palette).\n"
-        "6. **Atmospheric Nuance**: Capture the mood, tension, and 'soul' of the image.\n"
-        "Directly describe the image. No opening fillers like 'The image shows...'. Be objective and direct.\n"
+        "You are an expert art interrogator. Your task is to reverse-engineer this image into a highly descriptive prompt.\n"
+        "Priority 1: Art Style & Technical Medium (e.g., Digital Art, 35mm Photography, Oil Painting, 3D Render, Anime Style, etc.). Be extremely specific about the aesthetic (e.g., 'Cinematic, Moody, Cyberpunk', 'Soft Pastel, Impressionistic').\n"
+        "Priority 2: Textures & Materials (e.g., 'glossy skin', 'rough fabric', 'subsurface scattering', 'film grain').\n"
+        "Priority 3: Subject & Scene (detailed appearance, pose, environment).\n"
+        "Priority 4: Lighting & Composition (lighting source, color palette, camera angle, depth of field).\n"
+        "Output ONLY the description. No conversational fillers."
+    ),
+    "Vision_Style_Interrogator": (
+        "Identify the core artistic DNA of this image. Focus EXCLUSIVELY on:\n"
+        "1. Medium & Tool (e.g., C4D, Analog Film, Watercolor, Ink Wash).\n"
+        "2. Artistic Style & Aesthetic (e.g., Minimalism, Art Nouveau, Synthwave, Surrealism).\n"
+        "3. Technical Highlights (e.g., high-contrast lighting, bokeh, wide-angle lens, grainy texture, specific color grading).\n"
+        "Output a concise summary of the style keywords and technical descriptors that define the 'look' of this image."
     ),
     "Vision_Natural (FLUX/SD3)": (
         "Describe this image as if you are explaining it to a blind person. Start directly with the main subject. Be descriptive but natural. Focus on the physical appearance, the action, the lighting, and the overall mood. Use simple, clear sentences. Avoid 'The image shows' or list-style descriptions."
@@ -188,11 +192,12 @@ DEFAULT_INSTRUCTION = ""
 # [Config] Tag & Filename Instructions
 PROMPT_TAGS = (
     "[tags]: Generate a detailed list of English Danbooru-style tags based on the visual information.\n"
-    "Focus on extracting:\n"
-    "1. Art Style (e.g., anime, photorealistic, oil painting, sketch, 3d render, greyscale, monochrome);\n"
-    "2. Quality & Medium (e.g., masterpiece, best quality, 4k, film grain, traditional media);\n"
-    "3. Character Features (clothing, action, expression, gaze);\n"
-    "4. Background, Environment, Lighting (e.g., cinematic lighting, ray tracing).\n"
+    "Priority Order for Tags:\n"
+    "1. Art Style & Medium (e.g., photography, oil painting, 3d render, anime, charcoal sketch);\n"
+    "2. Technical Details (e.g., film grain, chromatic aberration, depth of field, sharp focus, volumetric lighting);\n"
+    "3. Quality (e.g., masterpiece, best quality, ultra-detailed);\n"
+    "4. Character & Subject (appearance, clothing, action, gaze);\n"
+    "5. Background & Environment.\n"
     "Separate tags with commas. Tags MUST be in English.\n"
 )
 PROMPT_FILENAME = (
@@ -301,7 +306,7 @@ class UniversalGGUFLoader:
         if clip_model != "None":
             clip_path = folder_paths.get_full_path("llm", clip_model)
             if clip_path and os.path.exists(clip_path):
-                print(f"\033[34m[UniversalGGUFLoader] Attempting to load Vision Projector: {clip_model}\033[0m")
+                # print(f"\033[34m[UniversalGGUFLoader] Attempting to load Vision Projector: {clip_model}\033[0m")
                 
                 # Helper function to try loading a handler
                 def try_load_handler(HandlerClass, name):
@@ -309,11 +314,11 @@ class UniversalGGUFLoader:
                     try:
                         # verbose=True can be helpful but let's keep it simple
                         h = HandlerClass(clip_model_path=clip_path)
-                        print(f"\033[32m[UniversalGGUFLoader] Success: {name} Vision Adapter Loaded.\033[0m")
+                        # print(f"\033[32m[UniversalGGUFLoader] Success: {name} Vision Adapter Loaded.\033[0m")
                         return h
                     except Exception as e:
                         # Don't print stack trace for expected failures, just the error
-                        print(f"\033[33m[UniversalGGUFLoader] Info: {name} handler failed ({str(e)}). Trying next...\033[0m")
+                        # print(f"\033[33m[UniversalGGUFLoader] Info: {name} handler failed ({str(e)}). Trying next...\033[0m")
                         return None
                 
                 # 0. Try Qwen (High Priority)
@@ -338,7 +343,7 @@ class UniversalGGUFLoader:
 
                 # Final Check
                 if chat_handler:
-                    print(f"\033[32m[UniversalGGUFLoader] Vision Model Ready.\033[0m")
+                    pass # print(f"\033[32m[UniversalGGUFLoader] Vision Model Ready.\033[0m")
                 else:
                     print(f"\033[31m[UniversalGGUFLoader] Error: Failed to load ANY compatible Vision Handler for: {clip_model}\033[0m")
                     print("\033[33m[UniversalGGUFLoader] Possible reasons:\n"
@@ -359,7 +364,7 @@ class UniversalGGUFLoader:
         
         if "qwen" in model_name:
             chat_format = "chatml"
-            print(f"\033[36m[UniversalGGUFLoader] Auto-detected Qwen model. Enforcing chat_format='chatml'.\033[0m")
+            # print(f"\033[36m[UniversalGGUFLoader] Auto-detected Qwen model. Enforcing chat_format='chatml'.\033[0m")
         elif "llama-3" in model_name or "llama3" in model_name:
              chat_format = "llama-3"
         elif "vicuna" in model_name:
@@ -679,59 +684,42 @@ class UniversalAIChat:
         """
         Builds a GBNF grammar string based on enabled features.
         """
-        # GBNF Definition
-        # root ::= description tags? filename?
-        # description ::= "**description**:" space text
-        # tags ::= "**tags**:" space text
-        # filename ::= "**filename**:" space text
-        
-        # Basic text definition (allows newlines)
-        # We need to be careful not to consume the next keyword.
-        # But GBNF for "everything until keyword" is tricky.
-        # Simple approach: standard text.
-        
-        gbnf = r"""
-root ::= description
-"""
-        if enable_tag:
-            gbnf += " tags"
-        if enable_filename:
-            gbnf += " filename"
+        if LlamaGrammar is None:
+            return None
+
+        try:
+            # 1. 构建 Root 规则
+            root_parts = ["description"]
+            if enable_tag:
+                root_parts.append("tags")
+            if enable_filename:
+                root_parts.append("filename")
             
-        gbnf += r"""
-description ::= "**description**:" "\n" content
-tags ::= "**tags**:" "\n" tag_content
-filename ::= "**filename**:" "\n" filename_content
-
-content ::= [^#*]+ 
-tag_content ::= [^#*]+
-filename_content ::= "[" [a-zA-Z0-9_]+ "]"
-
-"""
-        # Note: The regex [^#*]+ is a simplification. 
-        # Ideally we want "anything that doesn't look like a start tag".
-        # For now, let's try a simpler approach without strict GBNF first?
-        # Or use a very loose GBNF that just mandates the headers.
-        
-        # Let's try a structure that enforces the headers but allows free text in between.
-        
-        grammar_str = r"""
-root ::= description
-"""
-        if enable_tag:
-            grammar_str += " tags"
-        if enable_filename:
-            grammar_str += " filename"
+            grammar_lines = [
+                f"root ::= {' '.join(root_parts)}",
+                'description ::= "**description**:\\n" text',
+            ]
             
-        grammar_str += r"""
-description ::= "**description**:\n" text
-tags ::= "**tags**:\n" text
-filename ::= "**filename**:\n" filename_pattern
+            if enable_tag:
+                grammar_lines.append('tags ::= "\\n**tags**:\\n" text')
+            
+            if enable_filename:
+                grammar_lines.append('filename ::= "\\n**filename**:\\n" filename_pattern')
 
-text ::= ( [^#] | "#" [^*] )+ 
-filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
-"""
-        return None
+            # 2. 定义基础类型
+            # text: 允许不以 \n* 开头的任意内容。这会匹配到下一个标题之前的所有内容。
+            grammar_lines.append('text ::= ([^\\n] | "\\n" [^*])*')
+            grammar_lines.append('filename_pattern ::= "[" [a-zA-Z0-9_\\-]+ "]"')
+            
+            grammar_str = "\n".join(grammar_lines)
+            
+            return LlamaGrammar.from_string(grammar_str)
+            
+        except Exception as e:
+            print(f"\033[33m[UniversalAIChat] GBNF grammar build failed: {e}. Falling back to no grammar.\033[0m")
+            # 如果构建失败，输出一下 grammar_str 方便调试
+            # print(f"DEBUG Grammar:\n{grammar_str}") 
+            return None
     
     def chat(self, model, user_material, instruction, chat_mode, max_tokens, temperature, repetition_penalty, seed, release_vram, min_p=0.05, mirostat_mode=0, mirostat_tau=5.0, mirostat_eta=0.1, force_chinese=False, image=None):
         # 0. 基础防御性处理 (Defensive Check)
@@ -776,7 +764,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
                      print(f"\033[31m[UniversalAIChat] Reload failed: {e}\033[0m")
                      raise ValueError(f"Model reload failed: {e}")
              elif hasattr(model, '_init_params'):
-                 print("\033[33m[UniversalAIChat] Model is closed or invalid. Reloading...\033[0m")
+                 # print("\033[33m[UniversalAIChat] Model is closed or invalid. Reloading...\033[0m")
                  from llama_cpp import Llama
                  init_p = model._init_params
                  
@@ -854,7 +842,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             if safe_max < 256: safe_max = 256 # Minimum floor
             
             if eff_max_tokens > safe_max:
-                print(f"\033[33m[UniversalAIChat] Auto-Adjust: max_tokens ({eff_max_tokens}) reduced to {safe_max} to fit within context window ({ctx_limit}).\033[0m")
+                # print(f"\033[33m[UniversalAIChat] Auto-Adjust: max_tokens ({eff_max_tokens}) reduced to {safe_max} to fit within context window ({ctx_limit}).\033[0m")
                 eff_max_tokens = safe_max
         except:
             pass
@@ -1019,7 +1007,10 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
             safe_temperature = min(max(temperature, 0.0), 2.0)
             grammar = None
             if apply_template and needs_structure:
-                 pass
+                 grammar = self._build_grammar(enable_tag, enable_filename)
+                 # print(f"\033[36m[UniversalAIChat] GBNF Grammar Enabled: enable_tag={enable_tag}, enable_filename={enable_filename}\033[0m")
+            else:
+                 pass # print(f"\033[33m[UniversalAIChat] GBNF Grammar Disabled: apply_template={apply_template}, needs_structure={needs_structure}\033[0m")
 
             output = None
             full_res = ""
@@ -1083,7 +1074,7 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
                         # If error is about vision/embedding, try fallback
                         err_str = str(local_error).lower()
                         if is_vision_task and attempt < max_attempts:
-                             print(f"\033[33m[UniversalAIChat] Vision attempt {attempt} failed ({err_str}). Retrying with SAFE samplers...\033[0m")
+                             # print(f"\033[33m[UniversalAIChat] Vision attempt {attempt} failed ({err_str}). Retrying with SAFE samplers...\033[0m")
                              continue
                         else:
                             raise local_error
@@ -1126,7 +1117,11 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         else:
             user_log = f"🛡️ [System Instruction]:\n{final_system_command}\n\n{LABEL_USER_INPUT}\n{user_material}\n\n[Template Constraints]:\n{template_instructions}"
             
-        debug_meta = f"[MODE: {current_mode}, SAMPLER: {sampler_used}, Temp: {safe_temperature:.2f}, Min_P: {eff_min_p:.2f}]"
+        debug_meta = f"[MODE: {current_mode}, SAMPLER: {sampler_used}, Temp: {safe_temperature:.2f}, Min_P: {eff_min_p:.2f}, Rep_Penalty: {repetition_penalty:.2f}, Seed: {seed}]"
+        debug_meta += f"\n[GBNF: {'Enabled' if grammar is not None else 'Disabled'}, apply_template: {apply_template}, needs_structure: {needs_structure}, enable_tag: {enable_tag}, enable_filename: {enable_filename}]"
+        debug_meta += f"\n[Max_Tokens: {eff_max_tokens} (requested: {max_tokens}), Finish_Reason: {finish_reason}]"
+        if grammar is not None:
+            debug_meta += f"\n[GBNF_Grammar:\n{grammar}\n]"
         raw_output = f"User: {user_log}\n\nAI:\n{full_res}\n\n{debug_meta}"
 
         # Release VRAM if requested
@@ -1134,51 +1129,57 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
              try:
                 if hasattr(model, "close"):
                     model.close()
-                print("\033[33m[UniversalAIChat] Model VRAM Released (Closed).\033[0m")
+                # print("\033[33m[UniversalAIChat] Model VRAM Released (Closed).\033[0m")
              except:
                 pass
              model._is_closed = True
 
 
-        # 5. 分割逻辑 (Simple Splitter)
+        # 5. 分割逻辑 (Robust Splitter)
         clean_res = full_res.strip()
-            
-        marker_desc = "**description**:"
-        marker_tags = "**tags**:"
-        marker_filename = "**filename**:"
         
-        def get_pos(marker, text):
+        def get_marker_match(name, text):
+            # Matches **name**: or **name**： with optional spaces
+            pattern = rf"\*\*{re.escape(name)}\*\*\s*[:：]"
             think_spans = [(m.start(), m.end()) for m in re.finditer(r'<think>.*?</think>', text, re.DOTALL)]
+            
             def in_think(pos):
                 for s, e in think_spans:
                     if s <= pos < e:
                         return True
                 return False
-            matches = [m for m in re.finditer(re.escape(marker), text, re.IGNORECASE)]
+
+            matches = list(re.finditer(pattern, text, re.IGNORECASE))
             if not matches:
-                return -1
+                return None
+            
             valid_matches = []
             for m in matches:
                 start = m.start()
-                snippet = text[start + len(marker):start + len(marker) + 20]
+                end = m.end()
+                snippet = text[end:end + 20]
                 if in_think(start):
                     continue
-                if "[description]" in snippet or "[tags]" in snippet or "[filename]" in snippet:
+                # Avoid matching the prompt template itself if it's reflected in output
+                if f"[{name}]" in snippet:
                     continue
                 valid_matches.append(m)
-            if not valid_matches:
-                 if len(matches) > 1:
-                     return matches[-1].start()
-                 return matches[0].start()
-            return valid_matches[-1].start()
             
-        pos_desc = get_pos(marker_desc, clean_res)
-        pos_tags = get_pos(marker_tags, clean_res)
-        pos_filename = get_pos(marker_filename, clean_res)
+            if not valid_matches:
+                return matches[-1] if matches else None
+            return valid_matches[-1]
+            
+        match_desc = get_marker_match("description", clean_res)
+        match_tags = get_marker_match("tags", clean_res)
+        match_filename = get_marker_match("filename", clean_res)
+        
+        pos_desc = match_desc.start() if match_desc else -1
+        pos_tags = match_tags.start() if match_tags else -1
+        pos_filename = match_filename.start() if match_filename else -1
         
         start_desc = 0
-        if pos_desc != -1:
-            start_desc = pos_desc + len(marker_desc)
+        if match_desc:
+            start_desc = match_desc.end()
             
         end_desc = len(clean_res)
         candidates = []
@@ -1191,35 +1192,32 @@ filename_pattern ::= "[" [a-zA-Z0-9_]+ "]"
         out_desc = clean_res[start_desc:end_desc].strip()
         
         # Clean <think> tags from prompt output (out_desc)
-        # We don't want the thinking process in the actual prompt.
         out_desc = re.sub(r'<think>.*?</think>', '', out_desc, flags=re.DOTALL).strip()
         
         out_tags = ""
         if enable_tag:
-            if pos_tags != -1:
-                start_tags = pos_tags + len(marker_tags)
+            if match_tags:
+                start_tags = match_tags.end()
                 end_tags = len(clean_res)
                 if pos_filename != -1 and pos_filename > start_tags:
                     end_tags = pos_filename
-                # [Robustness] Also stop at description if it appears after tags (out of order)
                 if pos_desc != -1 and pos_desc > start_tags:
                     end_tags = min(end_tags, pos_desc)
                     
                 raw_tags = clean_res[start_tags:end_tags].strip()
                 out_tags = raw_tags.replace("\n", ",")
-        else:
-            out_tags = ""
-            
+        
         out_filename = ""
         if enable_filename:
-            if pos_filename != -1:
-                 start_fn = pos_filename + len(marker_filename)
+            if match_filename:
+                 start_fn = match_filename.end()
                  raw_fn = clean_res[start_fn:].strip()
+                 # Support [filename] or just the text
                  m = re.search(r'\[(.*?)\]', raw_fn)
                  if m:
                      out_filename = m.group(1)
                  else:
-                     out_filename = raw_fn.split('\n')[0]
+                     out_filename = raw_fn.split('\n')[0].strip()
         else:
             out_filename = ""
 
@@ -1283,17 +1281,10 @@ class LH_MultiTextSelector:
                         "tooltip": "多文本选择模式：Sequential=按顺序批量运行；Random=每次随机选择一行",
                     },
                 ),
-                "batch_text": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "",
-                        "dynamicPrompts": False,
-                        "tooltip": "批量输入：每行作为一个候选文本。根据 Mode 决定是全部执行(Sequential)还是随机抽一行(Random)。",
-                    },
-                ),
             },
             "optional": {
+                "batch_text": ("STRING", {"forceInput": True}),
+                "widget_text": ("STRING", {"default": "", "multiline": True}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "随机种子 (用于控制Wildcards选择)"}),
             }
         }
@@ -1354,13 +1345,15 @@ class LH_MultiTextSelector:
             text = self._spintax_pattern.sub(repl, text)
         return text
 
-    def select(self, mode, batch_text, seed=-1):
-        items = []
-        
-        # 1. Batch Mode (Priority)
-        if batch_text and batch_text.strip():
-            # Split by newlines and filter empty lines
-            items = [line.strip() for line in batch_text.split('\n') if line.strip()]
+    def select(self, mode, batch_text=None, widget_text=None, seed=-1):
+        # 1. Determine source
+        raw_text = ""
+        if batch_text is not None:
+            raw_text = "\n".join(batch_text) if isinstance(batch_text, list) else str(batch_text)
+        elif widget_text is not None:
+            raw_text = widget_text
+            
+        items = [line.strip() for line in raw_text.split('\n') if line.strip()]
         
         if not items:
             return ([""],)
@@ -1424,7 +1417,7 @@ class LH_History_Monitor:
         if clear_history:
             self.history = []
             # We still process the current input, but it will be the ONLY item in history.
-            print("\033[36m[LH_History_Monitor] History Cleared by User.\033[0m")
+            # print("\033[36m[LH_History_Monitor] History Cleared by User.\033[0m")
         # 1. 解析输入 (支持 JSON 或 纯文本)
         import json
         user_msg = ""
@@ -1549,7 +1542,7 @@ class LH_KeywordLoraLoader:
             if k in text_lower:
                 should_trigger = True
                 triggered_keyword = k
-                print(f"\033[36m[LH_KeywordLoraLoader] Triggered by keyword: '{k}'\033[0m")
+                # print(f"\033[36m[LH_KeywordLoraLoader] Triggered by keyword: '{k}'\033[0m")
                 break
         
         if should_trigger:

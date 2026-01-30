@@ -50,6 +50,11 @@ class LoRA_AllInOne_Saver:
     CATEGORY = "LoraHelper"
 
     def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
+        # 强制转换类型，防止 ComfyUI 某些情况下将字符串误认为布尔值 (Fixed: trigger_word becomes "true" issue)
+        trigger_word = str(trigger_word)
+        if trigger_word.lower() == "true":
+            trigger_word = "ChenAnran" # 回退到默认值，如果它莫名其妙变成了字符串 "true"
+        
         # 0. 路径清理 (Sanitization) - 修复安全漏洞 (Security Fix)
         # 使用 os.path.commonpath 进行严格的路径遍历检测 (Refined Logic)
         
@@ -304,8 +309,11 @@ class LH_SimpleText:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False}),
             },
+            "optional": {
+                "showtext": ("STRING", {"forceInput": True}),
+                "widget_text": ("STRING", {"default": "", "multiline": True}),
+            }
         }
     RETURN_TYPES = ("STRING",)
     FUNCTION = "execute"
@@ -314,14 +322,19 @@ class LH_SimpleText:
     INPUT_IS_LIST = True
     OUTPUT_IS_LIST = (True,)
 
-    def execute(self, text):
-        # text is always a list (INPUT_IS_LIST=True)
-        # If widget is used, it's a list of 1 string.
-        # If input is connected (list), it's that list.
+    def execute(self, showtext=None, widget_text=None):
+        # 1. Determine the source of text
+        # If showtext is provided (from connection), use it.
+        # Otherwise use widget_text (from the UI widget).
         
+        final_text = []
+        if showtext is not None:
+            final_text = showtext
+        elif widget_text is not None:
+            final_text = widget_text
+            
         # Safety: Ensure it's a list
-        final_text = text
         if not isinstance(final_text, list):
             final_text = [final_text]
-
+            
         return {"ui": {"text": final_text}, "result": (final_text,)}
