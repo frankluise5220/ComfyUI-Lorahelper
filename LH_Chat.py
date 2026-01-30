@@ -1521,15 +1521,15 @@ class LH_KeywordLoraLoader:
             }
         }
     
-    RETURN_TYPES = ("MODEL", "CLIP", "BOOLEAN", "STRING")
-    RETURN_NAMES = ("model", "clip", "triggered", "status_text")
+    RETURN_TYPES = ("MODEL", "CLIP", "BOOLEAN", "STRING", "STRING")
+    RETURN_NAMES = ("model", "clip", "triggered", "status_text", "prompt")
     FUNCTION = "load_lora_if_keyword"
     CATEGORY = "LoraHelper"
 
     def load_lora_if_keyword(self, model, lora_name, strength_model, strength_clip, prompt_text, trigger_keywords, clip=None):
         import comfy.utils
         if not prompt_text or not trigger_keywords:
-             return (model, clip, False, "Missing Input")
+             return (model, clip, False, "Missing Input", prompt_text)
 
         # Split keywords (support both English and Chinese commas)
         trigger_keywords = trigger_keywords.replace("，", ",")
@@ -1549,7 +1549,7 @@ class LH_KeywordLoraLoader:
             lora_path = folder_paths.get_full_path("loras", lora_name)
             if lora_path is None:
                 print(f"\033[33m[LH_KeywordLoraLoader] Warning: LoRA not found: {lora_name}\033[0m")
-                return (model, clip, False, f"Error: LoRA not found ({lora_name})")
+                return (model, clip, False, f"Error: LoRA not found ({lora_name})", prompt_text)
             
             lora = None
             if self.loaded_lora is not None:
@@ -1563,9 +1563,9 @@ class LH_KeywordLoraLoader:
                 self.loaded_lora = (lora_path, lora)
 
             model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
-            return (model_lora, clip_lora, True, f"Triggered by '{triggered_keyword}'")
+            return (model_lora, clip_lora, True, f"Triggered by '{triggered_keyword}'", prompt_text)
         else:
-            return (model, clip, False, "Not Triggered")
+            return (model, clip, False, "Not Triggered", prompt_text)
 
 NODE_CLASS_MAPPINGS = {
     "UniversalGGUFLoader": UniversalGGUFLoader,
