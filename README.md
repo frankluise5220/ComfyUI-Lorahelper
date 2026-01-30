@@ -184,14 +184,14 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `seed`: 随机种子 (控制结果一致性)。
     *   `release_vram`: 生成后自动释放显存。
 *   **输出端口**:
-    *   `prompt`: 核心描述文本 (description).
-    *   `tags`: 提取的标签 (需开启tag开关)。
-    *   `filename`: 提取的文件名 (需开启开关)。
-    *   `raw_output`: 原始输出 (连入 Monitor)。
+    *   `prompt`: 核心功能，提示词输出 (description).
+    *   `tags`: 从提示词中提取的danbooru标签 。
+    *   `filename`: 提取的文件名。
+    *   `raw_output`: AI对话全过程内容输出（方便debug、调整指令）。
 *   **隐形反推模式**:
     *   **自动触发**: 只要连接图片，无需输入任何用户指令，即刻生效。
     *   **智能指令**: 若 `instruction` 保持默认或留空，将使用内置的 **JoyCaption 同款无审查** 强力反推指令，生成极详尽的视觉描述。
-    *   **自定义**: 您也可以输入自定义 `instruction` 来覆盖内置行为。
+    *   **用户指令**: 您也可以输入自定义 `instruction` 来覆盖内置行为。
 *   **运行模式 (纯文本)**:
     *   **Enhance_Prompt**: 对用户素材（包括image和文本）进行创意扩写。
     *   **Debug_Chat**: 根据指令分析素材，输出思考过程。
@@ -202,14 +202,11 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **可视化显示**: 以 "Round X" 卡片形式清晰展示对话内容，自动调整窗口大小。
     *   **上下文循环**: 输出格式化后的 `context` 文本，可复制到 `user_material` 实现多轮对话调试。
 
-#### 4. LH_TextSplitter (Legacy)
-*   **状态**: 该节点已被移除，`LH_AIChat` 现已内置完整的自动切分功能。
-
 #### 5. LH_AllInOne_Saver (数据集保存器)
-*   **功能**: 一键保存 LoRA 训练所需的所有文件（Prompt、Tags、工作流）。
+*   **功能**: 一“键”保存 LoRA 训练所需的所有文件（Prompt、Tags、工作流）。
 *   **特性**:
     *   **一键保存**: 同时保存图片、标签文本、日志文件和 ComfyUI 工作流元数据。
-    *   **工作流嵌入**: 支持将完整的 ComfyUI 工作流嵌入 PNG 图片，拖入界面即可完美复现。
+    *   **工作流嵌入**: 支持关闭将 ComfyUI 工作流嵌入 PNG 图片。
     *   **灵活命名**: 支持自定义前缀、覆盖文件名和自动递增。
 *   **输入参数**:
     *   `images`: 需保存的图片输入。
@@ -220,13 +217,9 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `gen_prompt`: (可选) 连接完整描述文本，保存到 `_log.txt`。
     *   `lora_tags`: (可选) 连接标签文本，保存到 `.txt` (位于触发词之后)。
     *   `filename_final`: (可选) 覆盖具体文件名 (会自动拼接前缀)。
-*   **输出内容**:
-    *   **图片**: `.png` 格式，包含完整元数据（工作流）。
-    *   **标签**: `.txt` 文件，格式为 `触发词, 标签1, 标签2...`。
-    *   **日志**: `_log.txt` 文件，记录 AI 的原始完整回复（可以接入任何想要保存的文本）。
 *   **路径**: 默认保存在 `ComfyUI/output/LoRA_Train_Data/`，支持自定义子文件夹。
 
-#### 6. LH_MultiTextSelector (动态提示词生成器)
+#### 6. LH_MultiTextSelector (多行提示词选择器)
 *   **功能**: 支持动态语法 (Dynamic Prompts) 和批量处理的多功能文本选择器。
 *   **特性**:
     *   **批量模式 (Batch)**: 在 `batch_text` 中粘贴多行文本，节点可将其作为列表输出，实现“一行文本运行一次工作流”的批量生成。
