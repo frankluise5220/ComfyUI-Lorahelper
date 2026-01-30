@@ -17,7 +17,7 @@ class LH_LlamaInstruct:
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
     RETURN_NAMES = ("prompt", "tags", "filename", "raw_output")
     FUNCTION = "chat"
-    CATEGORY = "custom_nodes/MyLoraNodes/Legacy"
+    CATEGORY = "LoraHelper/Legacy"
 
     @classmethod
     def IS_CHANGED(s, **kwargs):

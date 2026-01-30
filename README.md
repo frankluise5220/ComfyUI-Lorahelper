@@ -108,18 +108,20 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 *   **Path**: Default saves to `ComfyUI/output/LoRA_Train_Data/`.
 
 #### 6. LH_MultiTextSelector (Dynamic Prompt Generator)
-*   **Function**: A powerful text selector with support for Dynamic Prompts syntax.
+*   **Function**: A powerful text selector with support for Dynamic Prompts syntax and Batch Processing.
 *   **Features**:
-    *   **4-Slot Selection**: Input up to 4 text candidates.
-    *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through them).
-    *   **Seed Control**: Ensure reproducible results for your random prompts.
+    *   **Batch Mode**: Paste multiple lines of text into `batch_text`. The node can output them as a list, running one workflow for each line (Sequential).
+    *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through list/batch).
+    *   **Seed Control**: Ensure reproducible results.
 
-#### 7. LH_SimpleText (Raw Text)
+#### 7. LH_SuperText
 *   **Function**: A pure, unadulterated multiline text node.
 *   **Features**:
-    *   **What You See Is What You Get**: No preprocessing, no hidden formatting.
-    *   **Real-time Feedback**: Displays received text immediately in the UI.
-    *   **Ideal For**: Connecting raw text to `user_material` to avoid "smart" text box interference.
+    *   **Pure Text**: No preprocessing, preserves original text format.
+    *   **ShowText Mode**: Serves as both an input box and a display!
+        *   **Manual Mode**: Type directly into the text box.
+        *   **Display Mode**: Right-click `text` -> `Convert to Input` to connect a wire. It automatically transforms into a display monitor, showing input content line-by-line.
+    *   **Usage**: Ideal as a source for `user_material` or for inspecting batch outputs from upstream nodes.
 
 ### 🎨 Global Feature: Dynamic Prompts Engine
 *   **Supported Nodes**: `LH_AIChat`, `LH_MultiTextSelector`, `LH_SimpleText` (via Utils).
@@ -225,18 +227,28 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **路径**: 默认保存在 `ComfyUI/output/LoRA_Train_Data/`，支持自定义子文件夹。
 
 #### 6. LH_MultiTextSelector (动态提示词生成器)
-*   **功能**: 支持动态语法 (Dynamic Prompts) 的多功能文本选择器。
+*   **功能**: 支持动态语法 (Dynamic Prompts) 和批量处理的多功能文本选择器。
 *   **特性**:
-    *   **4路选择**: 支持输入 4 个候选文本框。
-    *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环)。
+    *   **批量模式 (Batch)**: 在 `batch_text` 中粘贴多行文本，节点可将其作为列表输出，实现“一行文本运行一次工作流”的批量生成。
+    *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环/批量列表)。
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
-#### 7. LH_SimpleText (原生文本)
+#### 7. LH_SuperText
 *   **功能**: 一个纯净的、所见即所得的多行文本节点。
 *   **特性**:
     *   **原汁原味**: 不做任何预处理，保留文本最原始的格式。
-    *   **实时反馈**: 支持前端实时显示接收到的文本内容。
-    *   **用途**: 最适合作为 `user_material` 的输入源，避免被普通文本框的“智能”格式化干扰。
+    *   **ShowText 模式**: 既是输入框，也是显示器！
+        *   **手动模式**: 直接在文本框内打字。
+        *   **显示模式**: 右键点击 `text` -> `Convert to Input` 连线后，它会自动变成显示器，逐行展示输入内容。
+    *   **用途**: 最适合作为 `user_material` 的输入源，或者用来检查上游节点的批量输出内容。
+
+#### 8. LH_LoraLoader (关键词 Lora 加载器)
+*   **功能**: 根据提示词中的关键词，自动判断是否加载指定的 LoRA。
+*   **特性**:
+    *   **关键词触发**: 监控 `prompt_text` 输入。如果包含 `trigger_keywords` (逗号分隔) 中的任意词，则加载 LoRA。
+    *   **智能直通**: 如果未触发，则原样输出模型和 CLIP，不消耗额外资源。
+    *   **预设强度**: 为该条件 LoRA 单独设置模型和 CLIP 的强度。
+    *   **状态反馈**: 提供专门的文本输出端口，告知是哪个关键词触发了加载。
 
 ### 🎨 全局特性：动态提示词引擎 (Dynamic Prompts Engine)
 *   **支持节点**: `LH_AIChat`, `LH_MultiTextSelector` 等所有核心节点。

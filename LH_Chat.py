@@ -13,6 +13,7 @@ from datetime import datetime
 import json
 import requests
 import random
+import comfy.sd
 from .LH_Utils import process_dynamic_prompts
 
 # Import guard for llama_cpp
@@ -280,7 +281,7 @@ class UniversalGGUFLoader:
     RETURN_TYPES = ("LLM_MODEL",)
     RETURN_NAMES = ("model",)
     FUNCTION = "load_model"
-    CATEGORY = "custom_nodes/MyLoraNodes"
+    CATEGORY = "LoraHelper"
 
     def load_model(self, gguf_model, clip_model, n_gpu_layers, n_ctx):
         if Llama is None:
@@ -504,7 +505,7 @@ class UniversalOllamaLoader:
     RETURN_TYPES = ("LLM_MODEL",)
     RETURN_NAMES = ("model",)
     FUNCTION = "load_ollama"
-    CATEGORY = "custom_nodes/MyLoraNodes"
+    CATEGORY = "LoraHelper"
 
     def load_ollama(self, ollama_url, model_name, is_vision_model):
         model = OllamaModelWrapper(model_name, ollama_url)
@@ -667,7 +668,7 @@ class UniversalAIChat:
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
     RETURN_NAMES = ("prompt", "tags", "filename", "raw_output")
     FUNCTION = "chat"
-    CATEGORY = "custom_nodes/MyLoraNodes"
+    CATEGORY = "LoraHelper"
 
     # 强制每次运行 (Force Execution)
     @classmethod
@@ -1257,7 +1258,7 @@ class UniversalAIChat_Legacy:
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
     RETURN_NAMES = ("prompt", "tags", "filename", "raw_output")
     FUNCTION = "chat"
-    CATEGORY = "custom_nodes/MyLoraNodes/Legacy"
+    CATEGORY = "LoraHelper/Legacy"
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
@@ -1279,39 +1280,16 @@ class LH_MultiTextSelector:
                 "mode": (
                     ["Sequential", "Random"],
                     {
-                        "tooltip": "多文本选择模式：Sequential=按顺序轮流；Random=每次随机选择一个文本",
+                        "tooltip": "多文本选择模式：Sequential=按顺序批量运行；Random=每次随机选择一行",
                     },
                 ),
-                "text_1": (
+                "batch_text": (
                     "STRING",
                     {
                         "multiline": True,
                         "default": "",
-                        "tooltip": "第一个候选文本",
-                    },
-                ),
-                "text_2": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "",
-                        "tooltip": "第二个候选文本",
-                    },
-                ),
-                "text_3": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "",
-                        "tooltip": "第三个候选文本",
-                    },
-                ),
-                "text_4": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "",
-                        "tooltip": "第四个候选文本",
+                        "dynamicPrompts": False,
+                        "tooltip": "批量输入：每行作为一个候选文本。根据 Mode 决定是全部执行(Sequential)还是随机抽一行(Random)。",
                     },
                 ),
             },
@@ -1322,8 +1300,9 @@ class LH_MultiTextSelector:
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "select"
-    CATEGORY = "custom_nodes/MyLoraNodes"
+    CATEGORY = "LoraHelper"
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
@@ -1375,31 +1354,39 @@ class LH_MultiTextSelector:
             text = self._spintax_pattern.sub(repl, text)
         return text
 
-    def select(self, mode, text_1, text_2, text_3, text_4, seed=-1):
+    def select(self, mode, batch_text, seed=-1):
         items = []
-        for t in (text_1, text_2, text_3, text_4):
-            if isinstance(t, str) and t.strip() != "":
-                items.append(t)
+        
+        # 1. Batch Mode (Priority)
+        if batch_text and batch_text.strip():
+            # Split by newlines and filter empty lines
+            items = [line.strip() for line in batch_text.split('\n') if line.strip()]
+        
         if not items:
-            return ("",)
+            return ([""],)
             
+        final_list = []
+        
         if mode == "Random":
-            # Use seed if provided for reproducibility
+            # Random Mode: Return 1 random item (List of 1)
             rng = random.Random(seed) if seed != -1 else random.Random()
             chosen = rng.choice(items)
+            final_list = [chosen]
         else:
-            idx = self.index % len(items)
-            chosen = items[idx]
-            self.index += 1
-            
-        # 1. Process Wildcards (Dynamic Prompts)
-        # We disable internal random processing here to let _apply_spintax handle {} with weights
-        chosen = process_dynamic_prompts(chosen, seed, process_random=False)
+            # Sequential Mode: Return ALL items (List of N)
+            # This triggers ComfyUI batch processing (one run per item)
+            final_list = items
+
+        # Process each item in the list
+        processed_list = []
+        for item in final_list:
+            # 1. Process Wildcards (Dynamic Prompts)
+            item = process_dynamic_prompts(item, seed, process_random=False)
+            # 2. Process Spintax (Inline Random with weights)
+            item = self._apply_spintax(item)
+            processed_list.append(item)
         
-        # 2. Process Spintax (Inline Random with weights)
-        chosen = self._apply_spintax(chosen)
-        
-        return (chosen,)
+        return (processed_list,)
 
 
 # 4. 历史监控节点 (流水线排序)
@@ -1430,7 +1417,7 @@ class LH_History_Monitor:
     RETURN_NAMES = ("context",)
     OUTPUT_NODE = True
     FUNCTION = "update"
-    CATEGORY = "custom_nodes/MyLoraNodes"
+    CATEGORY = "LoraHelper"
 
     def update(self, raw_input, clear_history):
         # 0. Clear History Check
@@ -1511,3 +1498,96 @@ class LH_History_Monitor:
              ui_text.append("（暂无对话历史）")
         
         return {"ui": {"text": ui_text}, "result": (context,)}
+
+# ==========================================================
+# 5. 关键词触发Lora加载器 (Keyword Lora Loader)
+# ==========================================================
+# PROJECT: LH_KeywordLoraLoader
+# LOGIC DEFINITION:
+#   - Check if any keywords exist in the prompt
+#   - If yes, load the specific LoRA with preset strength
+#   - If no, return original model/clip
+# ==========================================================
+class LH_KeywordLoraLoader:
+    def __init__(self):
+        self.loaded_lora = None
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "lora_name": (folder_paths.get_filename_list("loras"), ),
+                "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01, "tooltip": "How strongly the LoRA modifies the main UNet model (visuals/style)."}),
+                "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01, "tooltip": "How strongly the LoRA modifies the CLIP text encoder (prompt understanding)."}),
+                "prompt_text": ("STRING", {"multiline": True, "forceInput": True, "default": "", "tooltip": "The text to be checked for keywords. If match found, 'triggered' output is True."}),
+                "trigger_keywords": ("STRING", {"multiline": False, "default": "anime, girl", "placeholder": "Separate keywords with comma (e.g., anime, girl)", "tooltip": "Keywords to trigger LoRA loading. Comma separated."}),
+            },
+            "optional": {
+                "clip": ("CLIP",),
+            }
+        }
+    
+    RETURN_TYPES = ("MODEL", "CLIP", "BOOLEAN", "STRING")
+    RETURN_NAMES = ("model", "clip", "triggered", "status_text")
+    FUNCTION = "load_lora_if_keyword"
+    CATEGORY = "LoraHelper"
+
+    def load_lora_if_keyword(self, model, lora_name, strength_model, strength_clip, prompt_text, trigger_keywords, clip=None):
+        import comfy.utils
+        if not prompt_text or not trigger_keywords:
+             return (model, clip, False, "Missing Input")
+
+        # Split keywords (support both English and Chinese commas)
+        trigger_keywords = trigger_keywords.replace("，", ",")
+        keywords = [k.strip().lower() for k in trigger_keywords.split(',') if k.strip()]
+        text_lower = prompt_text.lower()
+        
+        should_trigger = False
+        triggered_keyword = ""
+        for k in keywords:
+            if k in text_lower:
+                should_trigger = True
+                triggered_keyword = k
+                print(f"\033[36m[LH_KeywordLoraLoader] Triggered by keyword: '{k}'\033[0m")
+                break
+        
+        if should_trigger:
+            lora_path = folder_paths.get_full_path("loras", lora_name)
+            if lora_path is None:
+                print(f"\033[33m[LH_KeywordLoraLoader] Warning: LoRA not found: {lora_name}\033[0m")
+                return (model, clip, False, f"Error: LoRA not found ({lora_name})")
+            
+            lora = None
+            if self.loaded_lora is not None:
+                if self.loaded_lora[0] == lora_path:
+                    lora = self.loaded_lora[1]
+                else:
+                    self.loaded_lora = None
+
+            if lora is None:
+                lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                self.loaded_lora = (lora_path, lora)
+
+            model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
+            return (model_lora, clip_lora, True, f"Triggered by '{triggered_keyword}'")
+        else:
+            return (model, clip, False, "Not Triggered")
+
+NODE_CLASS_MAPPINGS = {
+    "UniversalGGUFLoader": UniversalGGUFLoader,
+    "UniversalAIChat": UniversalAIChat,
+    "UniversalOllamaLoader": UniversalOllamaLoader,
+    "LH_MultiTextSelector": LH_MultiTextSelector,
+    "LH_History_Monitor": LH_History_Monitor,
+    "LH_LoraLoader": LH_KeywordLoraLoader
+}
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "UniversalGGUFLoader": "LH_GGUFLoader",
+    "UniversalAIChat": "LH_AIChat",
+    "UniversalOllamaLoader": "LH_OllamaLoader",
+    "LH_MultiTextSelector": "LH_MultiTextSelector",
+    "LH_History_Monitor": "LH_History_Monitor",
+    "LH_LoraLoader": "LH_LoraLoader"
+}
