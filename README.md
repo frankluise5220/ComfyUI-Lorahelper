@@ -64,10 +64,10 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   `seed`: Random seed for reproducibility.
     *   `release_vram`: Auto-release VRAM after generation.
 *   **Outputs**:
-    *   `prompt`: The main generated text (SECTION 1).
-    *   `tags`: Extracted tags (if enabled).
+    *   `prompt`: Core prompt output (description).
+    *   `tags`: Extracted Danbooru tags (if enabled).
     *   `filename`: Extracted filename (if enabled).
-    *   `raw_output`: Raw history for Monitor.
+    *   `raw_output`: Full raw AI conversation output (for debugging/instruction tuning).
 *   **Vision Mode (Implicit)**:
     *   Triggered automatically when an image is connected.
     *   **Auto-Instruction**: If `instruction` is left default/empty, it uses a built-in **JoyCaption-style Uncensored** prompt for detailed image captioning.
@@ -82,9 +82,6 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Visual History**: Displays the last 5 rounds in clear "Round X" cards.
     *   **Auto-Resize**: Automatically adjusts size to fit content.
     *   **Context Loop**: Outputs formatted context to be copied into `user_material` for multi-turn debugging.
-
-#### 4. LH_TextSplitter (Legacy)
-*   **Status**: This node has been removed as `LH_AIChat` now fully handles output splitting internally.
 
 #### 5. LH_AllInOne_Saver (Dataset Saver)
 *   **Function**: One-click solution for saving training data, prompts, tags, and workflows.
@@ -123,8 +120,16 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
         *   **Display Mode**: Right-click `text` -> `Convert to Input` to connect a wire. It automatically transforms into a display monitor, showing input content line-by-line.
     *   **Usage**: Ideal as a source for `user_material` or for inspecting batch outputs from upstream nodes.
 
+#### 8. LH_LoraLoader (Keyword Lora Loader)
+*   **Function**: Automatically loads specific LoRAs based on keywords found in the prompt.
+*   **Features**:
+    *   **Keyword Trigger**: Monitors `prompt_text` input. Loads LoRA if any keyword in `trigger_keywords` (comma-separated) is found.
+    *   **Smart Bypass**: If not triggered, passes through model and CLIP unchanged, consuming no extra resources.
+    *   **Preset Strength**: Independently sets model and CLIP strength for this conditional LoRA.
+    *   **Status Feedback**: Provides a dedicated text output port to indicate which keyword triggered the load.
+
 ### 🎨 Global Feature: Dynamic Prompts Engine
-*   **Supported Nodes**: `LH_AIChat`, `LH_MultiTextSelector`, `LH_SimpleText` (via Utils).
+*   **Supported Nodes**: `LH_AIChat`, `LH_MultiTextSelector`, `LH_SuperText` (via Utils).
 *   **Advanced Syntax**:
     *   **Recursive Wildcards**: `__colors__` - Reads from `.txt` files (supports recursive lookup in `ComfyUI/wildcards` or plugin's `wildcards` folder).
     *   **Deep Nesting**: `{A|{B|C}}` - Supports complex nested choices up to 20 levels.
