@@ -235,21 +235,46 @@ class LH_AutoRatio:
 def process_dynamic_prompts(text, seed=None):
     if not text:
         return ""
+    
+    # Clean Zero Width Space (ZWSP) which often causes regex failure
+    text = text.replace("\u200b", "")
+
     if seed is not None:
         random.seed(seed)
     
     # Simple recursive dynamic prompt processor
-    # 1. {a|b|c}
-    # 2. __wildcard__ (search in ./wildcards/ if exists)
+    # 1. {a|b|c} with support for weights {2::a|1::b}
+    # 2. __wildcard__ (search in multiple directories)
     
     # Limit recursion depth
     MAX_DEPTH = 5
     
+    # Prepare wildcard search paths
+    # Priority: 
+    # 1. ComfyUI-Lorahelper/wildcards (Local)
+    # 2. ComfyUI/wildcards (Global)
+    # 3. ComfyUI/custom_nodes/comfyui-dynamicprompts/wildcards (DynamicPrompts)
+    search_dirs = []
+    
+    # 1. Local
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    search_dirs.append(os.path.join(base_dir, "wildcards"))
+    
+    # 2. Global
+    try:
+        if folder_paths.base_path:
+             search_dirs.append(os.path.join(folder_paths.base_path, "wildcards"))
+             # 3. DynamicPrompts (Standard install location)
+             search_dirs.append(os.path.join(folder_paths.base_path, "custom_nodes", "comfyui-dynamicprompts", "wildcards"))
+             search_dirs.append(os.path.join(folder_paths.base_path, "custom_nodes", "ComfyUI-DynamicPrompts", "wildcards"))
+    except:
+        pass
+
     def process(current_text, depth):
         if depth > MAX_DEPTH:
             return current_text
             
-        # 1. Handle {option1|option2}
+        # 1. Handle {option1|option2} with weights
         while True:
             # Find innermost braces \{[^{}]*\}
             match = re.search(r"\{([^{}]+)\}", current_text)
@@ -258,32 +283,103 @@ def process_dynamic_prompts(text, seed=None):
             
             full_match = match.group(0)
             options = match.group(1).split("|")
-            choice = random.choice(options).strip()
-            current_text = current_text.replace(full_match, choice, 1)
+            
+            choices = []
+            weights = []
+            
+            for opt in options:
+                opt = opt.strip()
+                # Support both English "::" and Chinese "：" (just in case)
+                if "::" in opt:
+                    sep = "::"
+                elif "：" in opt: # Handle potential Chinese colon typo
+                    sep = "："
+                else:
+                    sep = None
+
+                if sep:
+                    try:
+                        w_str, content = opt.split(sep, 1)
+                        w = float(w_str)
+                        choices.append(content)
+                        weights.append(w)
+                    except:
+                        # Fallback if parsing fails
+                        choices.append(opt)
+                        weights.append(1.0)
+                else:
+                    choices.append(opt)
+                    weights.append(1.0)
+            
+            if choices:
+                # Weighted random choice
+                # random.choices returns a list, we take the first element
+                choice = random.choices(choices, weights=weights, k=1)[0].strip()
+                current_text = current_text.replace(full_match, choice, 1)
+            else:
+                # Empty braces {} -> remove
+                current_text = current_text.replace(full_match, "", 1)
             
         # 2. Handle __wildcard__
-        # Just a basic placeholder implementation since we don't have the full wildcard logic from before
-        # If user has a 'wildcards' folder, we can try to use it.
-        wildcard_matches = list(re.finditer(r"__([a-zA-Z0-9_\-\.]+)__", current_text))
+        wildcard_matches = list(re.finditer(r"__([\w\-\./\\]+)__", current_text))
         if wildcard_matches:
-             base_dir = os.path.dirname(os.path.abspath(__file__))
-             wildcards_dir = os.path.join(base_dir, "wildcards")
-             
-             if os.path.exists(wildcards_dir):
-                 for m in reversed(wildcard_matches):
-                     w_name = m.group(1)
-                     w_file = os.path.join(wildcards_dir, f"{w_name}.txt")
-                     replacement = m.group(0)
+             # Process from end to start to maintain indices
+             for m in reversed(wildcard_matches):
+                 w_name = m.group(1)
+                 replacement = m.group(0)
+                 found = False
+                 
+                 # Search in all directories
+                 for w_dir in search_dirs:
+                     if not os.path.exists(w_dir):
+                         continue
+                         
+                     # Support subdirectories in wildcards e.g. __folder/name__
+                     # Check if w_name contains path separators? 
+                     # The regex allows / and \ now.
                      
+                     w_file = os.path.join(w_dir, f"{w_name}.txt")
                      if os.path.exists(w_file):
                          try:
                              with open(w_file, "r", encoding="utf-8") as f:
-                                 lines = [l.strip() for l in f if l.strip()]
+                                 # Ignore empty lines and comments starting with #
+                                 lines = [l.strip() for l in f if l.strip() and not l.strip().startswith("#")]
                                  if lines:
                                      replacement = random.choice(lines)
+                                     found = True
                          except:
                              pass
-                     current_text = current_text[:m.start()] + replacement + current_text[m.end():]
+                     
+                     if found:
+                         break
+                 
+                 # Apply replacement (if found, it's the random line; if not, it's the original __name__)
+                 # Wait, if we want to recurse, we should probably process the replacement too?
+                 # The outer loop calls process(text, 0) which handles recursion via the return call?
+                 # No, the recursion is: return process(text, 0) - wait, that's infinite loop if not careful?
+                 # Ah, the original code was: return process(text, 0) at the end?
+                 # No, the original code returned current_text at the end of function, and then outside called process(text,0) ONCE?
+                 # Wait, looking at original code:
+                 # line 290: return process(text, 0)
+                 # inside process:
+                 #   ... handles braces ...
+                 #   ... handles wildcards ...
+                 #   return current_text (NO RECURSION in the function body!)
+                 
+                 # To support recursive wildcards (wildcards inside wildcards), we need to recurse.
+                 # If replacement contains { } or __ __, we need to process it.
+                 # But we must decrement depth.
+                 
+                 current_text = current_text[:m.start()] + replacement + current_text[m.end():]
+        
+        # Check if we need another pass (recursion)
+        # Only recurse if we actually changed something AND we see more braces/wildcards
+        if (re.search(r"\{[^{}]+\}", current_text) or re.search(r"__([\w\-\./\\]+)__", current_text)) and depth < MAX_DEPTH:
+             # Prevent infinite loops by only recursing if depth allows
+             # Note: logic here is slightly different from typical recursion. 
+             # Usually you process the *replacement* recursively.
+             # Here we process the *whole string* again.
+             return process(current_text, depth + 1)
 
         return current_text
 
