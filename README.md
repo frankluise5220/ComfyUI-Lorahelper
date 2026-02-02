@@ -126,7 +126,20 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Keyword Trigger**: Monitors `prompt_text` input. Loads LoRA if any keyword in `trigger_keywords` (comma-separated) is found.
     *   **Smart Bypass**: If not triggered, passes through model and CLIP unchanged, consuming no extra resources.
     *   **Preset Strength**: Independently sets model and CLIP strength for this conditional LoRA.
-    *   **Status Feedback**: Provides a dedicated text output port to indicate which keyword triggered the load.
+    *   **Status Feedback**: Provides a dedicated text output port to indicate which keyword triggered the load (useful for saving in Log files).
+
+#### 9. LH_AutoRatio (Smart Resolution Calculator)
+*   **Function**: Calculates the optimal width and height based on an input image's aspect ratio or a default setting.
+*   **Features**:
+    *   **Smart Matching**: Analyzes the input image's aspect ratio and automatically snaps to the nearest standard ratio (16:9, 3:2, 1:1, 2:3, 9:16).
+    *   **Max Edge Control**: You define the longest side (e.g., 1024), and it calculates the short side to maintain the ratio.
+    *   **Safe Dimensions**: Ensures outputs are always multiples of 8 (preventing VAE errors).
+    *   **Fallback**: Uses `default_ratio` if no image is connected.
+
+### ⚙️ Configuration
+The plugin now supports persistent configuration via `lh_config.json`.
+*   **Location**: `ComfyUI/custom_nodes/ComfyUI-Lorahelper/lh_config.json`
+*   **Settings**: Customize default chat mode, max tokens, temperature, and system instructions.
 
 ### 🎨 Global Feature: Dynamic Prompts Engine
 *   **Supported Nodes**: `LH_AIChat`, `LH_MultiTextSelector`, `LH_SuperText` (via Utils).
@@ -178,7 +191,6 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 #### 2. LH_AIChat (DeepBlue Architecture)
 核心智能节点。[查看逻辑流程图](./Logic_Flowchart.md)
 *   **输入参数**:
-    *   `model`: 已加载的 LLM 模型。
     *   `image` (可选): 连接图片后自动触发 **隐形反推模式**。
     *   `user_material`: 用户输入的素材/文本 (反推模式下忽略)。
     *   `instruction`: 给 AI 的执行指令。
@@ -197,9 +209,12 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **自动触发**: 只要连接图片，无需输入任何用户指令，即刻生效。
     *   **智能指令**: 若 `instruction` 保持默认或留空，将使用内置的 **JoyCaption 同款无审查** 强力反推指令，生成极详尽的视觉描述。
     *   **用户指令**: 您也可以输入自定义 `instruction` 来覆盖内置行为。
-*   **运行模式 (纯文本)**:
+*   **运行模式**:
     *   **Enhance_Prompt**: 对用户素材（包括image和文本）进行创意扩写。
+    *   **Enhance_Beauty (Film-level)**: **新增!** 专为女性人像设计的高阶无审查扩写模式，兼顾解剖学细节与胶片质感。
     *   **Debug_Chat**: 根据指令分析素材，输出思考过程。
+*   **视觉预设**:
+    *   **Vision_Beauty (Film-level)**: **新增!** 法医级女性人像分析，在无审查与艺术美感之间取得平衡。
 
 #### 3. LH_History_Monitor (历史看板)
 *   **功能**: 维护并显示最近 5 轮的对话历史。
@@ -208,13 +223,9 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **上下文循环**: 输出格式化后的 `context` 文本，可复制到 `user_material` 实现多轮对话调试。
 
 #### 5. LH_AllInOne_Saver (数据集保存器)
-*   **功能**: 一“键”保存 LoRA 训练所需的所有文件（Prompt、Tags、工作流）。
-*   **特性**:
-    *   **一键保存**: 同时保存图片、标签文本、日志文件和 ComfyUI 工作流元数据。
-    *   **工作流嵌入**: 支持关闭将 ComfyUI 工作流嵌入 PNG 图片。
+*   **功能**: 一“键”保存 LoRA 训练所需的所有文件（图片、Prompt、Tags、工作流）。
     *   **灵活命名**: 支持自定义前缀、覆盖文件名和自动递增。
 *   **输入参数**:
-    *   `images`: 需保存的图片输入。
     *   `folder_path`: 保存路径子文件夹 (默认: "LoRA_Train_Data")。
     *   `filename_prefix`: 文件名前缀 (默认: "Anran").
     *   `trigger_word`: 触发词，自动添加在 caption 文件的最开头 (默认: "ChenAnran").
@@ -222,7 +233,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `gen_prompt`: (可选) 连接完整描述文本，保存到 `_log.txt`。
     *   `lora_tags`: (可选) 连接标签文本，保存到 `.txt` (位于触发词之后)。
     *   `filename_final`: (可选) 覆盖具体文件名 (会自动拼接前缀)。
-*   **路径**: 默认保存在 `ComfyUI/output/LoRA_Train_Data/`，支持自定义子文件夹。
+*   **路径**: 默认保存在 `output/LoRA_Train_Data/`，支持自定义子文件夹。
 
 #### 6. LH_MultiTextSelector (多行提示词选择器)
 *   **功能**: 支持动态语法 (Dynamic Prompts) 和批量处理的多功能文本选择器。
@@ -232,21 +243,29 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
 #### 7. LH_SuperText
-*   **功能**: 一个纯净的、所见即所得的多行文本节点。
-*   **特性**:
-    *   **原汁原味**: 不做任何预处理，保留文本最原始的格式。
-    *   **ShowText 模式**: 既是输入框，也是显示器！
-        *   **手动模式**: 直接在文本框内打字。
-        *   **显示模式**: 右键点击 `text` -> `Convert to Input` 连线后，它会自动变成显示器，逐行展示输入内容。
-    *   **用途**: 最适合作为 `user_material` 的输入源，或者用来检查上游节点的批量输出内容。
+*   **功能**: 一个兼顾多行文本显示、编辑的节点。
+*   **用途**: 最适合作为 `user_material` 的输入源，或者用来显示检查上游节点的批量输出内容。
 
 #### 8. LH_LoraLoader (关键词 Lora 加载器)
-*   **功能**: 根据提示词中的关键词，自动判断是否加载指定的 LoRA。
+*   **功能**: 与手动填写触发词不同，该节点根据检查提示词中的关键词，自动判断是否加载指定的 LoRA。
 *   **特性**:
     *   **关键词触发**: 监控 `prompt_text` 输入。如果包含 `trigger_keywords` (逗号分隔) 中的任意词，则加载 LoRA。
     *   **智能直通**: 如果未触发，则原样输出模型和 CLIP，不消耗额外资源。
     *   **预设强度**: 为该条件 LoRA 单独设置模型和 CLIP 的强度。
-    *   **状态反馈**: 提供专门的文本输出端口，告知是哪个关键词触发了加载。
+    *   **状态反馈**: 提供专门的文本输出端口，告知是哪个关键词触发了加载，可以输出文本用来保存在Log文件中。
+
+#### 9. LH_AutoRatio (智能分辨率计算器)
+*   **功能**: 根据输入图片的宽高比或默认设置，自动计算最佳的宽和高。
+*   **特性**:
+    *   **智能匹配**: 分析输入图片的原始比例，自动吸附到最近的标准比例 (16:9, 3:2, 1:1, 2:3, 9:16)。
+    *   **长边控制**: 您只需指定最长边 (如 1024)，它会自动计算短边长度以维持比例。
+    *   **安全尺寸**: 确保输出尺寸永远是 8 的倍数 (防止 VAE 报错)。
+    *   **默认回退**: 如果未连接图片，则使用 `default_ratio` 作为默认比例。
+
+### ⚙️ 配置文件 (Configuration)
+插件现在支持通过 `lh_config.json` 进行持久化配置。
+*   **位置**: `ComfyUI/custom_nodes/ComfyUI-Lorahelper/lh_config.json`
+*   **设置**: 可自定义默认的聊天模式、最大 Token 数、温度以及系统指令。
 
 ### 🎨 全局特性：动态提示词引擎 (Dynamic Prompts Engine)
 *   **支持节点**: `LH_AIChat`, `LH_MultiTextSelector` 等所有核心节点。

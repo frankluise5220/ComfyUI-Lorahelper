@@ -1,7 +1,7 @@
 [project]
 name = "lorahelper"
 description = "A specialized toolkit for image captioning (reverse prompting), prompt enrichment, and automated batch generation using GGUF and Ollama models."
-version = "1.0.3"
+version = "1.0.4"
 license = {file = "LICENSE"} 
 # classifiers = [
 #     # For OS-independent nodes (works on all operating systems)

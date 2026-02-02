@@ -1,6 +1,7 @@
-from .LH_Chat import UniversalAIChat, UniversalGGUFLoader, UniversalOllamaLoader, LH_History_Monitor, LH_MultiTextSelector, LH_KeywordLoraLoader
+from .LH_Chat import UniversalAIChat, UniversalGGUFLoader, UniversalOllamaLoader, LH_History_Monitor, LH_KeywordLoraLoader
 from .LH_LlamaInstruct import LH_LlamaInstruct
-from .LH_Utils import LoRA_AllInOne_Saver, LH_SimpleText
+from .LH_Utils import LoRA_AllInOne_Saver, LH_AutoRatio
+from .LH_Text import LH_SuperText, LH_MultiTextSelector
 
 NODE_CLASS_MAPPINGS = {
     "UniversalGGUFLoader": UniversalGGUFLoader,
@@ -10,8 +11,9 @@ NODE_CLASS_MAPPINGS = {
     "LH_History_Monitor": LH_History_Monitor,
     "LH_MultiTextSelector": LH_MultiTextSelector,
     "LoRA_AllInOne_Saver": LoRA_AllInOne_Saver,
-    "LH_SimpleText": LH_SimpleText,
+    "LH_SuperText": LH_SuperText,
     "LH_LoraLoader": LH_KeywordLoraLoader,
+    "LH_AutoRatio": LH_AutoRatio,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -22,8 +24,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LH_History_Monitor": "LH_History_Monitor",
     "LH_MultiTextSelector": "LH_MultiTextSelector",
     "LoRA_AllInOne_Saver": "LH_AllInOne_Saver",
-    "LH_SimpleText": "LH_SuperText",
+    "LH_SuperText": "LH_SuperText",
     "LH_LoraLoader": "LH_LoraLoader",
+    "LH_AutoRatio": "LH_AutoRatio",
 }
 
 WEB_DIRECTORY = "./web"

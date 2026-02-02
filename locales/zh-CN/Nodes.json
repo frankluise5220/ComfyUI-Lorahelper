@@ -1,0 +1,114 @@
+{
+    "UniversalAIChat": {
+        "title": "LH_AI对话助手",
+        "inputs": {
+            "model": "模型 (Model)",
+            "image": "图像 (Image)",
+            "max_tokens": "最大生成长度",
+            "temperature": "温度 (Temperature)",
+            "repetition_penalty": "重复惩罚",
+            "instruction": "系统指令/执行指令 (Instruction)",
+            "user_material": "用户素材 (User Material)",
+            "chat_mode": "对话模式",
+            "enable_tag": "启用标签提取",
+            "enable_filename": "启用文件名生成",
+            "seed": "种子 (Seed)",
+            "release_vram": "自动释放显存",
+            "force_chinese": "强制中文输出"
+        }
+    },
+    "UniversalGGUFLoader": {
+        "title": "LH_GGUF模型加载器",
+        "inputs": {
+            "gguf_model": "GGUF模型",
+            "clip_model": "CLIP视觉模型",
+            "n_gpu_layers": "GPU层数 (-1为全部)",
+            "n_ctx": "最大上下文 (n_ctx)"
+        }
+    },
+    "UniversalOllamaLoader": {
+        "title": "LH_Ollama加载器",
+        "inputs": {
+            "ollama_model": "Ollama模型",
+            "ollama_url": "Ollama地址"
+        }
+    },
+    "UniversalCloudLoader": {
+        "title": "LH_云端模型加载器",
+        "inputs": {
+            "api_key": "API 密钥 (API Key)",
+            "base_url": "API 地址 (Base URL)",
+            "model_name": "模型名称 (Model Name)"
+        }
+    },
+    "LH_History_Monitor": {
+        "title": "LH_对话历史监控",
+        "inputs": {
+            "raw_input": "原始输出 (Raw Input)",
+            "clear_history": "清除历史记录"
+        }
+    },
+    "LH_MultiTextSelector": {
+        "title": "LH_多路文本选择器",
+        "inputs": {
+            "mode": "选择模式 (顺序/随机)",
+            "text_1": "文本 1",
+            "text_2": "文本 2",
+            "text_3": "文本 3",
+            "text_4": "文本 4"
+        }
+    },
+    "LoRA_AllInOne_Saver": {
+        "title": "LH_全功能保存器",
+        "inputs": {
+            "images": "图像",
+            "gen_prompt": "生成提示词",
+            "lora_tags": "LoRA标签",
+            "filename_final": "最终文件名",
+            "folder_path": "保存路径",
+            "filename_prefix": "文件前缀",
+            "trigger_word": "触发词",
+            "save_workflow": "保存工作流"
+        }
+    },
+    "LH_SimpleText": {
+        "title": "LH_超级文本框",
+        "inputs": {
+            "showtext": "显示文本",
+            "widget_text": "编辑文本"
+        }
+    },
+    "LH_KeywordLoraLoader": {
+        "title": "LH_关键字Lora加载器",
+        "inputs": {
+            "model": "模型",
+            "lora_name": "LoRA名称",
+            "strength_model": "模型强度",
+            "strength_clip": "CLIP强度",
+            "prompt_in": "提示词输入",
+            "prompt_out": "提示词输出",
+            "trigger_keywords": "触发关键字",
+            "clip": "CLIP"
+        }
+    },
+    "LH_LlamaInstruct": {
+        "title": "LH_Llama指令助手 (旧版)",
+        "inputs": {
+            "model": "模型",
+            "instruction": "指令"
+        }
+    },
+    "LH_AutoRatio": {
+        "title": "LH_智能比例归一化",
+        "inputs": {
+            "image": "图像",
+            "max_edge": "最大边长",
+            "default_ratio": "默认比例(无图时)"
+        },
+        "outputs": {
+            "width": "宽",
+            "height": "高",
+            "raw_ratio": "原始比例"
+        }
+    }
+}
