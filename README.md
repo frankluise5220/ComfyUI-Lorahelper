@@ -137,9 +137,8 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Fallback**: Uses `default_ratio` if no image is connected.
 
 ### ⚙️ Configuration
-The plugin now supports persistent configuration via `lh_config.json`.
-*   **Location**: `ComfyUI/custom_nodes/ComfyUI-Lorahelper/lh_config.json`
-*   **Settings**: Customize default chat mode, max tokens, temperature, and system instructions.
+Customize UI language, default chat mode, and system instructions via `lh_config.json`.
+
 
 ### 🎨 Global Feature: Dynamic Prompts Engine
 *   **Supported Nodes**: `LH_AIChat`, `LH_MultiTextSelector`, `LH_SuperText` (via Utils).
@@ -263,9 +262,8 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **默认回退**: 如果未连接图片，则使用 `default_ratio` 作为默认比例。
 
 ### ⚙️ 配置文件 (Configuration)
-插件现在支持通过 `lh_config.json` 进行持久化配置。
-*   **位置**: `ComfyUI/custom_nodes/ComfyUI-Lorahelper/lh_config.json`
-*   **设置**: 可自定义默认的聊天模式、最大 Token 数、温度以及系统指令。
+支持通过 `lh_config.json` 自定义界面语言、默认聊天模式及系统指令。
+
 
 ### 🎨 全局特性：动态提示词引擎 (Dynamic Prompts Engine)
 *   **支持节点**: `LH_AIChat`, `LH_MultiTextSelector` 等所有核心节点。

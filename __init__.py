@@ -2,6 +2,35 @@ from .LH_Chat import UniversalAIChat, UniversalGGUFLoader, UniversalOllamaLoader
 from .LH_LlamaInstruct import LH_LlamaInstruct
 from .LH_Utils import LoRA_AllInOne_Saver, LH_AutoRatio
 from .LH_Text import LH_SuperText, LH_MultiTextSelector
+import os
+import json
+from aiohttp import web
+
+# Try to import PromptServer from server (ComfyUI standard)
+try:
+    from server import PromptServer
+except ImportError:
+    # Fallback or dummy if running outside ComfyUI (unlikely)
+    PromptServer = None
+
+# --- Config Management ---
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "lh_config.json")
+
+def load_config():
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[ComfyUI-Lorahelper] Error loading config: {e}")
+    return {}
+
+# Register API Route
+if PromptServer:
+    @PromptServer.instance.routes.get("/lorahelper/get_config")
+    async def get_config(request):
+        config = load_config()
+        return web.json_response(config)
 
 NODE_CLASS_MAPPINGS = {
     "UniversalGGUFLoader": UniversalGGUFLoader,

@@ -98,11 +98,11 @@ const TRANSLATIONS = {
     }
 };
 
-const DEFAULT_LANG = "en-US";
+const DEFAULT_LANG = "zh-CN";
 
 // Helper to get global ComfyUI language
 function getComfyLanguage() {
-    return app.ui.settings.getSettingValue("Comfy.Language", "en-US");
+    return app.ui.settings.getSettingValue("Comfy.Language", "zh-CN");
 }
 
 app.registerExtension({
@@ -111,9 +111,39 @@ app.registerExtension({
         console.log("[LoraHelper] Translation extension loaded.");
         const settings = app.ui.settings;
         
-        // Use ComfyUI's native language if the user hasn't explicitly set a LoraHelper preference
-        const initialLang = settings.getSettingValue("LoraHelper.Language", getComfyLanguage());
+        // 1. Fetch Config from Backend API
+        let backendConfig = {};
+        try {
+            const resp = await fetch("/lorahelper/get_config");
+            if (resp.ok) {
+                backendConfig = await resp.json();
+                console.log("[LoraHelper] Loaded backend config:", backendConfig);
+            }
+        } catch (e) {
+            console.warn("[LoraHelper] Failed to fetch backend config:", e);
+        }
 
+        // 2. Determine Initial Language
+        // Priority: User Setting > Backend Config > ComfyUI Global > Default "en-US"
+        let defaultLang = getComfyLanguage();
+        if (backendConfig.locale) {
+            // If backend config has a locale set (e.g. "zh-CN"), use it as the preferred default
+            // BUT, if user has manually set "LoraHelper.Language" in the settings before, we should respect that?
+            // Actually, if user went to trouble to set config.json, they probably want it enforced.
+            // Let's use it as the fallback if setting is not present.
+            defaultLang = backendConfig.locale;
+        }
+
+        const initialLang = settings.getSettingValue("LoraHelper.Language", defaultLang);
+        
+        // If the backend config differs from current setting and user hasn't manually set it (hard to detect), 
+        // we might want to auto-switch. But for now, using it as the default for getSettingValue is safe.
+        // However, if the setting already exists in localStorage, getSettingValue will return that.
+        // If user wants to force switch via config.json, they might need to clear setting or we logic it here.
+        
+        // Logic: If backend config "locale" is present, and it's different from what we thought,
+        // we could hint or just let the default value handle new users.
+        
         settings.addSetting({
             id: "LoraHelper.Language",
             name: "LoraHelper Language (中英文切换)",
@@ -218,7 +248,8 @@ function updateSingleNode(node, lang) {
     const dict = TRANSLATIONS[lang]?.[translationKey];
     if (!dict && lang !== "en-US") return; // If no translation found for non-EN, skip
     
-    // Process Node Title
+    // Process Node Title - Disabled as per user request
+    /*
     if (!node.originalTitle) {
         node.originalTitle = node.title || node.type;
     }
@@ -227,6 +258,7 @@ function updateSingleNode(node, lang) {
     } else if (dict && dict["title"]) {
         node.title = dict["title"];
     }
+    */
 
     // Process Inputs (Connections)
     if (node.inputs) {

@@ -636,7 +636,8 @@ def load_lh_config():
     defaults = {
         "default_chat_mode": "Auto_Mode (Default)",
         "default_max_tokens": 1024,
-        "default_temperature": 0.7
+        "default_temperature": 0.7,
+        "locale": "en-US"
     }
     if os.path.exists(config_path):
         try:
@@ -649,6 +650,8 @@ def load_lh_config():
                     defaults["default_max_tokens"] = int(user_config["default_max_tokens"])
                 if "default_temperature" in user_config:
                     defaults["default_temperature"] = float(user_config["default_temperature"])
+                if "locale" in user_config:
+                    defaults["locale"] = user_config["locale"]
         except Exception as e:
             print(f"[ComfyUI-Lorahelper] Error loading config: {e}")
     return defaults
