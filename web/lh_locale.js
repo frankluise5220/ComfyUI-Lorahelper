@@ -12,7 +12,7 @@ const TRANSLATIONS = {
             "instruction": "系统指令/执行指令 (Instruction)",
             "user_material": "用户素材 (User Material)",
             "chat_mode": "对话模式",
-            "enable_tag": "启用标签提取",
+            "enable_tags": "启用标签提取",
             "enable_filename": "启用文件名生成",
             "seed": "种子 (Seed)",
             "release_vram": "自动释放显存",
@@ -265,7 +265,8 @@ function updateSingleNode(node, lang) {
         for (const input of node.inputs) {
             // Store original name if not stored
             if (!input.originalLabel) {
-                input.originalLabel = input.label || input.name;
+                // [Fix] Always use input.name as the source of truth to avoid pollution from saved workflows or previous sessions
+                input.originalLabel = input.name;
             }
             
             if (lang === "en-US") {
@@ -281,8 +282,8 @@ function updateSingleNode(node, lang) {
         for (const widget of node.widgets) {
              // Store original name if not stored
             if (!widget.originalLabel) {
-                // Some widgets might have a label property, others rely on name
-                widget.originalLabel = widget.label || widget.name;
+                // [Fix] Always use widget.name as the source of truth
+                widget.originalLabel = widget.name;
             }
 
             if (lang === "en-US") {
@@ -298,7 +299,8 @@ function updateSingleNode(node, lang) {
         for (const output of node.outputs) {
              // Store original name if not stored
             if (!output.originalLabel) {
-                output.originalLabel = output.label || output.name;
+                // [Fix] Always use output.name as the source of truth
+                output.originalLabel = output.name;
             }
 
             if (lang === "en-US") {
