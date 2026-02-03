@@ -111,16 +111,16 @@ class LoRA_AllInOne_Saver:
                     file_parts.append(cleaned_name)
 
             # Add Timestamp (Requested by user)
-            timestamp_str = datetime.now().strftime("%Y%m%d%H%M%S")
+            timestamp_str = str(int(time.time()))
             file_parts.append(timestamp_str)
             
-            # Add counter
-            # We use the standard counter + loop index
-            current_count = counter + i
-            
             # Construct final filename
-            # e.g. "Anran_[CustomName]_20250201_120000_00005"
-            fname = "_".join(file_parts) + f"_{current_count:05}"
+            # e.g. "Anran_[CustomName]_1768451899"
+            fname = "_".join(file_parts)
+
+            # Handle batch index if multiple images
+            if len(images) > 1:
+                fname += f"_{i}"
             
             # Save Image
             img_tensor = image
