@@ -343,13 +343,6 @@ class UniversalGGUFLoader:
                         "tooltip": "上下文长度（token 数）。越大可处理的对话越长，但显存占用越高",
                     },
                 ),
-                "cache_mode": (
-                    ["fp16", "q8_0", "q4_0"],
-                    {
-                        "default": "fp16",
-                        "tooltip": "KV Cache 量化。FP16=无损(高显存); Q8_0=极微损(省显存,推荐); Q4_0=有损(极省,可能会变笨)。",
-                    },
-                ),
             }
         }
     RETURN_TYPES = ("LLM_MODEL",)
@@ -357,7 +350,7 @@ class UniversalGGUFLoader:
     FUNCTION = "load_model"
     CATEGORY = "LoraHelper"
 
-    def load_model(self, gguf_model, clip_model, n_gpu_layers, n_ctx, cache_mode):
+    def load_model(self, gguf_model, clip_model, n_gpu_layers, n_ctx):
         # [Memory Safety] Force Garbage Collection before load
         # This prevents "cudaMallocAsync" conflicts where PyTorch holds cached VRAM
         gc.collect()
@@ -446,17 +439,10 @@ class UniversalGGUFLoader:
         flash_attn = True 
 
         # [Cache Quantization]
-        # Reduces VRAM usage for KV cache (Context).
-        type_k = None
-        type_v = None
-        if cache_mode == "q8_0":
-            type_k = _llama_cpp.GGML_TYPE_Q8_0
-            type_v = _llama_cpp.GGML_TYPE_Q8_0
-            if verbose: print(f"\033[36m[UniversalGGUFLoader] KV Cache Quantization: Q8_0 enabled.\033[0m")
-        elif cache_mode == "q4_0":
-            type_k = _llama_cpp.GGML_TYPE_Q4_0
-            type_v = _llama_cpp.GGML_TYPE_Q4_0
-            if verbose: print(f"\033[36m[UniversalGGUFLoader] KV Cache Quantization: Q4_0 enabled.\033[0m")
+        # Hardcoded to Q8_0 for testing
+        type_k = _llama_cpp.GGML_TYPE_Q8_0
+        type_v = _llama_cpp.GGML_TYPE_Q8_0
+        if verbose: print(f"\033[36m[UniversalGGUFLoader] KV Cache Quantization: Q8_0 enabled (Hardcoded).\033[0m")
 
         # 实例化模型
         try:
