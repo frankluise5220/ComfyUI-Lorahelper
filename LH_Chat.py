@@ -251,35 +251,30 @@ TRIGGER_ORDER_TAGS = "### tags\n[Comma-separated tags]\n"
 TRIGGER_ORDER_FILENAME = "### filename\n[The filename in brackets]\n"
 TRIGGER_SUFFIX = "\nStart:\n"
 
-# 2. Section Instructions
+# 2. Section Instructions (Simplified for Speed)
 PROMPT_DESCRIPTION = (
-    "For the ### description section: This is the MAIN content area. Execute the main instruction provided above and output the result here.\n"
-    "IMPORTANT: You MUST preserve any specific structure, numbering (1., 2...), or headers (e.g. **Title**) requested by the user. Do NOT strip formatting.\n"
+    "### description: The main content. Execute the instruction. Preserve formatting.\n"
 )
 PROMPT_TAGS = (
-    "For the ### tags section: Generate a detailed list of English Danbooru-style tags based on the content.\n"
-    "Priority: Art Style > Technical > Quality > Character > Background.\n"
-    "Format: tag1, tag2, tag3... (English only)\n"
+    "### tags: English Danbooru-style tags (Art Style, Technical, Character). Format: tag1, tag2...\n"
 )
 PROMPT_FILENAME = (
-    "For the ### filename section: Generate a concise filename enclosed in square brackets. Strictly limit to 2-4 keywords connected by underscores. Format: [Keyword1_Keyword2_Keyword3].\n"
+    "### filename: [Keyword1_Keyword2_Keyword3] (2-4 keywords).\n"
 )
 
 # 3. Behavior Constraints
 CONSTRAINT_HEADER = "\n[Constraints]\n"
 
 CONSTRAINT_NO_COT = [
-    "Output ONLY the requested sections. NO conversational fillers. NO 'Here is the prompt'. NO self-correction text. NO <think> tags.\n"
-    "Structure markers (headers, bullet points, numbering) ARE allowed and expected if requested.\n"
+    "Output ONLY the requested sections. No conversational fillers. No <think> tags.\n"
 ]
 
 CONSTRAINT_ALLOW_COT = [
     "You MAY output your thinking process enclosed in <think>...</think> tags BEFORE the actual content.\n"
-    "This helps with complex reasoning. But the final output must still follow the requested format.\n"
 ]
 
 CONSTRAINT_NO_REPEAT = [
-    "Do NOT repeat the instructions. Output the content ONLY ONCE.\n"
+    "Do NOT repeat the instructions.\n"
 ]
 
 # [Config] Input Labels
