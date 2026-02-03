@@ -78,6 +78,59 @@ except ImportError:
 # 1. 路径注册 (Path Registration) - 重构版
 # ==========================================================
 
+# [Helper] Lazy Load Vision Handler
+def setup_vision_handler(model, clip_path, verbose=False):
+    if not clip_path or not os.path.exists(clip_path):
+        return None
+        
+    model_path = model.model_path
+    
+    # Helper function to try loading a handler
+    def try_load_handler(HandlerClass, name):
+        if not HandlerClass: return None
+        try:
+            h = HandlerClass(clip_model_path=clip_path, verbose=verbose)
+            if verbose:
+                print(f"\033[32m[UniversalAIChat] Success: {name} Vision Adapter Loaded (Lazy).\033[0m")
+            return h
+        except Exception as e:
+            if verbose:
+                print(f"\033[33m[UniversalAIChat] Info: {name} handler failed ({str(e)}). Trying next...\033[0m")
+            return None
+    
+    chat_handler = None
+    
+    # 0. Try Qwen (High Priority)
+    if not chat_handler and ("qwen" in model_path.lower() or "qwen" in clip_path.lower()):
+            chat_handler = try_load_handler(Qwen2VLChatHandler, "Qwen2-VL")
+
+    # 1. Try Llava 1.5 (Standard for many models)
+    if not chat_handler:
+        chat_handler = try_load_handler(Llava15ChatHandler, "Llava 1.5")
+    
+    # 2. Try Llava 1.6 (Vicuna/Mistral based)
+    if not chat_handler:
+        chat_handler = try_load_handler(Llava16ChatHandler, "Llava 1.6")
+
+    # 3. Try Moondream (Specific architecture)
+    if not chat_handler and "moondream" in clip_path.lower():
+            chat_handler = try_load_handler(MoondreamChatHandler, "Moondream")
+    
+    # 4. Try NanoLlava
+    if not chat_handler and "nano" in clip_path.lower():
+            chat_handler = try_load_handler(NanoLlavaChatHandler, "NanoLlava")
+
+    if chat_handler:
+        model.chat_handler = chat_handler
+        model._has_vision_handler = True
+        # Update init params to persist the loaded handler for future reloads
+        if hasattr(model, '_init_params'):
+            model._init_params['handler_name'] = type(chat_handler).__name__
+            # IMPORTANT: Re-inject clip_path into init params if it was lazy loaded
+            model._init_params['clip_path'] = clip_path 
+            
+    return chat_handler
+
 # 候选文件夹名称，涵盖了大多数用户的命名习惯
 llm_candidates = ["llm", "LLM", "llms", "LLMs", "GGUF", "gguf", "llama", "llama_cpp"]
 valid_llm_paths = []
@@ -284,7 +337,7 @@ class UniversalGGUFLoader:
                 "n_ctx": (
                     "INT",
                     {
-                        "default": 8192,
+                        "default": 4096,
                         "min": 2048,
                         "max": 32768,
                         "tooltip": "上下文长度（token 数）。越大可处理的对话越长，但显存占用越高",
@@ -298,11 +351,40 @@ class UniversalGGUFLoader:
     CATEGORY = "LoraHelper"
 
     def load_model(self, gguf_model, clip_model, n_gpu_layers, n_ctx):
-        # n_batch hardcoded to 2048 to support Qwen-VL
-        n_batch = 2048
+        # [Memory Safety] Force Garbage Collection before load
+        # This prevents "cudaMallocAsync" conflicts where PyTorch holds cached VRAM
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            try:
+                torch.cuda.ipc_collect()
+            except:
+                pass
+
+        # n_batch logic: 
+        # Vision models (Qwen-VL) often require larger batch sizes (e.g. 2048) for image tokens.
+        # Text-only models work fine with 512, which saves VRAM.
+        if clip_model != "None":
+            n_batch = 2048
+        else:
+            n_batch = 512
+
         # Use global DEBUG flag
         verbose = DEBUG
         
+        # [VRAM Monitor] Helper
+        def get_vram_info():
+            if torch.cuda.is_available():
+                try:
+                    free, total = torch.cuda.mem_get_info()
+                    used = total - free
+                    return f"Used {used/1024**3:.2f}GB / Total {total/1024**3:.2f}GB (Free {free/1024**3:.2f}GB)"
+                except:
+                    return "N/A"
+            return "CPU Only"
+
+        print(f"\033[35m[UniversalGGUFLoader] VRAM Before Load: {get_vram_info()}\033[0m")
+
         if Llama is None:
             raise ImportError("llama-cpp-python is not installed. Please install it to use this node.")
         
@@ -321,67 +403,20 @@ class UniversalGGUFLoader:
                              f"请下载 GGUF 版本的模型 (通常由 TheBloke, Qwen 等发布)。")
 
         # Setup Chat Handler for Vision (CLIP/MMProj)
-        # Loader 直接加载 CLIP，保持逻辑统一
+        # [LAZY LOAD UPDATE] 
+        # We do NOT load the vision handler (mmproj) here anymore.
+        # It will be loaded on-demand in UniversalAIChat node ONLY if Vision mode is active.
+        # This saves VRAM for users who select a clip model but run in Text/Auto mode.
         chat_handler = None
         if clip_model != "None":
+            # Just verify existence to be nice, but don't load
             clip_path = folder_paths.get_full_path("llm", clip_model)
             if clip_path and os.path.exists(clip_path):
                 if verbose:
-                    print(f"\033[34m[UniversalGGUFLoader] Attempting to load Vision Projector: {clip_model}\033[0m")
-                
-                # Helper function to try loading a handler
-                def try_load_handler(HandlerClass, name):
-                    if not HandlerClass: return None
-                    try:
-                        # Pass verbose flag to handler to control logging
-                        h = HandlerClass(clip_model_path=clip_path, verbose=verbose)
-                        if verbose:
-                            print(f"\033[32m[UniversalGGUFLoader] Success: {name} Vision Adapter Loaded.\033[0m")
-                        return h
-                    except Exception as e:
-                        # Don't print stack trace for expected failures, just the error
-                        if verbose:
-                            print(f"\033[33m[UniversalGGUFLoader] Info: {name} handler failed ({str(e)}). Trying next...\033[0m")
-                        return None
-                
-                # 0. Try Qwen (High Priority)
-                if not chat_handler and ("qwen" in model_path.lower() or "qwen" in clip_model.lower()):
-                     chat_handler = try_load_handler(Qwen2VLChatHandler, "Qwen2-VL")
-
-                # 1. Try Llava 1.5 (Standard for many models)
-                if not chat_handler:
-                    chat_handler = try_load_handler(Llava15ChatHandler, "Llava 1.5")
-                
-                # 2. Try Llava 1.6 (Vicuna/Mistral based)
-                if not chat_handler:
-                    chat_handler = try_load_handler(Llava16ChatHandler, "Llava 1.6")
-
-                # 3. Try Moondream (Specific architecture)
-                if not chat_handler and "moondream" in clip_model.lower():
-                     chat_handler = try_load_handler(MoondreamChatHandler, "Moondream")
-                
-                # 4. Try NanoLlava
-                if not chat_handler and "nano" in clip_model.lower():
-                     chat_handler = try_load_handler(NanoLlavaChatHandler, "NanoLlava")
-
-                # Final Check
-                if chat_handler:
-                    if verbose:
-                        print(f"\033[32m[UniversalGGUFLoader] Vision Model Ready.\033[0m")
-                else:
-                    # Critical Error - Only print if verbose, otherwise just warn once or rely on traceback if it fails later
-                    if verbose:
-                        print(f"\033[31m[UniversalGGUFLoader] Error: Failed to load ANY compatible Vision Handler for: {clip_model}\033[0m")
-                        print("\033[33m[UniversalGGUFLoader] Possible reasons:\n"
-                              "1. Mismatched Version: You are trying to use a 2B mmproj with a 7B model (or vice versa). MUST match exactly!\n"
-                              "2. The 'mmproj' file is corrupted or incompatible with installed llama-cpp-python.\n"
-                              "3. You are using a model type (e.g. Qwen-VL) that requires a specific handler not yet auto-detected.\n"
-                              "4. Update llama-cpp-python to the latest version.\033[0m")
-                        print("\033[33m[UniversalGGUFLoader] Continuing in Text-Only mode...\033[0m")
-                    chat_handler = None
+                    print(f"\033[34m[UniversalGGUFLoader] Vision Model selected: {clip_model}. Will be loaded lazily if needed.\033[0m")
             else:
-                if verbose:
-                    print(f"\033[33m[UniversalGGUFLoader] CLIP model not found: {clip_model}\033[0m")
+                 if verbose:
+                    print(f"\033[33m[UniversalGGUFLoader] Warning: CLIP model not found: {clip_model}\033[0m")
 
         # [Auto-Detect Chat Format]
         # 针对 Qwen 等模型，自动应用 chatml 格式，避免 llama-cpp-python 猜错。
@@ -398,8 +433,10 @@ class UniversalGGUFLoader:
         elif "vicuna" in model_name:
              chat_format = "vicuna"
         
-        # [Flash Attention] Auto-enable if available
-        flash_attn = True # Enabled for Qwen3-VL/5060Ti performance optimization
+        # [Flash Attention]
+        # Enabled by default to save VRAM and increase speed.
+        # If installed llama-cpp-python doesn't support it, we fallback automatically.
+        flash_attn = True 
 
         # 实例化模型
         try:
@@ -414,9 +451,9 @@ class UniversalGGUFLoader:
                 verbose=verbose
             )
         except TypeError as e:
-            if "flash_attn" in str(e):
+            if "flash_attn" in str(e) or "unexpected keyword argument 'flash_attn'" in str(e):
                 if verbose:
-                    print("\033[33m[UniversalGGUFLoader] Warning: 'flash_attn' not supported by this llama-cpp-python. Falling back.\033[0m")
+                    print("\033[33m[UniversalGGUFLoader] Warning: 'flash_attn' not supported by this llama-cpp-python. Falling back to default attention.\033[0m")
                 model = Llama(
                     model_path=model_path,
                     chat_handler=chat_handler,
@@ -429,7 +466,21 @@ class UniversalGGUFLoader:
             else:
                 raise e
         except Exception as e:
-             raise e
+            # Catch-all for other initialization errors (e.g. CUDA OOM)
+            # Try fallback if it looks like a flash_attn specific error not caught by TypeError
+            if "flash_attn" in str(e):
+                 print("\033[33m[UniversalGGUFLoader] Warning: 'flash_attn' caused an error. Falling back.\033[0m")
+                 model = Llama(
+                    model_path=model_path,
+                    chat_handler=chat_handler,
+                    n_gpu_layers=n_gpu_layers,
+                    n_ctx=n_ctx,
+                    n_batch=n_batch,
+                    chat_format=chat_format,
+                    verbose=verbose
+                )
+            else:
+                 raise e
 
         # 标记是否加载了 CLIP，供 Chat 节点参考
         model._loaded_clip_path = folder_paths.get_full_path("llm", clip_model) if clip_model != "None" else None
@@ -449,14 +500,15 @@ class UniversalGGUFLoader:
             "model_path": model_path,
             "n_gpu_layers": n_gpu_layers,
             "n_ctx": n_ctx,
-            "n_batch": n_batch,
-            "chat_format": chat_format,
-            "clip_path": folder_paths.get_full_path("llm", clip_model) if clip_model != "None" else None,
-            "flash_attn": flash_attn,
-            "verbose": verbose,
-            "handler_name": handler_name
-        }
+                "n_batch": n_batch,
+                "chat_format": chat_format,
+                "clip_path": folder_paths.get_full_path("llm", clip_model) if clip_model != "None" else None,
+                "flash_attn": flash_attn,
+                "verbose": verbose,
+                "handler_name": handler_name
+            }
         
+        print(f"\033[35m[UniversalGGUFLoader] VRAM After Load: {get_vram_info()}\033[0m")
         return (model,)
 
 # ==========================================================
@@ -834,6 +886,15 @@ class UniversalAIChat:
         import time
         t0 = time.time()
         
+        # [VRAM Monitor]
+        if torch.cuda.is_available():
+            try:
+                free, total = torch.cuda.mem_get_info()
+                used = total - free
+                print(f"\033[35m[UniversalAIChat] VRAM Start: Used {used/1024**3:.2f}GB / Total {total/1024**3:.2f}GB\033[0m")
+            except:
+                pass
+
         # [Process Log] Initialize
         process_log = []
         # process_log.append(f"Input Seed: {seed}") # Redundant with Stats block
@@ -896,6 +957,12 @@ class UniversalAIChat:
                     raise ValueError(f"Model reload failed: {e}")
             elif hasattr(model, '_init_params'):
                 # print("\033[33m[UniversalAIChat] Model is closed or invalid. Reloading...\033[0m")
+                
+                # [Memory Safety] Clean up before re-instantiating
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+
                 from llama_cpp import Llama
                 init_p = model._init_params
                 
@@ -994,6 +1061,21 @@ class UniversalAIChat:
 
         # [MODE SWITCHING LOGIC]
         if is_vision_task:
+            # [Lazy Load Vision Handler]
+            # If not loaded yet, try to load it now using the stored path
+            if not getattr(model, '_has_vision_handler', False):
+                if getattr(model, '_loaded_clip_path', None):
+                    if verbose:
+                        print(f"\033[36m[UniversalAIChat] Lazy Loading Vision Handler from: {model._loaded_clip_path}\033[0m")
+                    setup_vision_handler(model, model._loaded_clip_path, verbose=verbose)
+                    # [VRAM Monitor] Post-Load
+                    if torch.cuda.is_available():
+                        try:
+                            free, total = torch.cuda.mem_get_info()
+                            used = total - free
+                            print(f"\033[35m[UniversalAIChat] VRAM After Vision Load: Used {used/1024**3:.2f}GB\033[0m")
+                        except: pass
+
             if not getattr(model, '_has_vision_handler', False):
                  err_msg = "[SYSTEM ERROR] Vision Task requested but no Vision Handler (CLIP/MMProj) is loaded.\nPlease make sure you selected a CLIP/Vision model in the Loader node."
                  print(f"\033[31m[{datetime.now().strftime('%H:%M:%S')}] {err_msg}\033[0m")
@@ -1434,6 +1516,29 @@ class UniversalAIChat:
              except:
                 pass
              model._is_closed = True
+             # Force clean up
+             gc.collect()
+             if torch.cuda.is_available():
+                 torch.cuda.empty_cache()
+
+        # [Optim] Force clean up for next node (e.g. Z-Image)
+        # Even if we don't unload model, we should clear activation memory
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            try:
+                torch.cuda.ipc_collect()
+            except:
+                pass
+
+        # [VRAM Monitor] End (After Cleanup)
+        if torch.cuda.is_available():
+            try:
+                free, total = torch.cuda.mem_get_info()
+                used = total - free
+                print(f"\033[35m[UniversalAIChat] VRAM Final (Cleaned): Used {used/1024**3:.2f}GB / Total {total/1024**3:.2f}GB\033[0m")
+            except:
+                pass
 
         return (out_desc, out_tags, out_filename, raw_output)
 
@@ -1672,3 +1777,31 @@ class LH_KeywordLoraLoader:
         else:
             current_status = f"{lora_name} Not Triggered"
             return (model, prompt_in, clip, format_status(current_status), False)
+
+# ==========================================================
+# 6. 批量文本读取 (Text Directory Loader)
+# ==========================================================
+class LH_TextDirectoryLoader:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"directory_path": ("STRING", {"default": ""}), 
+                             "index": ("INT", {"default": 0, "min": 0, "max": 9999})}}
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("text_content",)
+    FUNCTION = "load_text"
+    CATEGORY = "LoraHelper"
+
+    def load_text(self, directory_path, index):
+        import os
+        if not os.path.isdir(directory_path):
+             return (f"Directory not found: {directory_path}",)
+             
+        files = sorted([f for f in os.listdir(directory_path) if f.endswith(".txt")])
+        if not files: return ("Directory empty (no .txt files)",)
+        
+        file_path = os.path.join(directory_path, files[index % len(files)])
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return (f.read().strip(),)
+        except Exception as e:
+            return (f"Error reading file: {e}",)

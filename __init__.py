@@ -1,4 +1,4 @@
-from .LH_Chat import UniversalAIChat, UniversalGGUFLoader, UniversalOllamaLoader, LH_History_Monitor, LH_KeywordLoraLoader
+from .LH_Chat import UniversalAIChat, UniversalGGUFLoader, UniversalOllamaLoader, LH_History_Monitor, LH_KeywordLoraLoader, LH_TextDirectoryLoader
 from .LH_LlamaInstruct import LH_LlamaInstruct
 from .LH_Utils import LoRA_AllInOne_Saver, LH_AutoRatio
 from .LH_Text import LH_SuperText, LH_MultiTextSelector
@@ -42,6 +42,7 @@ NODE_CLASS_MAPPINGS = {
     "LoRA_AllInOne_Saver": LoRA_AllInOne_Saver,
     "LH_SuperText": LH_SuperText,
     "LH_LoraLoader": LH_KeywordLoraLoader,
+    "LH_TextDirectoryLoader": LH_TextDirectoryLoader,
     "LH_AutoRatio": LH_AutoRatio,
 }
 
@@ -55,6 +56,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoRA_AllInOne_Saver": "LH_AllInOne_Saver",
     "LH_SuperText": "LH_SuperText",
     "LH_LoraLoader": "LH_LoraLoader",
+    "LH_TextDirectoryLoader": "LH_TextDirectoryLoader",
     "LH_AutoRatio": "LH_AutoRatio",
 }
 
