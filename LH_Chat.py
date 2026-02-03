@@ -192,6 +192,10 @@ TEXT_PRESETS = {
         "2. **Enhance Atmosphere**: Add lighting, mood, and stylistic keywords (e.g., 'cinematic', 'dreamy', 'dramatic'). "
         "3. **Optimize for AI**: Use effective descriptors but avoid excessive clutter or micro-management of insignificant details. "
         "Output **only the improved prompt text**. No reasoning, no explanations. Keep it natural and fluid."
+        "\n\n[Output Format]\n"
+        "### description: The improved prompt.\n"
+        "### tags: English tags (Art Style, Technical).\n"
+        "### filename: [Keyword1_Keyword2] (2-4 keywords)."
     ),
     "Text_Refine": (
         "Write ONE clear, concise photography prompt paragraph (120–200 words) that preserves the user’s intent and subject details. "
@@ -1101,37 +1105,10 @@ class UniversalAIChat:
         template_instructions = ""
         
         if apply_template:
-            rules = []
-            rules.extend(CONSTRAINT_NO_REPEAT)
-            
-            if chat_mode == "Debug_Chat (Raw)":
-                 rules.extend(CONSTRAINT_ALLOW_COT)
-            else:
-                 rules.extend(CONSTRAINT_NO_COT)
-
-            rules.append(PROMPT_DESCRIPTION)
-            # Always include tags/filename rules even if widgets are false (user might connect them later)
-            rules.append(PROMPT_TAGS)
-            rules.append(PROMPT_FILENAME)
-
-            strict_constraints = CONSTRAINT_HEADER
-            for i, rule in enumerate(rules, 1):
-                strict_constraints += f"{i}. {rule}\n"
-            
-            output_order = [TRIGGER_ORDER_DESC]
-            output_order.append(TRIGGER_ORDER_TAGS)
-            output_order.append(TRIGGER_ORDER_FILENAME)
-            
-            # [Dynamic Trigger Prefix]
-            # User Request: Use simpler instruction when force_chinese is True, but keep it in English and neutral about language.
-            # The specific language requirements for each section (description=CN, tags=EN, filename=EN) are already defined in the system prompts above.
-            current_trigger_prefix = TRIGGER_PREFIX
-            if force_chinese:
-                 current_trigger_prefix = "\n\n[Output Format Rules]\nPlease output the result immediately in the following format (excluding any other process):\n"
-
-            start_sequence = f"{current_trigger_prefix}{chr(10).join(output_order)}{TRIGGER_SUFFIX}"
-            strict_constraints += start_sequence
-            template_instructions += strict_constraints
+            # Simplified Constraint Injection
+            # We append a minimal reminder instead of a full numbered list, 
+            # relying on the System Preset to carry the main formatting instructions.
+            template_instructions += "\n\nRemember: ### description, ### tags, ### filename."
             
         # ==========================================================
         # 3. 消息组装 (Message Assembly)
