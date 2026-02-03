@@ -186,11 +186,12 @@ VISION_PRESETS = {
 # --- Text Presets ---
 TEXT_PRESETS = {
     "Enhance_Prompt (Creative)": (
-        "Refine and enhance the following user prompt for creative text-to-image generation (Stable Diffusion / Flux). "
-        "Keep the core meaning and keywords, but make it extremely expressive, visually rich, and detailed. "
-        "Expand on intricate details (clothing, textures), environment/atmosphere (lighting, weather, mood), "
-        "character (appearance, pose, expression), style (medium, angle), and atmospheric nuance. "
-        "Output **only the improved prompt text**. No reasoning, no explanations. 300+ words, 20+ descriptors."
+        "Refine the user's prompt for creative text-to-image generation (Stable Diffusion / Flux). "
+        "Goal: Create a visually stunning image while leaving room for the AI's artistic interpretation. "
+        "1. **Clarify the Subject**: Ensure the main subject is distinct. "
+        "2. **Enhance Atmosphere**: Add lighting, mood, and stylistic keywords (e.g., 'cinematic', 'dreamy', 'dramatic'). "
+        "3. **Optimize for AI**: Use effective descriptors but avoid excessive clutter or micro-management of insignificant details. "
+        "Output **only the improved prompt text**. No reasoning, no explanations. Keep it natural and fluid."
     ),
     "Text_Refine": (
         "Write ONE clear, concise photography prompt paragraph (120–200 words) that preserves the user’s intent and subject details. "
