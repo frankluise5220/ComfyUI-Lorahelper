@@ -100,25 +100,66 @@ def setup_vision_handler(model, clip_path, verbose=False):
     
     chat_handler = None
     
-    # 0. Try Qwen (High Priority)
-    if not chat_handler and ("qwen" in model_path.lower() or "qwen" in clip_path.lower()):
-            chat_handler = try_load_handler(Qwen2VLChatHandler, "Qwen2-VL")
+    # [Safety] Get Model Architecture from Metadata (Prevent Crashes)
+    # Loading the wrong handler (e.g. Llava on Qwen) causes Access Violation (Crash).
+    model_arch = ""
+    try:
+        if hasattr(model, "metadata"):
+            # llama-cpp-python returns dict, keys usually 'general.architecture'
+            val = model.metadata.get("general.architecture")
+            if val:
+                model_arch = str(val).lower()
+                if verbose: print(f"\033[34m[UniversalAIChat] Detected GGUF Architecture: {model_arch}\033[0m")
+    except:
+        pass
 
-    # 1. Try Llava 1.5 (Standard for many models)
-    if not chat_handler:
-        chat_handler = try_load_handler(Llava15ChatHandler, "Llava 1.5")
-    
-    # 2. Try Llava 1.6 (Vicuna/Mistral based)
-    if not chat_handler:
-        chat_handler = try_load_handler(Llava16ChatHandler, "Llava 1.6")
+    # Define available handlers with identification keywords
+    # Order matters for fallback: put most common/likely candidates first for generic names
+    available_handlers = [
+        # (HandlerClass, Name, [Keywords], [Architectures])
+        (Llava16ChatHandler, "Llava 1.6", ["v1.6", "mistral", "yi-", "hermes"], ["mistral", "yi"]),
+        (Llava15ChatHandler, "Llava 1.5", ["llava", "vicuna"], ["llama"]), 
+        (Qwen2VLChatHandler, "Qwen2-VL", ["qwen"], ["qwen2vl", "qwen"]),
+        (MoondreamChatHandler, "Moondream", ["moondream"], ["moondream"]),
+        (NanoLlavaChatHandler, "NanoLlava", ["nano"], ["qwen2"]), # NanoLlava often based on Qwen2
+    ]
 
-    # 3. Try Moondream (Specific architecture)
-    if not chat_handler and "moondream" in clip_path.lower():
-            chat_handler = try_load_handler(MoondreamChatHandler, "Moondream")
+    # Filter out unavailable handlers (ImportError)
+    valid_handlers = [(h, n, k, a) for h, n, k, a in available_handlers if h is not None]
+
+    # Smart Selection Logic
+    execution_list = []
     
-    # 4. Try NanoLlava
-    if not chat_handler and "nano" in clip_path.lower():
-            chat_handler = try_load_handler(NanoLlavaChatHandler, "NanoLlava")
+    # 1. Strong Match: Architecture (Metadata is the source of truth)
+    if model_arch:
+        for h, n, k, archs in valid_handlers:
+            if model_arch in archs:
+                execution_list.append((h, n))
+    
+    # 2. Medium Match: Filename Keywords (If metadata didn't narrow it down uniquely or failed)
+    path_lower = (model_path + " " + clip_path).lower()
+    for h, n, k, a in valid_handlers:
+        if (h, n) not in execution_list: # Avoid duplicates
+            if any(kw in path_lower for kw in k):
+                execution_list.append((h, n))
+                
+    # 3. Fallback: Default Order (Only for generic architectures like 'llama' or unknown)
+    # If we identified a specific arch like 'qwen2vl', we SHOULD NOT fallback to Llava (it will crash).
+    # Only fallback if we have NO clues or it's a generic architecture.
+    is_specific_arch = model_arch in ["qwen2vl", "moondream"]
+    
+    if not is_specific_arch:
+        for h, n, k, a in valid_handlers:
+            if (h, n) not in execution_list:
+                execution_list.append((h, n))
+    
+    if verbose and execution_list:
+        print(f"\033[34m[UniversalAIChat] Handler Priority: {[n for _, n in execution_list]}\033[0m")
+
+    for handler_class, name in execution_list:
+        chat_handler = try_load_handler(handler_class, name)
+        if chat_handler:
+            break
 
     if chat_handler:
         model.chat_handler = chat_handler
@@ -440,12 +481,16 @@ class UniversalGGUFLoader:
 
         # [Cache Quantization]
         # Hardcoded to Q8_0 for testing
-        type_k = _llama_cpp.GGML_TYPE_Q8_0
-        type_v = _llama_cpp.GGML_TYPE_Q8_0
+        # We try to use the integer value 8 directly to avoid AttributeError.
+        # However, some older versions might not even support type_k/type_v arguments.
+        # We will handle this in the try-except block below.
+        type_k = 8 # Equivalent to _llama_cpp.GGML_TYPE_Q8_0
+        type_v = 8 
         if verbose: print(f"\033[36m[UniversalGGUFLoader] KV Cache Quantization: Q8_0 enabled (Hardcoded).\033[0m")
 
         # 实例化模型
         try:
+            # 1. Try Full Feature Set (FlashAttn + Cache Quantization)
             model = Llama(
                 model_path=model_path,
                 chat_handler=chat_handler,
@@ -458,10 +503,14 @@ class UniversalGGUFLoader:
                 type_v=type_v,
                 verbose=verbose
             )
-        except TypeError as e:
-            if "flash_attn" in str(e) or "type_k" in str(e) or "unexpected keyword argument" in str(e):
+        except (TypeError, AttributeError, Exception) as e:
+            # Catch TypeError (unexpected keyword), AttributeError (missing constants), and generic Exception (if C++ binding fails)
+            error_str = str(e).lower()
+            if any(k in error_str for k in ["flash_attn", "type_k", "type_v", "unexpected keyword", "attribute"]):
                 if verbose:
-                    print(f"\033[33m[UniversalGGUFLoader] Warning: Advanced features (FlashAttn/CacheQuant) not supported by this llama-cpp-python ({e}). Falling back.\033[0m")
+                    print(f"\033[33m[UniversalGGUFLoader] Warning: Advanced features (FlashAttn/CacheQuant) not supported by this llama-cpp-python version. Falling back to standard mode.\nError: {e}\033[0m")
+                
+                # 2. Fallback: Standard Load
                 model = Llama(
                     model_path=model_path,
                     chat_handler=chat_handler,
@@ -472,23 +521,8 @@ class UniversalGGUFLoader:
                     verbose=verbose
                 )
             else:
+                # If it's a real error (e.g. file not found, OOM), re-raise it
                 raise e
-        except Exception as e:
-            # Catch-all for other initialization errors (e.g. CUDA OOM)
-            # Try fallback if it looks like a flash_attn/type_k specific error
-            if "flash_attn" in str(e) or "type_k" in str(e):
-                 print(f"\033[33m[UniversalGGUFLoader] Warning: Advanced features caused an error ({e}). Falling back.\033[0m")
-                 model = Llama(
-                    model_path=model_path,
-                    chat_handler=chat_handler,
-                    n_gpu_layers=n_gpu_layers,
-                    n_ctx=n_ctx,
-                    n_batch=n_batch,
-                    chat_format=chat_format,
-                    verbose=verbose
-                )
-            else:
-                 raise e
 
         # 标记是否加载了 CLIP，供 Chat 节点参考
         model._loaded_clip_path = folder_paths.get_full_path("llm", clip_model) if clip_model != "None" else None
@@ -1243,13 +1277,17 @@ class UniversalAIChat:
                 img = img.convert("RGB")
                 
             buffered = BytesIO()
-            max_dimension = 1536
+            # [Speed Optim] Reduced max_dimension from 1536 to 1024 for faster vision processing
+            # Most models (Llava 1.5/1.6) work well with ~1024px or less.
+            max_dimension = 1024 
+            
             if max(img.size) > max_dimension:
                 scale_factor = max_dimension / max(img.size)
                 new_size = (int(img.size[0] * scale_factor), int(img.size[1] * scale_factor))
-                img = img.resize(new_size, Image.Resampling.LANCZOS)
+                # [Speed Optim] Use BICUBIC instead of LANCZOS (Faster, sufficient quality)
+                img = img.resize(new_size, Image.Resampling.BICUBIC)
                 if verbose:
-                    print(f"\033[36m[UniversalAIChat] Image Resized to {img.size}\033[0m")
+                    print(f"\033[36m[UniversalAIChat] Image Resized to {img.size} (BICUBIC)\033[0m")
 
             img.save(buffered, format="JPEG", quality=95) 
             img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
@@ -1531,13 +1569,9 @@ class UniversalAIChat:
 
         # [Optim] Force clean up for next node (e.g. Z-Image)
         # Even if we don't unload model, we should clear activation memory
-        gc.collect()
+        # Removed aggressive gc.collect() and ipc_collect() for speed.
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            try:
-                torch.cuda.ipc_collect()
-            except:
-                pass
 
         # [VRAM Monitor] End (After Cleanup)
         if torch.cuda.is_available():
@@ -1551,43 +1585,7 @@ class UniversalAIChat:
         return (out_desc, out_tags, out_filename, raw_output)
 
 
-# ==========================================================
-# 4. UniversalAIChat_Legacy (Old AIChat Node - Shelved)
-# ==========================================================
-class UniversalAIChat_Legacy:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "model": ("LLM_MODEL",), 
-                "user_material": ("STRING", {"multiline": True, "default": DEFAULT_USER_MATERIAL}), 
-                "instruction": ("STRING", {"multiline": True, "default": DEFAULT_INSTRUCTION}),
-                "chat_mode": (["Enhance_Prompt", "Debug_Chat"],),
-                "enable_tag": ("BOOLEAN", {"default": False, "label_on": "Enable Tags", "label_off": "Disable Tags"}),
-                "enable_filename": ("BOOLEAN", {"default": False, "label_on": "Enable Filename", "label_off": "Disable Filename"}),
-                "enable_cot": ("BOOLEAN", {"default": False, "label_on": "Enable Thinking (CoT)", "label_off": "Disable Thinking"}),
-                "max_tokens": ("INT", {"default": 512, "min": 1, "max": 8192}),
-                "temperature": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 2.0, "step": 0.01}),
-                "repetition_penalty": ("FLOAT", {"default": 1.1, "min": 1.0, "max": 2.0, "step": 0.01}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff}),
-                "release_vram": ("BOOLEAN", {"default": False}),
-            },
-            "optional": {
-                "image": ("IMAGE",),
-            }
-        }
-    
-    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("prompt", "tags", "filename", "raw_output")
-    FUNCTION = "chat"
-    CATEGORY = "LoraHelper/Legacy"
-
-    @classmethod
-    def IS_CHANGED(s, **kwargs):
-        return float("nan")
-
-    def chat(self, model, user_material, instruction, chat_mode, enable_tag, enable_filename, enable_cot, max_tokens, temperature, repetition_penalty, seed, release_vram, image=None):
-        return ("Legacy Node - Shelved", "", "", "This node is deprecated. Please use the new UniversalAIChat node.")
+# Legacy Code Removed
 
 
 

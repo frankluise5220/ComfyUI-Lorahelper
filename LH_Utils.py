@@ -57,19 +57,11 @@ class LoRA_AllInOne_Saver:
     def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
         
         # 0. Path Security Check & ComfyUI Standard Path Resolution
-        # We use ComfyUI's standard method to handle %date% and auto-increment counters correctly.
+        if folder_paths and folder_paths.get_output_directory:
+            self.output_dir = folder_paths.get_output_directory()
         
-        # If user provided a specific folder_path in the widget, we should try to respect it
-        # BUT ComfyUI's get_save_image_path uses 'output_dir' as base. 
-        # If we want a subfolder, we should prepend it to filename_prefix or handle it manually.
-        
-        # Let's align with the user's existing logic but use standard numbering.
-        # Existing logic: base_output_dir/folder_path/filename_prefix...
-        
-        # Construct the prefix properly:
+        # Construct the prefix properly
         if folder_path and folder_path.strip():
-             # Combine folder_path and filename_prefix for the standard function
-             # e.g. "LoRA_Train/Anran"
              full_prefix_arg = os.path.join(folder_path, filename_prefix)
         else:
              full_prefix_arg = filename_prefix
@@ -97,28 +89,43 @@ class LoRA_AllInOne_Saver:
         # 2. Iterate Images
         for i, image in enumerate(images):
             # Determine Filename
-            # User Requirement: Prefix + [FilenameFinal] + Timestamp + Batch
-            
-            file_parts = [filename] # This is the prefix part returned by get_save_image_path (e.g. "Anran")
+            file_parts = [filename] # This is the prefix part returned by get_save_image_path
             
             # Add filename_final (custom part) if exists
             if filename_final:
-                # Relaxed sanitization: Allow brackets [] () {} but remove illegal Windows chars
-                cleaned_name = re.sub(r'[<>:"/\\|?*]', "", filename_final).strip()
+                # 1. Basic Sanitization: Remove illegal Windows chars
+                cleaned_name = re.sub(r'[<>:"/\\|?*\n\r\t]', "", filename_final).strip()
+                
+                # 2. Length Check & Error Fallback
+                MAX_CUSTOM_LEN = 100
+                if len(cleaned_name) > MAX_CUSTOM_LEN:
+                    print(f"\033[33m[LoraHelper Saver] Warning: Filename too long ({len(cleaned_name)} chars). Replaced with 'FILENAME_TOO_LONG_ERROR'.\033[0m")
+                    cleaned_name = "FILENAME_TOO_LONG_ERROR"
+                
+                # 3. Final Cleanup
+                # Remove trailing dots/spaces
+                cleaned_name = cleaned_name.strip(". ")
+                
+                # Check if we ended up with nothing
+                if not cleaned_name and filename_final.strip():
+                    cleaned_name = "FILENAME_INVALID_ERROR"
+
                 # Remove extension if user typed it manually
-                cleaned_name = os.path.splitext(cleaned_name)[0]
+                name_no_ext, ext = os.path.splitext(cleaned_name)
+                if ext.lower() in ['.png', '.jpg', '.jpeg', '.webp', '.txt']:
+                    cleaned_name = name_no_ext
+
                 if cleaned_name:
                     file_parts.append(cleaned_name)
 
-            # Add Timestamp (Requested by user)
+            # Add Timestamp
             timestamp_str = str(int(time.time()))
             file_parts.append(timestamp_str)
             
             # Construct final filename
-            # e.g. "Anran_[CustomName]_1768451899"
             fname = "_".join(file_parts)
 
-            # Handle batch index if multiple images
+            # Handle batch index
             if len(images) > 1:
                 fname += f"_{i}"
             
@@ -144,7 +151,7 @@ class LoRA_AllInOne_Saver:
             with open(txt_path, "w", encoding="utf-8") as f:
                 f.write(caption_content)
             
-            # Save Log (optional, keeping as per original)
+            # Save Log
             log_path = os.path.join(full_output_folder, f"{fname}_log.txt")
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write(f"{gen_prompt}")
@@ -239,8 +246,7 @@ def process_dynamic_prompts(text, seed=None):
     # Clean Zero Width Space (ZWSP) which often causes regex failure
     text = text.replace("\u200b", "")
 
-    if seed is not None:
-        random.seed(seed)
+    rng = random.Random(seed) if seed is not None else random
     
     # Simple recursive dynamic prompt processor
     # 1. {a|b|c} with support for weights {2::a|1::b}
@@ -313,8 +319,8 @@ def process_dynamic_prompts(text, seed=None):
             
             if choices:
                 # Weighted random choice
-                # random.choices returns a list, we take the first element
-                choice = random.choices(choices, weights=weights, k=1)[0].strip()
+                # rng.choices returns a list, we take the first element
+                choice = rng.choices(choices, weights=weights, k=1)[0].strip()
                 current_text = current_text.replace(full_match, choice, 1)
             else:
                 # Empty braces {} -> remove
@@ -345,7 +351,7 @@ def process_dynamic_prompts(text, seed=None):
                                  # Ignore empty lines and comments starting with #
                                  lines = [l.strip() for l in f if l.strip() and not l.strip().startswith("#")]
                                  if lines:
-                                     replacement = random.choice(lines)
+                                     replacement = rng.choice(lines)
                                      found = True
                          except:
                              pass

@@ -284,3 +284,16 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 3.  **深度扩写**: 本插件会基于随机属性，自动补充灯光、构图及场景细节。
 
 **核心优势**: 结合了随机性的“广度”和 AI 的“深度”，能够快速生成高质量、多样化的 LoRA 训练数据集。
+
+---
+
+## 📅 Update Log
+
+### v1.2.1 (2025-02-09)
+*   **[CRITICAL]** Fixed "Access Violation" crashes by implementing metadata-based GGUF architecture detection. Now safely identifies Qwen/Llava/Yi models to load the correct vision handler.
+*   **[CRITICAL]** Fixed crash on older `llama-cpp-python` versions lacking `Q8_0` support (added silent fallback).
+*   **[FIX]** **Saver Node**: Fixed long filename errors. Filenames >100 chars or with illegal chars are now auto-replaced with `Error_Timestamp` markers instead of failing.
+*   **[OPTIMIZATION]** Removed aggressive `gc.collect()` calls during inference loops to reduce micro-stutters.
+
+### v1.2.1 更新日志
+*   **[严重修复]** 修复�?"Access Violation" 崩溃问题。新�?Metadata 元数据检测机制，精准识别 Qwen/Llava/Yi 模型架构，防止因加载错误的视觉处理器导致崩溃�?*   **[严重修复]** 修复了旧�?`llama-cpp-python` 不支�?`Q8_0` 量化导致的报错（增加自动回退机制）�?*   **[修复]** **Saver 节点**：修复长文件名保存失败问题。超�?00字符或含非法字符的文件名将自动替换为 `Error` 标记，确保图片数据不丢失�?*   **[优化]** 移除了推理循环中不必要的强制内存回收 (`gc.collect`)，大幅减少卡顿，提升批处理速度�?
