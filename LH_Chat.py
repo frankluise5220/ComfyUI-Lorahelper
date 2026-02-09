@@ -47,6 +47,10 @@ try:
         Qwen2VLChatHandler = None
     from llama_cpp.llama_grammar import LlamaGrammar
     
+    # [Debug Info] Print llama-cpp-python version
+    if hasattr(_llama_cpp, "__version__"):
+        print(f"\033[36m[ComfyUI-Lorahelper] llama-cpp-python version: {_llama_cpp.__version__}\033[0m")
+    
     # [Log Suppression] Robust implementation using ctypes
     try:
         if hasattr(_llama_cpp, "llama_log_set"):
