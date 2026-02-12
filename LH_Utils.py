@@ -246,6 +246,10 @@ def process_dynamic_prompts(text, seed=None):
     # Clean Zero Width Space (ZWSP) which often causes regex failure
     text = text.replace("\u200b", "")
 
+    # Handle seed=-1 (Random) explicitly
+    if seed == -1:
+        seed = None
+
     rng = random.Random(seed) if seed is not None else random
     
     # Simple recursive dynamic prompt processor
@@ -266,15 +270,28 @@ def process_dynamic_prompts(text, seed=None):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     search_dirs.append(os.path.join(base_dir, "wildcards"))
     
-    # 2. Global
+    # 2. Global (Standard ComfyUI Path)
     try:
-        if folder_paths.base_path:
+        if hasattr(folder_paths, "base_path"):
              search_dirs.append(os.path.join(folder_paths.base_path, "wildcards"))
-             # 3. DynamicPrompts (Standard install location)
              search_dirs.append(os.path.join(folder_paths.base_path, "custom_nodes", "comfyui-dynamicprompts", "wildcards"))
              search_dirs.append(os.path.join(folder_paths.base_path, "custom_nodes", "ComfyUI-DynamicPrompts", "wildcards"))
     except:
         pass
+        
+    # 3. Global (Relative Path Fallback)
+    # In case folder_paths.base_path fails or is not set
+    try:
+        comfy_root_guess = os.path.abspath(os.path.join(base_dir, "..", ".."))
+        wildcards_guess = os.path.join(comfy_root_guess, "wildcards")
+        if os.path.exists(wildcards_guess) and wildcards_guess not in search_dirs:
+             search_dirs.append(wildcards_guess)
+    except:
+        pass
+
+    # [DEBUG LOG] Print search directories to console
+    # print(f"\033[33m[LH_Utils] Wildcard Search Dirs: {search_dirs}\033[0m")
+
 
     def process(current_text, depth):
         if depth > MAX_DEPTH:

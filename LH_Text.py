@@ -13,6 +13,10 @@ class LH_SuperText:
         return {
             "required": {
                 "showtext": ("STRING", {"multiline": True, "default": ""}),
+            },
+            "optional": {
+                "force_text": ("STRING", {"forceInput": True}),
+                "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "Seed for Wildcards"}),
             }
         }
     RETURN_TYPES = ("STRING",)
@@ -21,8 +25,28 @@ class LH_SuperText:
     FUNCTION = "process"
     CATEGORY = "LoraHelper"
 
-    def process(self, showtext):
-        return {"ui": {"text": [showtext]}, "result": (showtext,)}
+    @classmethod
+    def IS_CHANGED(s, **kwargs):
+        return float("nan")
+
+    def process(self, showtext, force_text=None, seed=-1):
+        # Prioritize force_text if connected and valid
+        text_to_process = showtext
+        if force_text is not None and isinstance(force_text, str) and force_text.strip() != "":
+            text_to_process = force_text
+
+        # Apply Dynamic Prompts processing
+        # Note: If seed is -1, process_dynamic_prompts treats it as None (fully random) if not handled, 
+        # but let's check LH_Utils implementation.
+        # LH_Utils: rng = random.Random(seed) if seed is not None else random
+        # So passing -1 will fix the seed to -1 (which is valid but static).
+        # We usually want fully random if seed is not connected or set to control widget default?
+        # Standard ComfyUI "control_after_generate" handles the seed change.
+        
+        final_text = process_dynamic_prompts(text_to_process, seed)
+        # Only return the processed text as result, do NOT update the UI widget
+        # We keep showtext in UI to avoid confusion
+        return {"ui": {"text": [showtext]}, "result": (final_text,)}
 
 class LH_MultiTextSelector:
     def __init__(self):
