@@ -27,7 +27,15 @@ function setupSuperTextWidget(node, widgetName, inputName, app) {
     // Update state based on connection
     const updateState = () => {
         const input = node.inputs?.find(i => i.name === inputName);
-        const isConnected = input && input.link !== null;
+        let isConnected = input && input.link !== null;
+
+        // Special handling for LH_SuperText force_text
+        if (!isConnected && node.type === "LH_SuperText") {
+             const forceInput = node.inputs?.find(i => i.name === "force_text");
+             if (forceInput && forceInput.link !== null) {
+                 isConnected = true;
+             }
+        }
         
         if (isConnected) {
             w.inputEl.readOnly = true;

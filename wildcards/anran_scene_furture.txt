@@ -1,0 +1,13 @@
+# --- [5. 未来科幻系列：赛博空间与奇观] ---
+
+# 场景：2050年赛博朋克深巷，新东京底层，全息招牌，蓝紫霓虹光，滴水的管道和裸露电缆。
+(cyberpunk_alley_env:1.4), 2050 Neo-Tokyo back alley, neon holographic signs, blue and purple lighting, dripping pipes, exposed industrial cables.
+# 场景：3000年悬浮都市内部，晶体尖塔，窗外是生物荧光植物构成的海洋，天空闪烁极光。
+(floating_city_env:1.3), interior of a 3000 AD floating metropolis, crystalline architecture, bioluminescent flora sea outside, auroras in the sky.
+# --- [1. 极致中式审美：从秦汉到当代] ---
+# 场景：秦汉风格石质大殿，巨大的玄武岩立柱，地面磨光如镜倒映火炬，沉重的青铜鼎散发微弱烟雾，肃穆庄严。
+(qin_han_palace:1.3), ancient Qin-Han style stone hall, massive basalt pillars, polished floor reflecting torchlight, heavy bronze tripods with faint incense smoke, solemn and grand atmosphere.
+# 场景：苏州园林漏窗回廊，粉墙黛瓦，窗外是错落有致的太湖石与芭蕉叶，午后细碎的阳光穿过漏窗，形成斑驳几何光影。
+(suzhou_garden:1.2), traditional Suzhou garden corridor, white walls and grey tiles, Taihu stones and banana leaves outside, afternoon sunlight through lattice windows casting geometric shadows.
+# 场景：民国时期私人图书馆，通天木质书架，绿色老式台灯发出幽光，深红色丝绒窗帘遮住一半窗户，空气中充满陈年墨香。
+(republican_library:1.3), 1930s private library, towering dark wood bookshelves, vintage green banker's lamps, deep red velvet curtains, scent of old ink and aged paper.

@@ -15,7 +15,8 @@ class LH_SuperText:
                 "showtext": ("STRING", {"multiline": True, "default": ""}),
             },
             "optional": {
-                "force_text": ("STRING", {"forceInput": True}),
+                # Change input type to wildcard "*" to allow ANY input type (STRING, INT, FLOAT, etc.)
+                "force_text": ("*", {"forceInput": True}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "Seed for Wildcards"}),
             }
         }
@@ -32,8 +33,14 @@ class LH_SuperText:
     def process(self, showtext, force_text=None, seed=-1):
         # Prioritize force_text if connected and valid
         text_to_process = showtext
-        if force_text is not None and isinstance(force_text, str) and force_text.strip() != "":
-            text_to_process = force_text
+        if force_text is not None:
+            # Check if force_text is valid (not empty string)
+            # Since input type is "*", we convert everything to string first
+            f_text = str(force_text)
+            print(f"[LH_SuperText] Input force_text: '{f_text}' (Type: {type(force_text)})")
+            
+            if f_text.strip() != "":
+                text_to_process = f_text
 
         # Apply Dynamic Prompts processing
         # Note: If seed is -1, process_dynamic_prompts treats it as None (fully random) if not handled, 
@@ -46,7 +53,9 @@ class LH_SuperText:
         final_text = process_dynamic_prompts(text_to_process, seed)
         # Only return the processed text as result, do NOT update the UI widget
         # We keep showtext in UI to avoid confusion
-        return {"ui": {"text": [showtext]}, "result": (final_text,)}
+        
+        # [Change] User wants to SEE the input text in the widget if connected
+        return {"ui": {"text": [text_to_process]}, "result": (final_text,)}
 
 class LH_MultiTextSelector:
     def __init__(self):

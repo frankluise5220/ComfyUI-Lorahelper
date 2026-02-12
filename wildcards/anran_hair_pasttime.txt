@@ -1,0 +1,23 @@
+# --- [ 历史与跨时空：极致考究版 ] ---
+# 唐代垂云髻。{重型簪饰} + {长耳坠|空}。
+(Tang_Dynasty_hair:1.3), high chignon, (golden step-shaker hairpins:1.2), (swaying tassels:1.3), {(long golden drop earrings:1.2)|(ruby ear pendants:1.2)|}, imperial opulence.
+# 十三钗手推波纹。{复古耳环|眼镜变体|空}。
+(1930s_glamour_waves:1.3), high-gloss wet-look finger waves, (pearl hair clip:1.1), {(vintage emerald earrings:1.2)|(round vintage glasses:1.1)|(dangling pearl earrings:1.2)|}, heavy vintage elegance.
+# 清代大拉翅。{翠玉饰品|空}。
+(Qing_Dynasty_headpiece:1.3), (silk flowers and jade pendants:1.2), {(jadeite ear pendants:1.2)|(gold filigree earrings:1.1)|}, historical royal elegance.
+# 洛神凌波髻。{珍珠链|玉坠|空}。
+(Goddess_Luoshen_hair:1.3), (asymmetric cloud-like bun:1.2), (delicate pearl strings:1.2), {(single large pearl earring:1.2)|(teardrop jade earring:1.1)|}, ethereal beauty.
+# 中世纪金丝发网。{珍珠头圈|耳饰|空}。
+(medieval_hairnet:1.2), gold thread netting, (pearl accents:1.1), (velvet headband:1.1), {(silver cross earrings:1.2)|(delicate ear studs:1.1)|}, regal historical look.
+# 宋代垂挂髻。{玉簪|珍珠钗|空}。
+(Song_Dynasty_chuihua_hair:1.3), low-hanging bun, (slender jade hairpin:1.2), (layered hair tassels:1.1), {(pearl hairpin:1.2)|(lotus jade pendant:1.1)|}, elegant simplicity.
+# 明代牡丹髻。{点翠簪|宝石钗|空}。
+(Ming_Dynasty_mudan_hair:1.3), large peony-shaped bun, (kingfisher-feather hairpin:1.2), (red gem inlays:1.2), {(golden phoenix earrings:1.2)|(jade butterfly earrings:1.1)|}, graceful court style.
+# 魏晋飞仙髻。{银步摇|玉串|空}。
+(Wei-Jin_feixian_hair:1.3), high double buns with flowing strands, (silver tassel hairpin:1.3), (floating silk ribbons:1.2), {(jade bead earrings:1.1)|(silver filigree earcuffs:1.2)|}, ethereal scholar vibe.
+# 汉代堕马髻。{金簪|珠串|空}。
+(Han_Dynasty_duoma_hair:1.3), slanted loose bun, (golden cloud hairpin:1.2), (pearl string hair accessory:1.1), {(golden hoop earrings:1.1)|(jade pendant earrings:1.2)|}, gentle classical elegance.
+# 日式平安髻。{花簪|玉钗|空}。
+(Heian_period_kamikaze_hair:1.3), voluminous topknot, (flower hairpin with silk:1.2), (lacquered hairpin:1.1), {(jade drop earrings:1.2)|(gold leaf earrings:1.1)|}, traditional Japanese noble style.
+# 古埃及蛇形发冠。{金饰|宝石|空}。
+(Ancient_Egyptian_snake_crown:1.3), braided hair base, (gold snake headpiece:1.3), (colored gem inlays:1.2), {(golden hoop earrings:1.2)|(lapis lazuli earrings:1.1)|}, exotic historical grandeur.

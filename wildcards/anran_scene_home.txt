@@ -1,0 +1,20 @@
+# --- [1. 居家系列：跨越年代的私人空间] ---
+# 场景：2000年代中国商品房客厅，旧式实木地板，随眼可见的书堆、资料，米色柔软双人沙发，充满22岁女生住了2年的真实生活气息，杂而不乱。
+Chinese apartment living room, aged solid wood flooring, scattered stacks of books and research papers, soft beige double sofa, cozy and cluttered but tidy, realistic lived-in atmosphere.{__anran_clothes_home__|__anran_clothes_naked__} 
+# 场景：现代极简公寓浴室，2025年风格，白色瓷砖墙面，智能触控龙头，磨砂玻璃隔断，冷调内嵌式灯带。
+minimalist apartment bathroom, white tile walls, smart touchless faucets, frosted glass partition, cool recessed LED lighting strips.{__anran_clothes_home__|__anran_clothes_naked__} 
+# 场景：1950年代单间居室，纯白色床单，旧木书桌，桌上摆放复古研究设备，阳光穿过木窗格，空气中漂浮着被照亮的微尘。
+modest bedroom, crisp white linens, vintage wooden desk with retro research equipment, sunlight filtering through wooden window panes, dust motes dancing in sunbeams.{__anran_clothes_home__|__anran_clothes_naked__} 
+
+# [1] 早晨的客厅蜷缩
+【全身镜头/浅景深】 f/1.8大光圈特写，焦点锁定脸部与膝盖。2000年代中国商品房客厅，旧式实木地板，随处可见书堆与资料。 {__anran_clothes_home__|__anran_clothes_naked__} 
+# [2] 深夜客厅看电视 
+【侧面中景/明暗对比】 晚上10点，极具电影感的明暗对照(Chiaroscuro)。只有沙发旁一盏落地灯开着，暖黄色灯光从侧后方打亮轮廓与发丝(Rim light)。 {__anran_clothes_home__|__anran_clothes_naked__}
+# [3] 1950年代单人居室 (怀旧细节)
+1950年代单人居室，纯白色床单，角落是笨重的木书桌，上面摆放着复古电脑设备。阳光穿过木窗格，在空气中投射下被照亮的微尘，充满时代的宁静感。 {__anran_clothes_home__|__anran_clothes_naked__} 
+# [4] 现代极简浴室 (2025年风格)
+2025 minimalist apartment bathroom, white tile walls, smart touchless faucets, frosted glass partition, cool recessed LED lighting strips, sleek and clean.__anran_clothes_naked__
+# 场景：清晨的居家客厅，柔和的漫射光（Soft diffused light），光线像牛奶般充满房间，温暖米白色调。
+Soft morning diffused light in a home living room, milky wrapping light, airy atmosphere, warm cream-white color palette.{__anran_clothes_home__|__anran_clothes_naked__} 
+# 场景：深夜的客厅，极具电影感的明暗对照(Chiaroscuro)，沙发旁单盏暖黄落地灯，侧后方轮廓光（Rim light），背景是电视机的荧光映照。
+Late night living room, cinematic Chiaroscuro lighting, single warm yellow floor lamp, dramatic rim lighting, faint blue glow from a TV screen in the background.{__anran_clothes_home__|__anran_clothes_naked__} 

@@ -62,6 +62,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
 WEB_DIRECTORY = "./web"
 
-__version__ = "1.2.1"
+__version__ = "1.2.3"
 __author__ = "LoraHelper Team"
 

@@ -289,8 +289,10 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 
 ## 📅 Update Log
 
-### v1.2.2 (2025-02-12)
-*   **[New]** **LH_SuperText**: Added `force_text` input port. Now supports external input while keeping the text widget editable (auto-fallback logic).
+### v1.2.3 (2025-02-12)
+*   **[New]** **LH_SuperText**: Added `force_text` input port. Supports external input while keeping the text widget editable (auto-fallback logic).
+*   **[Improvement]** **LH_SuperText**: The text widget is now automatically disabled (read-only) when `force_text` is connected, preventing accidental edits.
+*   **[Fix]** **LH_SuperText**: Changed `force_text` input type to wildcard (`*`) to support connecting any type of text node.
 *   **[Improvement]** **LH_SuperText**: Added `seed` control and `IS_CHANGED` signal to ensure correct random updates for wildcards.
 *   **[Fix]** **Dynamic Prompts**: Fixed path resolution issues for wildcard files and optimized random seed handling (seed=-1 is now true random).
 
