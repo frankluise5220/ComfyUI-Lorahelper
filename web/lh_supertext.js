@@ -24,29 +24,50 @@ function setupSuperTextWidget(node, widgetName, inputName, app) {
     w.inputEl.style.pointerEvents = "auto";
     w.inputEl.style.cursor = "text";
 
+    // Update state based on connection
     const updateState = () => {
-        const findInput = (name) => node.inputs?.find(i => i.name === name);
-        const isActiveLink = (inp) => {
-            if (!inp || inp.link == null) return false;
-            const link = app.graph?.links?.[inp.link];
-            let muted = false;
-            if (link && (link.muted === true || link?.data?.muted === true || link?.data?.bypass === true)) muted = true;
-            const origin = link ? app.graph?._nodes_by_id?.[link.origin_id] : null;
-            if (origin && (origin.mode === 2 || origin.mode === 4)) muted = true;
-            return !muted;
+        const input = node.inputs?.find(i => i.name === inputName);
+        let isConnected = input && input.link !== null;
+
+        // Helper to check if upstream node is active (not Muted/Bypassed)
+        // Note: In ComfyUI, LiteGraph.ALWAYS=0, NEVER=2 (Mute), BYPASS=4
+        // If upstream is Muted (2) or Bypassed (4), we treat it as inactive so user can edit.
+        const isUpstreamActive = (linkId) => {
+            if (linkId === null || linkId === undefined) return false;
+            const link = app.graph.links[linkId];
+            if (!link) return false;
+            const originNode = app.graph.getNodeById(link.origin_id);
+            if (!originNode) return false;
+            
+            // Mode 2 is Mute (Never run)
+            // Mode 4 is Bypass (Pass through)
+            if (originNode.mode === 2 || originNode.mode === 4) return false;
+            return true;
         };
 
-        const primaryInput = findInput(inputName);
-        let isConnected = isActiveLink(primaryInput);
+        // Check showtext input
+        let isShowTextActive = false;
+        if (input && input.link !== null) {
+            if (isUpstreamActive(input.link)) {
+                isShowTextActive = true;
+            }
+        }
 
-        if (!isConnected && node.type === "LH_SuperText") {
-            const forceInput = findInput("force_text");
-            if (isActiveLink(forceInput)) {
-                isConnected = true;
+        let isForceTextActive = false;
+        // Special handling for LH_SuperText force_text
+        if (node.type === "LH_SuperText") {
+            const forceInput = node.inputs?.find(i => i.name === "force_text");
+            if (forceInput && forceInput.link !== null) {
+                if (isUpstreamActive(forceInput.link)) {
+                    isForceTextActive = true;
+                }
             }
         }
         
-        if (isConnected) {
+        // Final decision: Lock if ANY active input is present
+        const shouldLock = isShowTextActive || isForceTextActive;
+
+        if (shouldLock) {
             w.inputEl.readOnly = true;
             w.inputEl.style.opacity = 0.6;
         } else {
@@ -60,6 +81,18 @@ function setupSuperTextWidget(node, widgetName, inputName, app) {
     node.onConnectionsChange = function() {
         if (onConnectionsChange) onConnectionsChange.apply(this, arguments);
         updateState();
+    };
+
+    // Hook into draw foreground to update state on upstream mode changes (Mute/Bypass)
+    const onDrawForeground = node.onDrawForeground;
+    node.onDrawForeground = function(ctx) {
+        if (onDrawForeground) onDrawForeground.apply(this, arguments);
+        if (this.flags && this.flags.collapsed) return;
+        const now = Date.now();
+        if (!this._last_update_state_time || (now - this._last_update_state_time > 200)) {
+            updateState();
+            this._last_update_state_time = now;
+        }
     };
 
     // Initial state
