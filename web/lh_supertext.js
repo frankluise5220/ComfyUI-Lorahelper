@@ -24,17 +24,26 @@ function setupSuperTextWidget(node, widgetName, inputName, app) {
     w.inputEl.style.pointerEvents = "auto";
     w.inputEl.style.cursor = "text";
 
-    // Update state based on connection
     const updateState = () => {
-        const input = node.inputs?.find(i => i.name === inputName);
-        let isConnected = input && input.link !== null;
+        const findInput = (name) => node.inputs?.find(i => i.name === name);
+        const isActiveLink = (inp) => {
+            if (!inp || inp.link == null) return false;
+            const link = app.graph?.links?.[inp.link];
+            let muted = false;
+            if (link && (link.muted === true || link?.data?.muted === true || link?.data?.bypass === true)) muted = true;
+            const origin = link ? app.graph?._nodes_by_id?.[link.origin_id] : null;
+            if (origin && (origin.mode === 2 || origin.mode === 4)) muted = true;
+            return !muted;
+        };
 
-        // Special handling for LH_SuperText force_text
+        const primaryInput = findInput(inputName);
+        let isConnected = isActiveLink(primaryInput);
+
         if (!isConnected && node.type === "LH_SuperText") {
-             const forceInput = node.inputs?.find(i => i.name === "force_text");
-             if (forceInput && forceInput.link !== null) {
-                 isConnected = true;
-             }
+            const forceInput = findInput("force_text");
+            if (isActiveLink(forceInput)) {
+                isConnected = true;
+            }
         }
         
         if (isConnected) {
@@ -140,9 +149,13 @@ app.registerExtension({
 
                 // Update the found/created widget
                 if (targetWidget) {
-                    targetWidget.value = displayValue;
-                    if (targetWidget.inputEl) {
-                        targetWidget.inputEl.value = displayValue;
+                    const isDisplayWidget = targetWidget.name === "display_text";
+                    const isReadOnly = !!(targetWidget.inputEl && targetWidget.inputEl.readOnly);
+                    if (isDisplayWidget || isReadOnly) {
+                        targetWidget.value = displayValue;
+                        if (targetWidget.inputEl) {
+                            targetWidget.inputEl.value = displayValue;
+                        }
                     }
                 }
 

@@ -38,6 +38,9 @@ More than just a GGUF loader, it embeds **Expert-Level Prompt Engineering logic*
    ```
    *Note: This project requires `llama-cpp-python` for GGUF model support. For vision capabilities, ensure your installation supports CLIP/MMProj.*
 
+### 🌐 Language Switching
+The plugin supports one-click language switching (English/Chinese) via the ComfyUI menu. No restart required.
+
 ### 🧩 Node Overview
 
 #### 1. LH_GGUFLoader (GGUF Model Loader)
@@ -112,13 +115,11 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Seed Control**: Ensure reproducible results.
 
 #### 7. LH_SuperText
-*   **Function**: A pure, unadulterated multiline text node.
+*   **Function**: **Bidirectional Text Node (Input/Output)**. Supports disconnected editing and rapid image generation.
 *   **Features**:
-    *   **Pure Text**: No preprocessing, preserves original text format.
-    *   **ShowText Mode**: Serves as both an input box and a display!
-        *   **Manual Mode**: Type directly into the text box.
-        *   **Display Mode**: Right-click `text` -> `Convert to Input` to connect a wire. It automatically transforms into a display monitor, showing input content line-by-line.
-    *   **Usage**: Ideal as a source for `user_material` or for inspecting batch outputs from upstream nodes.
+    *   **Dual Role**: Acts as both an upstream text aggregator/pass-through and a direct downstream text source.
+    *   **Editable Mode**: Automatically enables editing when disconnected, bypassed, or when the upstream node is disabled. Supports instant editing and locking of current content.
+    *   **Quick Generation**: Perfect for "Gacha" style prompting. Generate a prompt, then temporarily bypass/disable the upstream workflow to "lock" the text in SuperText. Use this fixed text as the prompt for image generation, avoiding constant re-generation from the upstream LLM.
 
 #### 8. LH_LoraLoader (Keyword Lora Loader)
 *   **Function**: Automatically loads specific LoRAs based on keywords found in the prompt.
@@ -135,10 +136,6 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Max Edge Control**: You define the longest side (e.g., 1024), and it calculates the short side to maintain the ratio.
     *   **Safe Dimensions**: Ensures outputs are always multiples of 8 (preventing VAE errors).
     *   **Fallback**: Uses `default_ratio` if no image is connected.
-
-### ⚙️ Configuration
-Customize UI language, default chat mode, and system instructions via `lh_config.json`.
-
 
 ### 🎨 Global Feature: Dynamic Prompts Engine
 *   **Supported Nodes**: `LH_AIChat`, `LH_MultiTextSelector`, `LH_SuperText` (via Utils).
@@ -175,6 +172,9 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
    pip install -r requirements.txt
    ```
    *注意：本项目依赖 `llama-cpp-python` 来加载 GGUF 模型。如需使用视觉反推功能，请确保安装版本支持 CLIP/MMProj。*
+
+### 🌐 中英文切换
+插件菜单支持一键切换语言（中/英），无需重启 ComfyUI。
 
 ### 🧩 节点详解
 
@@ -242,8 +242,11 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
 #### 7. LH_SuperText
-*   **功能**: 一个兼顾多行文本显示、编辑的节点。
-*   **用途**: 最适合作为 `user_material` 的输入源，或者用来显示检查上游节点的批量输出内容。
+*   **功能**: **双向文本节点（输入/输出）**，支持断链编辑与快速出图。
+*   **特性**:
+    *   **双重角色**: 既能作为上游文本的聚合/透传节点，也能作为下游的直接文本输出节点。
+    *   **可编辑模式**: 当断开、绕开或关闭上游节点时，自动进入可编辑状态，支持在节点内即时编辑与锁定当前内容。
+    *   **快速出图**: 抽卡获得提示词后，可暂时屏蔽上游工作流，直接使用 SuperText 的文本作为 Prompt 投喂至下游生成节点，避免上游反复改写带来的干扰。
 
 #### 8. LH_LoraLoader (关键词 Lora 加载器)
 *   **功能**: 与手动填写触发词不同，该节点根据检查提示词中的关键词，自动判断是否加载指定的 LoRA。
@@ -260,10 +263,6 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **长边控制**: 您只需指定最长边 (如 1024)，它会自动计算短边长度以维持比例。
     *   **安全尺寸**: 确保输出尺寸永远是 8 的倍数 (防止 VAE 报错)。
     *   **默认回退**: 如果未连接图片，则使用 `default_ratio` 作为默认比例。
-
-### ⚙️ 配置文件 (Configuration)
-支持通过 `lh_config.json` 自定义界面语言、默认聊天模式及系统指令。
-
 
 ### 🎨 全局特性：动态提示词引擎 (Dynamic Prompts Engine)
 *   **支持节点**: `LH_AIChat`, `LH_MultiTextSelector` 等所有核心节点。

@@ -31,26 +31,27 @@ class LH_SuperText:
         return float("nan")
 
     def process(self, showtext, force_text=None, seed=-1):
-        # Prioritize force_text if connected and valid
         text_to_process = showtext
+        used_force = False
         if force_text is not None:
-            # Check if force_text is valid (not empty string)
-            # Since input type is "*", we convert everything to string first
-            f_text = str(force_text)
-            print(f"[LH_SuperText] Input force_text: '{f_text}' (Type: {type(force_text)})")
-            
-            if f_text.strip() != "":
-                text_to_process = f_text
+            candidate = None
+            if isinstance(force_text, (str, bytes)):
+                candidate = force_text.decode() if isinstance(force_text, bytes) else force_text
+            elif isinstance(force_text, (list, tuple)):
+                try:
+                    candidate = "\n".join([x for x in force_text if isinstance(x, str)])
+                except Exception:
+                    candidate = None
+
+            if candidate is not None and isinstance(candidate, str) and candidate.strip() != "":
+                text_to_process = candidate
+                used_force = True
 
         # Apply Dynamic Prompts processing
-        # Note: If seed is -1, process_dynamic_prompts treats it as None (fully random) if not handled, 
-        # but let's check LH_Utils implementation.
-        # LH_Utils: rng = random.Random(seed) if seed is not None else random
-        # So passing -1 will fix the seed to -1 (which is valid but static).
-        # We usually want fully random if seed is not connected or set to control widget default?
-        # Standard ComfyUI "control_after_generate" handles the seed change.
-        
-        final_text = process_dynamic_prompts(text_to_process, seed)
+        eff_seed = seed
+        if not used_force and eff_seed == -1:
+            eff_seed = 0
+        final_text = process_dynamic_prompts(text_to_process, eff_seed)
         # Only return the processed text as result, do NOT update the UI widget
         # We keep showtext in UI to avoid confusion
         
