@@ -1,14 +1,20 @@
-# 场景：幽静古老森林，参天大树，强烈的耶稣光(1.3)穿透冠层，斑驳的光影(1.4)，绿色的植被与厚实的苔藓。
-towering old-growth trees, volumetric sunlight beams (God rays), mottled shadows, lush green vegetation and thick moss, mystical forest floor.
-# 场景：清澈小溪边，潺潺流水，强烈的逆光(1.4)，波光粼粼的水面，丁达尔效应，微尘粒子，温暖明媚。
-side of a clear running creek, rushing water, strong backlighting, shimmering water surface, Tyndall effect, floating dust particles, warm bright mood.
-# 场景：旧公寓天台，生锈铁丝网围栏，Magic Hour紫红色晚霞，城市背景剪影，强烈的逆光镜头光晕。
-Old apartment rooftop, rusted chain-link fence, sunset Magic Hour, purple and crimson sky, urban skyline silhouette, dramatic lens flare.
-# 场景：金色麦田，一望无际，日落黄金时刻，橙色光辉，麦浪起伏，背景是模糊的起伏山丘。
-endless golden wheat field, sunset golden hour, warm orange glow, undulating waves of wheat, blurred rolling hills in the background.
-# 场景：大雨夜晚的车内，布满水珠的车窗，模糊的霓虹灯影，狭窄私密的忧郁电影感。
-#inside a vehicle on a rainy night, water droplets on window glass, blurred neon street lights, intimate and moody cinematic lighting.
-# 场景：夏季繁忙购物中心，透明采光顶，现代建筑线条，背景是模糊的人潮和各种时尚店招。
-busy summer shopping mall, glass skylights, modern architectural lines, blurred crowds and retail signs in the distance.
-# 场景：阳光斑驳的精品店小巷，挂满花篮，鹅卵石地面，复古橱窗。
-sun-dappled boutique alley, hanging flower baskets, cobblestone path, vintage shop windows, chic urban atmosphere.
+#幽静古老森林 参天古树 强烈的耶稣光1.3穿透冠层 斑驳光影1.4 厚实苔藓覆盖地面 绿意盎然神秘氛围 85mm镜头 浅景深 f/1.8 焦点少女脸部 背景奶油虚化 creamy bokeh volumetric god rays rim light glowing hair edges photorealistic ultra detailed {__anran_clothes_home__|__anran_clothes_naked__}
+towering old-growth trees volumetric sunlight beams (God rays:1.3) mottled shadows (1.4) lush green vegetation thick moss mystical forest floor 85mm lens shallow depth of field f/1.8 focus on girl's face creamy bokeh rim light glowing hair edges photorealistic ultra detailed {__anran_clothes_home__|__anran_clothes_naked__}
+
+#清澈小溪边 潺潺流水 强烈逆光1.4 波光粼粼水面 丁达尔效应 微尘粒子飘浮 温暖明媚阳光 50mm镜头 浅景深 f/1.8 少女坐在溪边石头上 逆光勾勒身形轮廓 strong backlighting shimmering highlights floating dust particles warm bright mood creamy bokeh {__anran_clothes_home__|__anran_clothes_naked__}
+side of a clear running creek rushing water strong backlighting (1.4) shimmering water surface Tyndall effect floating dust particles warm bright mood 50mm lens shallow depth of field f/1.8 girl sitting on creek rock backlit silhouette strong rim light creamy bokeh {__anran_clothes_home__|__anran_clothes_naked__}
+
+#旧公寓天台 生锈铁丝网围栏 Magic Hour紫红色晚霞 城市天际线剪影 强烈逆光镜头光晕 35mm镜头 浅景深 f/2.0 少女靠栏杆远眺 夕阳光晕环绕头发 dramatic lens flare rim light purple crimson sky urban silhouette moody cinematic {__anran_clothes_home__|__anran_clothes_naked__}
+Old apartment rooftop rusted chain-link fence sunset Magic Hour purple and crimson sky urban skyline silhouette dramatic lens flare 35mm lens shallow depth of field f/2.0 girl leaning on railing sunset halo around hair rim light moody cinematic {__anran_clothes_home__|__anran_clothes_naked__}
+
+#金色麦田 一望无际 日落黄金时刻 橙色暖光 麦浪随风起伏 背景模糊起伏山丘 85mm镜头 浅景深 f/1.8 少女站在麦田中 逆光麦穗轮廓发光 golden hour warm orange glow undulating wheat waves blurred hills creamy bokeh soft romantic {__anran_clothes_home__|__anran_clothes_naked__}
+endless golden wheat field sunset golden hour warm orange glow undulating waves of wheat blurred rolling hills in background 85mm lens shallow depth of field f/1.8 girl standing in field backlit wheat silhouette glowing edges creamy bokeh soft romantic {__anran_clothes_home__|__anran_clothes_naked__}
+
+#大雨夜晚车内 车窗布满水珠 模糊霓虹灯影反射 狭窄私密空间 忧郁电影感 车内暖光与外霓虹对比 35mm镜头 浅景深 f/1.8 少女靠窗凝视雨幕 雨滴滑落玻璃 intimate moody cinematic water droplets neon reflection blurred street lights film grain {__anran_clothes_home__|__anran_clothes_naked__}
+inside a vehicle on rainy night water droplets on window glass blurred neon street lights intimate moody cinematic lighting 35mm lens shallow depth of field f/1.8 girl leaning on window watching rain raindrops sliding down glass neon reflection film grain {__anran_clothes_home__|__anran_clothes_naked__}
+
+#夏季繁忙购物中心 透明玻璃采光顶 现代建筑线条 背景模糊人潮和店招 自然光洒落 50mm镜头 浅景深 f/2.8 少女站在扶梯上 光线从头顶打下 玻璃反射柔光 busy mall glass skylights modern lines blurred crowds retail signs airy bright atmosphere {__anran_clothes_home__|__anran_clothes_naked__}
+busy summer shopping mall glass skylights modern architectural lines blurred crowds retail signs in distance 50mm lens shallow depth of field f/2.8 girl on escalator overhead natural light glass reflection airy bright atmosphere {__anran_clothes_home__|__anran_clothes_naked__}
+
+#阳光斑驳精品店小巷 挂满花篮 鹅卵石地面 复古橱窗 阳光从屋檐漏下 斑驳光影 35mm镜头 浅景深 f/1.8 少女走在小巷中 花香空气 光斑落在脸上 sun-dappled alley hanging flower baskets cobblestone vintage windows chic urban soft diffused light creamy bokeh {__anran_clothes_home__|__anran_clothes_naked__}
+sun-dappled boutique alley hanging flower baskets cobblestone path vintage shop windows chic urban atmosphere 35mm lens shallow depth of field f/1.8 girl walking in alley light spots on face soft diffused light creamy bokeh {__anran_clothes_home__|__anran_clothes_naked__}

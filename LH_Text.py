@@ -16,7 +16,7 @@ class LH_SuperText:
             },
             "optional": {
                 # Change input type to wildcard "*" to allow ANY input type (STRING, INT, FLOAT, etc.)
-                "force_text": ("*", {"forceInput": True}),
+                "text": ("*", {"forceInput": True}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "Seed for Wildcards"}),
             }
         }
@@ -30,16 +30,16 @@ class LH_SuperText:
     def IS_CHANGED(s, **kwargs):
         return float("nan")
 
-    def process(self, showtext, force_text=None, seed=-1):
+    def process(self, showtext, text=None, seed=-1):
         text_to_process = showtext
         used_force = False
-        if force_text is not None:
+        if text is not None:
             candidate = None
-            if isinstance(force_text, (str, bytes)):
-                candidate = force_text.decode() if isinstance(force_text, bytes) else force_text
-            elif isinstance(force_text, (list, tuple)):
+            if isinstance(text, (str, bytes)):
+                candidate = text.decode() if isinstance(text, bytes) else text
+            elif isinstance(text, (list, tuple)):
                 try:
-                    candidate = "\n".join([x for x in force_text if isinstance(x, str)])
+                    candidate = "\n".join([x for x in text if isinstance(x, str)])
                 except Exception:
                     candidate = None
 
@@ -56,7 +56,7 @@ class LH_SuperText:
         # We keep showtext in UI to avoid confusion
         
         # [Change] User wants to SEE the input text in the widget if connected
-        return {"ui": {"text": [text_to_process]}, "result": (final_text,)}
+        return {"ui": {"showtext": [text_to_process]}, "result": (final_text,)}
 
 class LH_MultiTextSelector:
     def __init__(self):

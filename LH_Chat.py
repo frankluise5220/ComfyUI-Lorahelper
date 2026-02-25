@@ -224,11 +224,74 @@ CHAT_MODES_LIST = [
     "Debug_Chat (Raw)"
 ]
 
-CHAT_MODES_TOOLTIP = (
-    "Auto_Mode: 自动模式 (连图用 Vision_Caption, 没图用 Enhance_Prompt)\n"
-    "Vision_Beauty: 电影级美女大师 (视觉)\n"
-    "Debug_Chat: 纯指令模式"
-)
+UI_TEXT = {
+    "en-US": {
+        "aichat_model": "Loaded LLM model from UniversalGGUFLoader.",
+        "aichat_user_material": "User material text. Ignored when image is connected; used in extend/debug modes.",
+        "aichat_instruction": "System/style instruction. If empty, uses the built-in default.",
+        "aichat_max_tokens": "Maximum tokens for this answer. Higher gives longer output and slower generation, especially with chain-of-thought models.",
+        "aichat_temperature": "Sampling temperature. Higher is more random, lower is more deterministic. Recommended 0.6–0.9.",
+        "aichat_repetition_penalty": "Repetition penalty (>1 reduces repeated sentences). Typical range 1.05–1.2.",
+        "aichat_seed": "-1 means random seed; a fixed value makes the output reproducible.",
+        "aichat_release_vram": "If enabled, closes the model after each run to free VRAM. Next call reloads the model (slower).",
+        "aichat_enable_tags": "Generate Danbooru-style tags (### tags). Disable to save time.",
+        "aichat_enable_filename": "Generate a recommended filename (### filename). Disable to save time.",
+        "aichat_image": "When an image is connected, enter vision reverse mode and ignore user_material; use image + instruction only.",
+        "aichat_min_p": "Min-P sampling threshold that filters low-probability tokens. Recommended 0.05–0.15.",
+        "aichat_mirostat_mode": "Mirostat sampling mode: 0=off, 1/2=adaptive. Usually keep 0.",
+        "aichat_mirostat_tau": "Mirostat target perplexity. Only used when Mirostat is enabled. Typical 5.",
+        "aichat_mirostat_eta": "Mirostat learning rate. Only used when Mirostat is enabled. Typical 0.1.",
+        "aichat_force_chinese": "Force Chinese for the main description. Tags and filename remain English.",
+        "aichat_chat_mode": "Chat behavior preset: Auto (image/text auto-switch), Beauty (vision), or Debug (raw).",
+        "loraloader_prompt_in": "The text to be checked for keywords. If a keyword matches, 'triggered' output is True.",
+        "loraloader_strength_model": "How strongly the LoRA modifies the main UNet model (visuals/style).",
+        "loraloader_strength_clip": "How strongly the LoRA modifies the CLIP text encoder (prompt understanding).",
+        "loraloader_trigger_keywords": "Load-words (not trigger-words): if the prompt contains any of these words, this LoRA will be loaded; if empty, it will always load.",
+        "gguf_gguf_model": "Required GGUF LLM model file under ComfyUI/models/llm (or subfolders).",
+        "gguf_clip_model": "Optional Vision mmproj/CLIP model. Use None for pure text-only models.",
+        "gguf_n_gpu_layers": "-1 auto-distributes GPU layers; 0 forces CPU; lower if you hit OOM.",
+        "gguf_n_ctx": "Context window size (tokens). Larger allows longer chats but uses more VRAM.",
+    },
+    "zh-CN": {
+        "aichat_model": "来自 UniversalGGUFLoader 的已加载 LLM 模型",
+        "aichat_user_material": "用户素材文本。image 连线时会被忽略，仅在扩写/调试模式中使用",
+        "aichat_instruction": "系统指令/风格设定。留空时使用内置默认说明",
+        "aichat_max_tokens": "本次回答的最大片段长度（token）。注意：数值越大，生成内容越长，耗时也会显著增加（尤其是开启思维链的模型）",
+        "aichat_temperature": "采样温度。数值越高越随机，越低越保守。推荐 0.6–0.9",
+        "aichat_repetition_penalty": "重复惩罚系数。>1 会减少重复句子。常用范围 1.05–1.2",
+        "aichat_seed": "-1 表示随机种子；固定某个值可复现相同输出",
+        "aichat_release_vram": "勾选后每次生成结束都会关闭模型释放显存，但下次调用会重新加载模型，速度较慢",
+        "aichat_enable_tags": "开启后生成 Danbooru 风格的标签 (### tags)。关闭可节省时间。",
+        "aichat_enable_filename": "开启后生成推荐文件名 (### filename)。关闭可节省时间。",
+        "aichat_image": "连接图片后自动进入 Vision 反推模式，忽略文本素材，仅使用图像+指令",
+        "aichat_min_p": "Min-P 采样阈值，控制低概率词的截断。推荐 0.05–0.15",
+        "aichat_mirostat_mode": "Mirostat 采样模式：0=关闭，1/2=自适应采样。一般保持 0 即可",
+        "aichat_mirostat_tau": "Mirostat 目标困惑度参数。仅在开启 Mirostat 时生效，常用 5",
+        "aichat_mirostat_eta": "Mirostat 学习率参数。仅在开启 Mirostat 时生效，常用 0.1",
+        "aichat_force_chinese": "强制使用中文输出内容。仅影响主要描述部分，Tag 和文件名仍保持英文。",
+        "aichat_chat_mode": (
+            "Auto_Mode: 自动模式（连图用 Vision_Caption，没图用 Enhance_Prompt）\n"
+            "Vision_Beauty: 电影级美女大师（视觉）\n"
+            "Debug_Chat: 纯指令模式"
+        ),
+        "loraloader_prompt_in": "提示词。如果命中了任意加载词，'triggered' 输出为 True。",
+        "loraloader_strength_model": "控制 LoRA 对主模型（图像风格/细节）的影响强度。",
+        "loraloader_strength_clip": "控制 LoRA 对 CLIP 文本理解的影响强度。",
+        "loraloader_trigger_keywords": "加载词（非触发词）：如果提示词中包含任意加载词，则加载本 LoRA；如果留空，则始终加载。",
+        "gguf_gguf_model": "必选：LLM GGUF 模型文件，支持 ComfyUI/models/ 下的 llm、LLM、GGUF 等目录。",
+        "gguf_clip_model": "可选：Vision mmproj/CLIP 模型；为 None 时仅加载纯文本模型。",
+        "gguf_n_gpu_layers": "-1 表示自动分配 GPU 层数；0 为纯 CPU；遇到显存不足时可调小。",
+        "gguf_n_ctx": "上下文长度（token 数）。越大可处理的对话越长，但显存占用越高。",
+    },
+}
+
+def get_ui_text(key: str, locale: str = "en-US") -> str:
+    lang = "zh-CN" if locale == "zh-CN" else "en-US"
+    lang_map = UI_TEXT.get(lang, {})
+    if key in lang_map:
+        return lang_map[key]
+    # Fallback to English if missing in selected language
+    return UI_TEXT["en-US"].get(key, "")
 
 # [Config] Built-in Prompt Templates
 # These templates define the "Role" and "Instruction" for the AI.
@@ -352,6 +415,8 @@ LABEL_USER_INPUT = "[User Material]:"
 class UniversalGGUFLoader:
     @classmethod
     def INPUT_TYPES(s):
+        config = load_lh_config()
+        locale = config.get("locale", "en-US")
         # [Filter] Only show .gguf files to avoid confusion
         all_files = folder_paths.get_filename_list("llm")
         gguf_files = [f for f in all_files if f.lower().endswith(".gguf")]
@@ -361,13 +426,13 @@ class UniversalGGUFLoader:
                 "gguf_model": (
                     gguf_files,
                     {
-                        "tooltip": "必选：LLM GGUF 模型文件，支持 ComfyUI/models/ 下的 llm, LLM, GGUF 等目录",
+                        "tooltip": get_ui_text("gguf_gguf_model", locale),
                     },
                 ),
                 "clip_model": (
                     ["None"] + gguf_files,
                     {
-                        "tooltip": "可选：Vision mmproj/CLIP 模型；为 None 时仅加载纯文本模型",
+                        "tooltip": get_ui_text("gguf_clip_model", locale),
                     },
                 ),
                 "n_gpu_layers": (
@@ -376,7 +441,7 @@ class UniversalGGUFLoader:
                         "default": -1,
                         "min": -1,
                         "max": 100,
-                        "tooltip": "-1 表示自动分配 GPU 层数；0 为纯 CPU；遇到显存不足时可调小",
+                        "tooltip": get_ui_text("gguf_n_gpu_layers", locale),
                     },
                 ),
                 "n_ctx": (
@@ -385,7 +450,7 @@ class UniversalGGUFLoader:
                         "default": 4096,
                         "min": 2048,
                         "max": 32768,
-                        "tooltip": "上下文长度（token 数）。越大可处理的对话越长，但显存占用越高",
+                        "tooltip": get_ui_text("gguf_n_ctx", locale),
                     },
                 ),
             }
@@ -688,6 +753,8 @@ def load_lh_config():
         "default_chat_mode": "Auto_Mode (Default)",
         "default_max_tokens": 1024,
         "default_temperature": 0.7,
+        "default_system_instruction": DEFAULT_INSTRUCTION,
+        "default_user_material": DEFAULT_USER_MATERIAL,
         "locale": "en-US"
     }
     if os.path.exists(config_path):
@@ -701,6 +768,10 @@ def load_lh_config():
                     defaults["default_max_tokens"] = int(user_config["default_max_tokens"])
                 if "default_temperature" in user_config:
                     defaults["default_temperature"] = float(user_config["default_temperature"])
+                if "default_system_instruction" in user_config:
+                    defaults["default_system_instruction"] = str(user_config["default_system_instruction"])
+                if "default_user_material" in user_config:
+                    defaults["default_user_material"] = str(user_config["default_user_material"])
                 if "locale" in user_config:
                     defaults["locale"] = user_config["locale"]
         except Exception as e:
@@ -711,35 +782,36 @@ class UniversalAIChat:
     @classmethod
     def INPUT_TYPES(s):
         config = load_lh_config()
+        locale = config.get("locale", "en-US")
         return {
             "required": {
                 "model": (
                     "LLM_MODEL",
                     {
-                        "tooltip": "来自 UniversalGGUFLoader 的已加载 LLM 模型",
+                        "tooltip": get_ui_text("aichat_model", locale),
                     },
                 ),
                 "user_material": (
                     "STRING",
                     {
                         "multiline": True,
-                        "default": DEFAULT_USER_MATERIAL,
-                        "tooltip": "用户素材文本。反推图片时会被忽略，仅在扩写/调试模式中使用",
+                        "default": config.get("default_user_material", DEFAULT_USER_MATERIAL),
+                        "tooltip": get_ui_text("aichat_user_material", locale),
                     },
                 ),
                 "instruction": (
                     "STRING",
                     {
                         "multiline": True,
-                        "default": DEFAULT_INSTRUCTION,
-                        "tooltip": "系统指令/风格设定。留空时使用内置默认说明",
+                        "default": config.get("default_system_instruction", DEFAULT_INSTRUCTION),
+                        "tooltip": get_ui_text("aichat_instruction", locale),
                     },
                 ),
                 "chat_mode": (
                     CHAT_MODES_LIST,
                     {
                         "default": config["default_chat_mode"],
-                        "tooltip": CHAT_MODES_TOOLTIP,
+                        "tooltip": get_ui_text("aichat_chat_mode", locale),
                     },
                 ),
                 "max_tokens": (
@@ -748,7 +820,7 @@ class UniversalAIChat:
                         "default": config["default_max_tokens"],
                         "min": 1,
                         "max": 8192,
-                        "tooltip": "本次回答的最大片段长度（token）。注意：数值越大，生成内容越长，耗时也会显著增加（尤其是开启思维链的模型）",
+                        "tooltip": get_ui_text("aichat_max_tokens", locale),
                     },
                 ),
                 "temperature": (
@@ -758,7 +830,7 @@ class UniversalAIChat:
                         "min": 0.0,
                         "max": 2.0,
                         "step": 0.01,
-                        "tooltip": "采样温度。数值越高越随机，越低越保守。推荐 0.6–0.9",
+                        "tooltip": get_ui_text("aichat_temperature", locale),
                     },
                 ),
                 "repetition_penalty": (
@@ -768,7 +840,7 @@ class UniversalAIChat:
                         "min": 1.0,
                         "max": 2.0,
                         "step": 0.01,
-                        "tooltip": "重复惩罚系数。>1 会减少重复句子。常用范围 1.05–1.2",
+                        "tooltip": get_ui_text("aichat_repetition_penalty", locale),
                     },
                 ),
                 "seed": (
@@ -777,28 +849,28 @@ class UniversalAIChat:
                         "default": -1,
                         "min": -1,
                         "max": 0xffffffffffffffff,
-                        "tooltip": "-1 表示随机种子；固定某个值可复现相同输出",
+                        "tooltip": get_ui_text("aichat_seed", locale),
                     },
                 ),
                 "release_vram": (
                     "BOOLEAN",
                     {
                         "default": False,
-                        "tooltip": "勾选后每次生成结束都会关闭模型释放显存，但下次调用会重新加载模型，速度较慢",
+                        "tooltip": get_ui_text("aichat_release_vram", locale),
                     },
                 ),
                 "enable_tags": (
                     "BOOLEAN",
                     {
                         "default": True,
-                        "tooltip": "开启后生成 Danbooru 风格的标签 (### tags)。关闭可节省时间。",
+                        "tooltip": get_ui_text("aichat_enable_tags", locale),
                     },
                 ),
                 "enable_filename": (
                     "BOOLEAN",
                     {
                         "default": True,
-                        "tooltip": "开启后生成推荐文件名 (### filename)。关闭可节省时间。",
+                        "tooltip": get_ui_text("aichat_enable_filename", locale),
                     },
                 ),
             },
@@ -806,7 +878,7 @@ class UniversalAIChat:
                 "image": (
                     "IMAGE",
                     {
-                        "tooltip": "连接图片后自动进入 Vision 反推模式，忽略文本素材，仅使用图像+指令",
+                        "tooltip": get_ui_text("aichat_image", locale),
                     },
                 ),
                 "min_p": (
@@ -816,7 +888,7 @@ class UniversalAIChat:
                         "min": 0.0,
                         "max": 1.0,
                         "step": 0.01,
-                        "tooltip": "Min-P 采样阈值，控制低概率词的截断。推荐 0.05–0.15",
+                        "tooltip": get_ui_text("aichat_min_p", locale),
                     },
                 ),
                 "mirostat_mode": (
@@ -825,7 +897,7 @@ class UniversalAIChat:
                         "default": 0,
                         "min": 0,
                         "max": 2,
-                        "tooltip": "Mirostat 采样模式：0=关闭，1/2=自适应采样。一般保持 0 即可",
+                        "tooltip": get_ui_text("aichat_mirostat_mode", locale),
                     },
                 ),
                 "mirostat_tau": (
@@ -835,7 +907,7 @@ class UniversalAIChat:
                         "min": 0.0,
                         "max": 10.0,
                         "step": 0.1,
-                        "tooltip": "Mirostat 目标困惑度参数。仅在开启 Mirostat 时生效，常用 5",
+                        "tooltip": get_ui_text("aichat_mirostat_tau", locale),
                     },
                 ),
                 "mirostat_eta": (
@@ -845,21 +917,21 @@ class UniversalAIChat:
                         "min": 0.0,
                         "max": 1.0,
                         "step": 0.01,
-                        "tooltip": "Mirostat 学习率参数。仅在开启 Mirostat 时生效，常用 0.1",
+                        "tooltip": get_ui_text("aichat_mirostat_eta", locale),
                     },
                 ),
                 "force_chinese": (
                     "BOOLEAN",
                     {
                         "default": False,
-                        "tooltip": "强制使用中文输出内容。仅影响主要描述部分，Tag和文件名仍保持英文。",
+                        "tooltip": get_ui_text("aichat_force_chinese", locale),
                     },
                 ),
             }
         }
     
     RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("prompt", "tags", "filename", "raw_output")
+    RETURN_NAMES = ("prompt", "tags", "filename", "raw_data")
     FUNCTION = "chat"
     CATEGORY = "LoraHelper"
 
@@ -952,6 +1024,26 @@ class UniversalAIChat:
         # 0. 基础防御性处理 (Defensive Check)
         if user_material is None: user_material = ""
         if instruction is None: instruction = ""
+
+        # Instruction Fallback: Use config default if empty
+        config = load_lh_config()
+        default_instruction = config.get("default_system_instruction", DEFAULT_INSTRUCTION)
+        default_user_material = config.get("default_user_material", DEFAULT_USER_MATERIAL)
+        
+        if isinstance(instruction, str):
+            if instruction.strip() == "":
+                instruction = default_instruction
+        else:
+            if not instruction:
+                instruction = default_instruction
+
+        # User Material Fallback
+        if isinstance(user_material, str):
+            if user_material.strip() == "":
+                user_material = default_user_material
+        else:
+            if not user_material:
+                user_material = default_user_material
 
         # [NEW] Dynamic Prompts Processing
         # Process user_material and instruction for wildcards and random choices
@@ -1614,7 +1706,7 @@ class LH_History_Monitor:
     def INPUT_TYPES(s):
         return { 
             "required": { 
-                "raw_input": ("STRING", {"forceInput": True}),
+                "raw_data": ("STRING", {"forceInput": True}),
                 "clear_history": ("BOOLEAN", {"default": False, "label_on": "Clear History", "label_off": "Keep History"})
             } 
         }
@@ -1625,7 +1717,7 @@ class LH_History_Monitor:
     FUNCTION = "update"
     CATEGORY = "LoraHelper"
 
-    def update(self, raw_input, clear_history):
+    def update(self, raw_data, clear_history):
         # 0. Clear History Check
         if clear_history:
             self.history = []
@@ -1637,27 +1729,27 @@ class LH_History_Monitor:
         ai_msg = ""
         
         # 尝试解析特定格式 "User: ... \nAI: ..."
-        if isinstance(raw_input, str) and raw_input.startswith("User:"):
+        if isinstance(raw_data, str) and raw_data.startswith("User:"):
              # 使用 split 分割，注意只分割第一个 "\nAI: "
-             parts = raw_input.split("\nAI: ", 1)
+             parts = raw_data.split("\nAI: ", 1)
              if len(parts) == 2:
                  user_msg = parts[0][5:].strip() # 去掉 "User: "
                  ai_msg = parts[1].strip()
              else:
                  user_msg = "Raw Input"
-                 ai_msg = str(raw_input)
+                 ai_msg = str(raw_data)
         else:
             try:
-                data = json.loads(raw_input)
+                data = json.loads(raw_data)
                 if isinstance(data, dict):
                     user_msg = data.get("user", "")
                     ai_msg = data.get("ai", "")
                 else:
                     user_msg = "Raw Input"
-                    ai_msg = str(raw_input)
+                    ai_msg = str(raw_data)
             except:
                  user_msg = "Raw Input"
-                 ai_msg = str(raw_input)
+                 ai_msg = str(raw_data)
         
         # 2. 更新历史 (去重)
         # 构造一个结构化对象存储
@@ -1718,14 +1810,16 @@ class LH_KeywordLoraLoader:
 
     @classmethod
     def INPUT_TYPES(s):
+        config = load_lh_config()
+        locale = config.get("locale", "en-US")
         return {
             "required": {
                 "model": ("MODEL",),
-                "prompt_in": ("STRING", {"multiline": True, "forceInput": True, "default": "", "tooltip": "The text to be checked for keywords. If match found, 'triggered' output is True."}),
+                "prompt_in": ("STRING", {"multiline": True, "forceInput": True, "default": "", "tooltip": get_ui_text("loraloader_prompt_in", locale)}),
                 "lora_name": (folder_paths.get_filename_list("loras"), ),
-                "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01, "tooltip": "How strongly the LoRA modifies the main UNet model (visuals/style)."}),
-                "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01, "tooltip": "How strongly the LoRA modifies the CLIP text encoder (prompt understanding)."}),
-                "trigger_keywords": ("STRING", {"multiline": False, "default": "anime, girl", "placeholder": "Separate keywords with comma (e.g., anime, girl)", "tooltip": "Keywords to trigger LoRA loading. Comma separated."}),
+                "strength_model": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01, "tooltip": get_ui_text("loraloader_strength_model", locale)}),
+                "strength_clip": ("FLOAT", {"default": 1.0, "min": -20.0, "max": 20.0, "step": 0.01, "tooltip": get_ui_text("loraloader_strength_clip", locale)}),
+                "trigger_keywords": ("STRING", {"multiline": False, "default": "anime, girl", "placeholder": "Separate keywords with comma (e.g., anime, girl)", "tooltip": get_ui_text("loraloader_trigger_keywords", locale)}),
             },
             "optional": {
                 "clip": ("CLIP",),
@@ -1741,28 +1835,30 @@ class LH_KeywordLoraLoader:
     def load_lora_if_keyword(self, model, lora_name, strength_model, strength_clip, prompt_in, trigger_keywords, clip=None, status_text_in=None):
         import comfy.utils
         
-        # Helper to format status
         def format_status(current_msg):
             if status_text_in:
                 return f"{status_text_in}\n{current_msg}"
             return current_msg
 
-        if not prompt_in or not trigger_keywords:
-             return (model, prompt_in, clip, format_status("Missing Input"), False)
+        if not trigger_keywords:
+             keywords = []
+        else:
+             trigger_keywords = trigger_keywords.replace("，", ",")
+             keywords = [k.strip().lower() for k in trigger_keywords.split(',') if k.strip()]
 
-        # Split keywords (support both English and Chinese commas)
-        trigger_keywords = trigger_keywords.replace("，", ",")
-        keywords = [k.strip().lower() for k in trigger_keywords.split(',') if k.strip()]
-        text_lower = prompt_in.lower()
-        
         should_trigger = False
         triggered_keyword = ""
-        for k in keywords:
-            if k in text_lower:
-                should_trigger = True
-                triggered_keyword = k
-                # print(f"\033[36m[LH_KeywordLoraLoader] Triggered by keyword: '{k}'\033[0m")
-                break
+        if not keywords:
+            should_trigger = True
+        else:
+            if not prompt_in:
+                 return (model, prompt_in, clip, format_status("Missing Input"), False)
+            text_lower = prompt_in.lower()
+            for k in keywords:
+                if k in text_lower:
+                    should_trigger = True
+                    triggered_keyword = k
+                    break
         
         if should_trigger:
             lora_path = folder_paths.get_full_path("loras", lora_name)
@@ -1782,7 +1878,10 @@ class LH_KeywordLoraLoader:
                 self.loaded_lora = (lora_path, lora)
 
             model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
-            current_status = f"{lora_name} is triggered by '{triggered_keyword}'"
+            if triggered_keyword:
+                current_status = f"{lora_name} is triggered by '{triggered_keyword}'"
+            else:
+                current_status = f"{lora_name} is always on (no trigger keywords)"
             return (model_lora, prompt_in, clip_lora, format_status(current_status), True)
         else:
             current_status = f"{lora_name} Not Triggered"

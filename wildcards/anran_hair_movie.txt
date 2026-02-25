@@ -1,35 +1,30 @@
-# --- [ 影视、二次元灵感：风格锚点版 ] ---
-# 蛇姬姬发式。{标志性耳坠|空}。
-straight blunt bangs, (level-cut side locks:1.3), ultra-long hair, {(golden snake earrings:1.3)|(oversized ruby earrings:1.2)|}, arrogant beauty.
-# 阿拉蕾小绿老师。{不同边框眼镜|空}。
- (long wavy hair:1.4), side-parted bangs, {(round gold-rimmed glasses:1.2)|(bold red frame glasses:1.2)|(oversized clear frame glasses:1.1)|}, retro anime aesthetic.
-# 哥特洛丽塔。{蝴蝶结|颈饰|耳钉|空}。
-(intricate lace ruffles:1.2), {(black ribbons and silver cross:1.1)|(lace choker:1.2)|(cross stud earrings:1.1)|}, twin tails, dark romantic style.
---- [纯欲风发型] ---
-纯欲微卷长发。{耳饰 | 空}。
-long slightly wavy hair, air bangs, fluffy roots, soft light texture, {(small pearl earrings:1.1)|(thin silver earrings:1.1)|}, pure and seductive.
-纯欲半扎发。{发夹 | 空}。
-half-up half-down hair, loose messy strands, gentle waves, {(small pearl hair clip:1.1)|}, hazy pure desire vibe.
-纯欲低马尾。{碎发 | 空}。
-low ponytail, thin face-framing strands, slightly curled ends, natural soft texture, pure and gentle.
---- [甜妹风发型] ---
-甜妹双马尾。{丝带 | 发圈}。
-high double ponytails, fluffy curls, {(pink ribbon:1.2)|(cute hair tie:1.2)|}, sweet and lively.
-甜妹丸子头。{发饰 | 空}。
-small high bun, messy broken hair, cute hairpin, youthful and sweet.
-甜妹齐肩蛋卷头。{发夹 | 空}。
-shoulder-length egg roll hair, air bangs, {(cute cartoon hair clip:1.1)|}, soft and sweet.
---- [清冷感发型] ---
-清冷黑长直。{耳饰 | 空}。
-long straight black hair, silky texture, middle part, no excess volume, {(minimalist silver earrings:1.1)|}, cold and clean.
-清冷低马尾。{素圈 | 空}。
-low ponytail, middle part, smooth hair, simple and advanced, cold elegant aesthetic.
-清冷锁骨发。{碎发 | 空}。
-collarbone hair, straight with slight inward buckle, light face-framing layers, indifferent and clean.
---- [韩系温柔发型] ---
-韩系气垫烫中长发。{耳饰 | 空}。
-medium long hair with Korean air perm, natural fluffy waves, side bangs, {(small gold earrings:1.1)|}, Korean gentle style.
-韩系低丸子头。{碎发 | 空}。
-lazy low bun, fluffy broken hair, soft texture, Korean daily gentle vibe.
-韩系八字刘海卷发。{项链 | 空}。
-long wavy hair, Korean eight-character bangs, natural curls, {(delicate clavicle necklace:1.1)|}, soft and advanced.
+#蛇姬姬发式 
+straight blunt bangs (level-cut side locks:1.3) ultra-long hair arrogant beauty {标志性耳坠|golden snake earrings:1.3|oversized ruby earrings:1.2|空} {发饰|heart hair ornament|butterfly hair ornament|空}
+#阿拉蕾小绿老师
+(long wavy hair:1.4) side-parted bangs retro anime aesthetic {不同边框眼镜|round gold-rimmed glasses:1.2|bold red frame glasses:1.2|oversized clear frame glasses:1.1|空} {发饰|hair bell|star hair ornament|空}
+#哥特洛丽塔 
+(intricate lace ruffles:1.2) twin tails dark romantic style {蝴蝶结|颈饰|耳钉|black ribbons and silver cross:1.1|lace choker:1.2|cross stud earrings:1.1|空} {发饰|crescent hair ornament|skull hair ornament|空}
+#纯欲微卷长发 
+long slightly wavy hair air bangs fluffy roots soft light texture pure and seductive {耳饰|small pearl earrings:1.1|thin silver earrings:1.1|空} {发饰|hair flower|leaf hair ornament|空}
+#纯欲半扎发 
+half-up half-down hair loose messy strands gentle waves hazy pure desire vibe {发夹|small pearl hair clip:1.1|空} {耳饰|heart stud earrings|空}
+#纯欲低马尾 
+low ponytail thin face-framing strands slightly curled ends natural soft texture pure and gentle {碎发|空} {发饰|hair bobbles|butterfly hair ornament|空}
+#甜妹双马尾 
+high double ponytails fluffy curls sweet and lively {丝带|pink ribbon:1.2|cute hair tie:1.2|空} {发饰|star hair ornament|carrot hair ornament|空}
+#甜妹丸子头 
+small high bun messy broken hair youthful and sweet {发饰|cute cartoon hair clip:1.1|hair flower|空} {耳饰|small heart earrings|空}
+#甜妹齐肩蛋卷头 
+shoulder-length egg roll hair air bangs soft and sweet {发夹|cute cartoon hair clip:1.1|空} {发饰|hair bell|heart hair ornament|空}
+#清冷黑长直
+long straight black hair silky texture middle part no excess volume cold and clean {耳饰|minimalist silver earrings:1.1|空} {发饰|leaf hair ornament|crescent hair ornament|空}
+#清冷低马尾
+low ponytail middle part smooth hair simple and advanced cold elegant aesthetic {素圈|空} {耳饰|thin silver earrings|空}
+#清冷锁骨发 
+collarbone hair straight with slight inward buckle light face-framing layers indifferent and clean {碎发|空} {发饰|minimalist hair clip|空}
+#韩系气垫烫中长发 
+medium long hair with Korean air perm natural fluffy waves side bangs Korean gentle style {耳饰|small gold earrings:1.1|空} {发饰|hair flower|small pearl hair clip|空}
+#韩系低丸子头 
+lazy low bun fluffy broken hair soft texture Korean daily gentle vibe {碎发|空} {发饰|hair bobbles|空}
+#韩系八字刘海卷发
+long wavy hair Korean eight-character bangs natural curls soft and advanced {项链|delicate clavicle necklace:1.1|空} {发饰|hair bell|butterfly hair ornament|空}

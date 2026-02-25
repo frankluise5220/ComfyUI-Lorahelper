@@ -4,26 +4,31 @@ const TRANSLATIONS = {
     "zh-CN": {
         "LoraHelper_Chat": {
             "title": "LH_AI对话助手",
-            "model": "模型 (Model)",
-            "image": "图像 (Image)",
+            "model": "模型",
+            "image": "图像",
             "max_tokens": "最大生成长度",
-            "temperature": "温度 (Temperature)",
+            "temperature": "温度",
             "repetition_penalty": "重复惩罚",
-            "instruction": "系统指令/执行指令 (Instruction)",
-            "user_material": "用户素材 (User Material)",
+            "instruction": "系统指令/执行指令",
+            "user_material": "用户素材",
             "chat_mode": "对话模式",
             "enable_tags": "启用标签提取",
             "enable_filename": "启用文件名生成",
-            "seed": "种子 (Seed)",
+            "seed": "种子",
             "release_vram": "自动释放显存",
-            "force_chinese": "强制中文输出"
+            "force_chinese": "强制中文输出",
+            "prompt": "提示词",
+            "tags": "标签",
+            "filename": "文件名",
+            "raw_data": "原始输出"
         },
         "Qwen3_GGUF_loader": {
             "title": "LH_GGUF模型加载器",
             "gguf_model": "GGUF模型",
             "clip_model": "CLIP视觉模型",
             "n_gpu_layers": "GPU层数 (-1为全部)",
-            "n_ctx": "最大上下文 (n_ctx)"
+            "n_ctx": "最大上下文 (n_ctx)",
+            "model": "模型"
         },
         "LoraHelper_OllamaLoader": {
             "title": "LH_Ollama加载器",
@@ -32,14 +37,15 @@ const TRANSLATIONS = {
         },
         "LoraHelper_CloudLoader": {
             "title": "LH_云端模型加载器",
-            "api_key": "API 密钥 (API Key)",
-            "base_url": "API 地址 (Base URL)",
-            "model_name": "模型名称 (Model Name)"
+            "api_key": "API 密钥",
+            "base_url": "API 地址",
+            "model_name": "模型名称"
         },
         "LoraHelper_Monitor": {
             "title": "LH_对话历史监控",
-            "raw_input": "原始输出 (Raw Input)",
-            "clear_history": "清除历史记录"
+            "raw_data": "原始数据",
+            "clear_history": "清除历史记录",
+            "context": "上下文"
         },
         "LoraHelper_MultiTextSelector": {
             "title": "LH_多路文本选择器",
@@ -58,7 +64,7 @@ const TRANSLATIONS = {
             "title": "LH_全功能保存器",
             "images": "图像",
             "gen_prompt": "生成提示词",
-            "lora_tags": "LoRA标签",
+            "lora_tags": "打标文本",
             "filename_final": "最终文件名",
             "folder_path": "保存路径",
             "filename_prefix": "文件前缀",
@@ -68,7 +74,8 @@ const TRANSLATIONS = {
         "LoraHelper_SuperText": {
             "title": "LH_超级文本框",
             "showtext": "显示文本",
-            "widget_text": "编辑文本"
+            "text": "文本输入",
+            "seed": "随机种子"
         },
         "LoraHelper_LoraLoader": {
             "title": "LH_关键字Lora加载器",
@@ -76,10 +83,13 @@ const TRANSLATIONS = {
             "lora_name": "LoRA名称",
             "strength_model": "模型强度",
             "strength_clip": "CLIP强度",
-            "prompt_in": "提示词输入",
-            "prompt_out": "提示词输出",
+            "prompt_in": "提示词",
+            "prompt_out": "提示词",
             "trigger_keywords": "触发关键字",
-            "clip": "CLIP"
+            "clip": "CLIP",
+            "status_text_in": "状态文本",
+            "status_text": "状态文本",
+            "triggered": "触发标记"
         },
         "LoraHelper_LlamaInstruct": {
             "title": "LH_Llama指令助手 (旧版)",
@@ -153,8 +163,18 @@ app.registerExtension({
                 { value: "zh-CN", text: "Chinese (简体中文)" }
             ],
             defaultValue: initialLang,
-            onChange: (newVal) => {
+            tooltip: "Hover tooltip language is controlled by lh_config.json locale and requires ComfyUI restart.\n悬停说明的中英文切换由 lh_config.json 的 locale 控制，修改后需要重启 ComfyUI 才会生效。",
+            onChange: async (newVal) => {
                 updateAllNodes(newVal);
+                try {
+                    await fetch("/lorahelper/set_locale", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ locale: newVal })
+                    });
+                } catch (e) {
+                    console.warn("[LoraHelper] Failed to update backend locale:", e);
+                }
             }
         });
     },
@@ -246,7 +266,7 @@ function updateSingleNode(node, lang) {
     if (!translationKey) return;
 
     const dict = TRANSLATIONS[lang]?.[translationKey];
-    if (!dict && lang !== "en-US") return; // If no translation found for non-EN, skip
+    if (!dict && lang !== "en-US") return;
     
     // Process Node Title - Disabled as per user request
     /*
@@ -263,9 +283,7 @@ function updateSingleNode(node, lang) {
     // Process Inputs (Connections)
     if (node.inputs) {
         for (const input of node.inputs) {
-            // Store original name if not stored
             if (!input.originalLabel) {
-                // [Fix] Always use input.name as the source of truth to avoid pollution from saved workflows or previous sessions
                 input.originalLabel = input.name;
             }
             

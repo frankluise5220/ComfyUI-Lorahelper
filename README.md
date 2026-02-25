@@ -203,7 +203,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `prompt`: 核心功能，提示词输出 (description).
     *   `tags`: 从提示词中提取的danbooru标签 。
     *   `filename`: 提取的文件名。
-    *   `raw_output`: AI对话全过程内容输出（方便debug、调整指令）。
+    *   `raw_data`: AI对话全过程内容输出（方便debug、调整指令）。
 *   **隐形反推模式**:
     *   **自动触发**: 只要连接图片，无需输入任何用户指令，即刻生效。
     *   **智能指令**: 若 `instruction` 保持默认或留空，将使用内置的 **JoyCaption 同款无审查** 强力反推指令，生成极详尽的视觉描述。
@@ -287,6 +287,14 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 ---
 
 ## 📅 Update Log
+
+### v1.2.4 (2026-02-25)
+*   **[New]** **LH_SuperText**: **Auto-Unlock Feature!** The text widget now automatically becomes editable when the upstream node is **Bypassed** or **Muted**.
+*   **[Improvement]** **LH_SuperText**: Renamed input ports to `showtext` (Display) and `text` (Input) for better clarity.
+*   **[Fix]** **LH_SuperText**: Fixed an issue where the text widget wouldn't update visually when receiving new input.
+*   **[New]** **LH_AIChat**: Added **Smart Fallback** for `instruction` and `user_material`. If the input is empty (e.g., upstream Bypassed), it now automatically falls back to the default values in `lh_config.json`.
+*   **[Improvement]** **LH_History_Monitor**: Renamed `raw_input` to `raw_data` for consistency across nodes.
+*   **[Localization]** Updated Chinese translations for tooltips and node inputs.
 
 ### v1.2.3 (2025-02-12)
 *   **[New]** **LH_SuperText**: Added `force_text` input port. Supports external input while keeping the text widget editable (auto-fallback logic).

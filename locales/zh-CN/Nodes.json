@@ -44,7 +44,7 @@
     "LH_History_Monitor": {
         "title": "LH_对话历史监控",
         "inputs": {
-            "raw_input": "原始输出 (Raw Input)",
+            "raw_data": "原始输出 (Raw Data)",
             "clear_history": "清除历史记录"
         }
     },
@@ -71,11 +71,11 @@
             "save_workflow": "保存工作流"
         }
     },
-    "LH_SimpleText": {
+    "LH_SuperText": {
         "title": "LH_超级文本框",
         "inputs": {
             "showtext": "显示文本",
-            "widget_text": "编辑文本"
+            "text": "文本输入"
         }
     },
     "LH_KeywordLoraLoader": {

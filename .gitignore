@@ -5,3 +5,10 @@ __pycache__/
 *.ckpt
 version_history.txt
 .DS_Store
+wildcards/*
+!wildcards/yifu.txt
+!wildcards/衣服.txt
+_random_expr_test.py
+random_expr_output.txt
+*test*.py
+*test*.txt

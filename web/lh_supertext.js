@@ -54,9 +54,8 @@ function setupSuperTextWidget(node, widgetName, inputName, app) {
         }
 
         let isForceTextActive = false;
-        // Special handling for LH_SuperText force_text
         if (node.type === "LH_SuperText") {
-            const forceInput = node.inputs?.find(i => i.name === "force_text");
+            const forceInput = node.inputs?.find(i => i.name === "text");
             if (forceInput && forceInput.link !== null) {
                 if (isUpstreamActive(forceInput.link)) {
                     isForceTextActive = true;
@@ -111,12 +110,6 @@ app.registerExtension({
                 
                 setTimeout(() => {
                     setupSuperTextWidget(this, "showtext", "showtext", app);
-                    
-                    // Add tooltip (User suggestion)
-                    const widget = this.widgets?.find(w => w.name === "showtext");
-                    if (widget?.inputEl) {
-                        widget.inputEl.title = "Connected: Copyable (Ctrl+C)\nDisconnected: Editable";
-                    }
                 }, 50);
                 
                 return r;
@@ -214,6 +207,23 @@ app.registerExtension({
                     setupSuperTextWidget(this, "widget_text", "batch_text", app);
                 }, 1);
                 
+                return r;
+            };
+        }
+        // 3. UniversalAIChat text behavior (user_material + instruction)
+        if (nodeData.name === "UniversalAIChat") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated;
+            nodeType.prototype.onNodeCreated = function () {
+                const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
+
+                setTimeout(() => {
+                    // user_material: when connected to active upstream -> read-only
+                    // when disconnected or upstream muted/bypassed -> editable
+                    setupSuperTextWidget(this, "user_material", "user_material", app);
+                    // instruction: use the same logic for consistency
+                    setupSuperTextWidget(this, "instruction", "instruction", app);
+                }, 50);
+
                 return r;
             };
         }
