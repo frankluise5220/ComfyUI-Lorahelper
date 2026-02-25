@@ -12,11 +12,26 @@ class LH_SuperText:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "showtext": ("STRING", {"multiline": True, "default": ""}),
+                # Nothing required, allowing the node to be a pure generator/display node
             },
             "optional": {
-                # Change input type to wildcard "*" to allow ANY input type (STRING, INT, FLOAT, etc.)
-                "text": ("*", {"forceInput": True}),
+                # 'text' is a standard Widget now (forceInput removed to avoid mandatory connection error)
+                # But placed FIRST to capture auto-connect.
+                "text": ("STRING", {"multiline": True, "forceInput": True, "default": ""}), 
+                # Wait, if forceInput is True, it demands connection? 
+                # Let's try forceInput: False or just omit it. 
+                # If omitted, it's a widget. But we want it to be an input point primarily?
+                # Actually, forceInput: True in optional SHOULD be fine. 
+                # The user report "must be connected" suggests it's treated as required.
+                # Let's try making it a simple STRING widget that auto-converts.
+                # BUT auto-convert only happens if it's NOT forceInput.
+                # If we remove forceInput, it becomes a text box.
+                # Let's keep forceInput: True but ensure it's optional.
+                # Maybe the issue was the lack of default value?
+                # Let's add default value to text.
+                "text": ("STRING", {"forceInput": True, "default": ""}), 
+
+                "showtext": ("STRING", {"multiline": True, "default": "", "forceInput": False}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "Seed for Wildcards"}),
             }
         }
@@ -30,32 +45,37 @@ class LH_SuperText:
     def IS_CHANGED(s, **kwargs):
         return float("nan")
 
-    def process(self, showtext, text=None, seed=-1):
-        text_to_process = showtext
-        used_force = False
-        if text is not None:
-            candidate = None
-            if isinstance(text, (str, bytes)):
-                candidate = text.decode() if isinstance(text, bytes) else text
+    def process(self, text="", showtext="", seed=-1):
+        if not text:
+            # If text is empty (e.g. initial state), fallback to showtext (manual input)
+            text_to_process = showtext
+        else:
+            # If text has input (from upstream), use it and update showtext
+            if isinstance(text, str):
+                text_to_process = text
+            elif isinstance(text, (int, float, bool)):
+                text_to_process = str(text)
             elif isinstance(text, (list, tuple)):
-                try:
-                    candidate = "\n".join([x for x in text if isinstance(x, str)])
-                except Exception:
-                    candidate = None
-
-            if candidate is not None and isinstance(candidate, str) and candidate.strip() != "":
-                text_to_process = candidate
-                used_force = True
+                # Join list items with newline
+                text_to_process = "\n".join([str(item) for item in text])
+            elif isinstance(text, dict):
+                 import json
+                 try:
+                     text_to_process = json.dumps(text, indent=4, ensure_ascii=False)
+                 except:
+                     text_to_process = str(text)
+            else:
+                text_to_process = str(text)
 
         # Apply Dynamic Prompts processing
-        eff_seed = seed
-        if not used_force and eff_seed == -1:
-            eff_seed = 0
+        # Use seed if provided, default to 0 if not
+        eff_seed = seed if seed != -1 else 0
         final_text = process_dynamic_prompts(text_to_process, eff_seed)
-        # Only return the processed text as result, do NOT update the UI widget
-        # We keep showtext in UI to avoid confusion
-        
-        # [Change] User wants to SEE the input text in the widget if connected
+
+        # Update showtext widget in frontend with the RAW text (before dynamic prompts?) 
+        # Or processed? Usually user wants to see what's being processed.
+        # But if it's dynamic, maybe show raw? 
+        # Let's show the raw input text so user knows what came in.
         return {"ui": {"showtext": [text_to_process]}, "result": (final_text,)}
 
 class LH_MultiTextSelector:

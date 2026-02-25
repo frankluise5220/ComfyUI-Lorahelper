@@ -4,34 +4,55 @@ import { ComfyWidgets } from "../../scripts/widgets.js";
 // Helper function to create a resizable DOM widget
 function setupSuperTextWidget(node, widgetName, inputName, app) {
     const widget = node.widgets?.find((w) => w.name === widgetName);
-    if (!widget || !widget.inputEl) return;
+    // [Fix] Don't return early if inputEl is missing yet. 
+    // Instead, we will retry applying styles in the draw loop.
+    if (!widget) return; 
 
     const w = widget;
     
-    // Custom styling
-    w.inputEl.style.border = "1px solid #333";
-    w.inputEl.style.borderRadius = "4px";
-    w.inputEl.style.padding = "4px";
-    w.inputEl.style.lineHeight = "1.4";
-    
-    // Enable Resizing
-    w.inputEl.style.resize = "vertical";
-    w.inputEl.style.overflowY = "auto";
-    
-    // Selection styles (Ensures text can be copied)
-    w.inputEl.style.userSelect = "text";
-    w.inputEl.style.webkitUserSelect = "text";
+    // Function to apply styles (idempotent)
+    const applyStyles = () => {
+        if (!w.inputEl || w._lh_styles_applied) return;
+        
+        // Custom styling
+        w.inputEl.style.border = "1px solid #444"; 
+        w.inputEl.style.borderRadius = "4px";
+        w.inputEl.style.padding = "6px"; 
+        w.inputEl.style.lineHeight = "1.4"; // Restore readable line height
+        // Remove bold as it makes text harder to read
+        w.inputEl.style.fontWeight = "normal"; 
+        
+        // [Revert] No forced colors. Let ComfyUI handle theme.
+        w.inputEl.style.removeProperty("color");
+        w.inputEl.style.removeProperty("background-color");
+        
+        // Enable Resizing
+        w.inputEl.style.resize = "vertical";
+        w.inputEl.style.overflowY = "auto";
+        
+        // Selection styles
+        w.inputEl.style.userSelect = "text";
+        w.inputEl.style.webkitUserSelect = "text";
+        
+        w._lh_styles_applied = true;
+    };
+
+    // Try applying immediately (might fail if DOM not ready)
+    applyStyles();
     w.inputEl.style.pointerEvents = "auto";
     w.inputEl.style.cursor = "text";
 
     // Update state based on connection
     const updateState = () => {
+        // [Safety Check] Ensure inputEl exists and styles are applied before updating state
+        if (!w.inputEl) return;
+        if (!w._lh_styles_applied) applyStyles();
+
+        // 1. Check the specific named input (e.g., "showtext", "instruction", "user_material")
         const input = node.inputs?.find(i => i.name === inputName);
         let isConnected = input && input.link !== null;
 
         // Helper to check if upstream node is active (not Muted/Bypassed)
-        // Note: In ComfyUI, LiteGraph.ALWAYS=0, NEVER=2 (Mute), BYPASS=4
-        // If upstream is Muted (2) or Bypassed (4), we treat it as inactive so user can edit.
         const isUpstreamActive = (linkId) => {
             if (linkId === null || linkId === undefined) return false;
             const link = app.graph.links[linkId];
@@ -45,33 +66,50 @@ function setupSuperTextWidget(node, widgetName, inputName, app) {
             return true;
         };
 
-        // Check showtext input
-        let isShowTextActive = false;
+        // Check named input status
+        let isMainInputActive = false;
         if (input && input.link !== null) {
             if (isUpstreamActive(input.link)) {
-                isShowTextActive = true;
+                isMainInputActive = true;
             }
         }
 
-        let isForceTextActive = false;
+        // Check additional "text" input status (Specific to LH_SuperText node)
+        let isExtraTextActive = false;
         if (node.type === "LH_SuperText") {
             const forceInput = node.inputs?.find(i => i.name === "text");
             if (forceInput && forceInput.link !== null) {
                 if (isUpstreamActive(forceInput.link)) {
-                    isForceTextActive = true;
+                    isExtraTextActive = true;
                 }
             }
         }
         
         // Final decision: Lock if ANY active input is present
-        const shouldLock = isShowTextActive || isForceTextActive;
+        // If it's LH_SuperText, we look at both 'showtext' (if exists) and 'text'
+        // If it's UniversalAIChat, we only look at the named input (e.g. instruction)
+        const shouldLock = isMainInputActive || isExtraTextActive;
 
         if (shouldLock) {
-            w.inputEl.readOnly = true;
-            w.inputEl.style.opacity = 0.6;
+            if (!w.inputEl.readOnly) {
+                w.inputEl.readOnly = true;
+            }
+            // Locked state (Read-Only) -> Dim it
+            // Only use opacity to indicate state, matching native ComfyUI style
+            w.inputEl.style.setProperty("opacity", "0.6", "important"); 
+            w.inputEl.style.removeProperty("color");
+            w.inputEl.style.removeProperty("background-color");
+            w.inputEl.style.removeProperty("font-weight");
         } else {
-            w.inputEl.readOnly = false;
-            w.inputEl.style.opacity = 1.0;
+            // Unlocked state (Editable)
+            if (w.inputEl.readOnly) {
+                w.inputEl.readOnly = false;
+            }
+            // Always enforce full opacity in unlocked state
+            w.inputEl.style.setProperty("opacity", "1.0", "important");
+            w.inputEl.style.removeProperty("color");
+            w.inputEl.style.removeProperty("background-color");
+            w.inputEl.style.removeProperty("font-weight");
         }
     };
 
@@ -87,16 +125,47 @@ function setupSuperTextWidget(node, widgetName, inputName, app) {
     node.onDrawForeground = function(ctx) {
         if (onDrawForeground) onDrawForeground.apply(this, arguments);
         if (this.flags && this.flags.collapsed) return;
+        
+        // Restore 200ms throttle as requested
+        // [Fix] Use unique timer property per widget to avoid conflict when multiple widgets on same node use this helper
+        const timerProp = `_last_update_state_time_${widgetName}`;
         const now = Date.now();
-        if (!this._last_update_state_time || (now - this._last_update_state_time > 200)) {
+        if (!this[timerProp] || (now - this[timerProp] > 200)) {
             updateState();
-            this._last_update_state_time = now;
+            this[timerProp] = now;
         }
     };
 
     // Initial state
     updateState();
 }
+
+// [New] Cleanup Function to remove unwanted inputs
+    function cleanupInputs(node) {
+        if (node.type !== "LH_SuperText") return;
+        
+        // Check if 'showtext' has an input slot
+        const inputName = "showtext";
+        const slotIdx = node.findInputSlot(inputName);
+        
+        if (slotIdx !== -1) {
+             const input = node.inputs[slotIdx];
+             if (!input.link) {
+                 // Remove it if it's not connected.
+                 // This forces the cleanup of the unwanted input slot.
+                 node.removeInput(slotIdx);
+             } else {
+                 // If connected, it means user has an old workflow.
+                 // To prevent confusion, we can HIDE the connection point visually?
+                 // No, that's complex. Let's just remove it if user wants "cannot be connected".
+                 // But removing connected input breaks user workflow.
+                 // Let's assume user will manually reconnect to 'text' if needed.
+                 // For now, only remove unconnected ones to be safe.
+                 // But if user insists on "cannot be connected", we might need to be more aggressive?
+                 // Let's keep it safe: Only remove unconnected.
+             }
+        }
+    }
 
 app.registerExtension({
 	name: "Comfy.LoraHelper.Widgets",
@@ -111,6 +180,11 @@ app.registerExtension({
                 setTimeout(() => {
                     setupSuperTextWidget(this, "showtext", "showtext", app);
                 }, 50);
+
+                // Cleanup unwanted inputs for SuperText
+                setTimeout(() => {
+                    cleanupInputs(this);
+                }, 100);
                 
                 return r;
             };
@@ -119,11 +193,15 @@ app.registerExtension({
             nodeType.prototype.onExecuted = async function (message) {
                 onExecuted?.apply(this, arguments);
 
-                if (!message?.text || !Array.isArray(message.text) || message.text.length === 0) {
+                // Fix: Check for 'showtext' in message first (ComfyUI standard UI update)
+                // Backend returns: {"ui": {"showtext": [text_to_process]}}
+                const newText = message?.showtext?.[0] || message?.text?.[0];
+
+                if (!newText) {
                     return;
                 }
 
-                const displayValue = message.text[0] || "";
+                const displayValue = newText;
 
                 // Strategy: 
                 // 1. Try to use existing 'showtext' widget if it's visible (not converted to input).
@@ -175,13 +253,13 @@ app.registerExtension({
 
                 // Update the found/created widget
                 if (targetWidget) {
-                    const isDisplayWidget = targetWidget.name === "display_text";
-                    const isReadOnly = !!(targetWidget.inputEl && targetWidget.inputEl.readOnly);
-                    if (isDisplayWidget || isReadOnly) {
-                        targetWidget.value = displayValue;
-                        if (targetWidget.inputEl) {
-                            targetWidget.inputEl.value = displayValue;
-                        }
+                    targetWidget.value = displayValue;
+                    if (targetWidget.inputEl) {
+                        targetWidget.inputEl.value = displayValue;
+                    }
+                    // Force UI update if needed
+                    if (targetWidget.callback) {
+                        targetWidget.callback(displayValue, app.canvas, this, app.canvas.graph_mouse, {});
                     }
                 }
 
