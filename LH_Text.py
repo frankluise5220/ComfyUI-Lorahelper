@@ -32,7 +32,7 @@ class LH_SuperText:
                 "text": ("STRING", {"forceInput": True, "default": ""}), 
 
                 "showtext": ("STRING", {"multiline": True, "default": "", "forceInput": False}),
-                "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "Seed for Wildcards"}),
+                # Seed is hidden to simplify UI.
             }
         }
     RETURN_TYPES = ("STRING",)
@@ -45,7 +45,7 @@ class LH_SuperText:
     def IS_CHANGED(s, **kwargs):
         return float("nan")
 
-    def process(self, text="", showtext="", seed=-1):
+    def process(self, text="", showtext="", seed=None):
         if not text:
             # If text is empty (e.g. initial state), fallback to showtext (manual input)
             text_to_process = showtext
@@ -68,9 +68,11 @@ class LH_SuperText:
                 text_to_process = str(text)
 
         # Apply Dynamic Prompts processing
-        # Use seed if provided, default to 0 if not
-        eff_seed = seed if seed != -1 else 0
-        final_text = process_dynamic_prompts(text_to_process, eff_seed)
+        # Auto-generate seed internally since widget is hidden
+        if seed is None:
+            seed = random.randint(0, 0xffffffffffffffff)
+        
+        final_text = process_dynamic_prompts(text_to_process, seed)
 
         # Update showtext widget in frontend with the RAW text (before dynamic prompts?) 
         # Or processed? Usually user wants to see what's being processed.
