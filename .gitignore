@@ -12,3 +12,7 @@ _random_expr_test.py
 random_expr_output.txt
 *test*.py
 *test*.txt
+*.7z
+*.zip
+*.rar
+diagnose_path.py
