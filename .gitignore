@@ -5,9 +5,6 @@ __pycache__/
 *.ckpt
 version_history.txt
 .DS_Store
-wildcards/*
-!wildcards/衣服.txt
-!wildcards/场景.txt
 _random_expr_test.py
 random_expr_output.txt
 *test*.py
@@ -16,3 +13,6 @@ random_expr_output.txt
 *.zip
 *.rar
 diagnose_path.py
+wildcards/*
+!wildcards/衣服.txt
+!wildcards/场景.txt
