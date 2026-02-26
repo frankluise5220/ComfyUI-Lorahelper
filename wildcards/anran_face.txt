@@ -1,6 +1,0 @@
-# --- 脸型锚点 ---
-{ (soft long pebble face shape:1.2), (pointed chin:1.4), (tight chin:1.4), youthful features, flawless skin }
-# --- 眼神与眉毛 ---
-{ (slender willow leaf eyebrows:1.2), soft eyes show love, teasing gaze, eyes half-lidded }
-# --- 唇部细节 ---
-{ (extremely thin lips:1.2), very small mouth, moist lips, (biting lip slightly:1.1) }
