@@ -1,9 +1,0 @@
-# --- [ 互动与肉感：这是去重复的关键 ] ---
-# (1) 压力细节：
-(knees pressing against chest:1.3), (breast compression:1.2), 展现身体受压处的细微褶皱。
-# (2) 触摸细节：
-(fingertips brushing against collarbone:1.1), (hand pushing hair behind ear:1.2).
-# (3) 物理状态：
-(sweat glistening on skin:1.1), (strands of hair stuck to damp skin:1.2).
-# (4) 视线引导：
-(looking away with a shy smile:1.1), (gazing intensely into the lens:1.2).
