@@ -43,7 +43,9 @@ The plugin supports one-click language switching (English/Chinese) via the Comfy
 
 ### 🔥 Heavy Support: Qwen 3.5 VL
 *   **Full Support**: Perfectly compatible with **Qwen2.5-VL** and the latest **Qwen3.5-VL** models.
-*   **Optimized Performance**: Automatically detects Qwen3.5-VL and disables "Chain-of-Thought" (thinking process) by default to ensure **3x faster generation speed** and prevent token waste.
+*   **Thinking Control**: New `enable_thinking` toggle allows you to enable/disable the "Chain-of-Thought" process.
+    *   **Disable (Default)**: Forces the model to skip thinking and output the result immediately. **3x faster** and saves tokens.
+    *   **Enable**: Allows the model to "think" before answering, suitable for complex logic or math tasks.
 *   **Smart Loading**: Auto-configures the correct visual encoder (CLIP) and chat template.
 
 ### 🧩 Node Overview
@@ -56,7 +58,7 @@ The plugin supports one-click language switching (English/Chinese) via the Comfy
     *   **GGUF Model**: Select your main LLM.
     *   **CLIP Model**: (Optional) Load a CLIP/MMProj model to enable vision capabilities for image analysis.
     *   **GPU Layers**: Supports auto-offloading VRAM.
-    *   **n_ctx**: Maximum context window size (default: 8192).
+    *   **n_ctx**: Maximum context window size (default: 4096).
 
 #### 2. LH_AIChat (DeepBlue Architecture)
 The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
@@ -69,6 +71,7 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   `temperature`: Creativity (higher = more random).
     *   `repetition_penalty`: Penalty for repeating text.
     *   `force_chinese`: (Boolean) Appends a Chinese translation directive to the system prompt, ensuring detailed Chinese output.
+    *   `enable_thinking`: (Boolean) Toggle Chain-of-Thought reasoning (Recommended: False for speed).
     *   `seed`: Random seed for reproducibility.
     *   `release_vram`: Auto-release VRAM after generation.
 *   **Outputs**:
@@ -97,20 +100,21 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **One-Click Save**: Simultaneously saves Images, Caption text, Log files, and ComfyUI Workflow metadata.
     *   **Workflow Embedding**: Supports saving the full ComfyUI workflow into the PNG, allowing drag-and-drop to reproduce the generation.
     *   **Flexible Naming**: Supports custom prefixes, filename overrides, and auto-incrementing.
+    *   **Localization**: Labels adapt to the selected language (e.g., "Save Method" / "保存方式").
 *   **Inputs**:
     *   `images`: Input images to save.
-    *   `folder_path`: Subfolder path in output directory (default: "LoRA_Train_Data").
-    *   `filename_prefix`: Prefix for filenames (default: "Anran").
-    *   `trigger_word`: Trigger word added to the start of caption files (default: "ChenAnran").
+    *   `folder_path`: Subfolder path in output directory (default: "output").
+    *   `filename_prefix`: Prefix for filenames (default: "ComfyUI").
+    *   `save_method`: **New!** Choose between `timestamp` (Time-based, default) or `sequential` (Auto-incrementing ID).
     *   `save_workflow`: Toggle to save ComfyUI workflow metadata in PNG.
-    *   `gen_prompt`: (Optional) Connect full description text to save in `_log.txt`.
-    *   `lora_tags`: (Optional) Connect tags to save in `.txt`.
+    *   `text1`: (Optional) Primary text to save (e.g., Gen Prompt).
+    *   `text2`: (Optional) Secondary text to save (e.g., Tags).
     *   `filename_final`: (Optional) Override specific filename (will be combined with prefix).
 *   **Outputs**:
     *   **Image**: `.png` with metadata (Workflow).
     *   **Tags**: `.txt` file with format `trigger_word, tags`.
     *   **Log**: `_log.txt` with the full raw AI response.
-*   **Path**: Default saves to `ComfyUI/output/LoRA_Train_Data/`.
+*   **Path**: Default saves to `ComfyUI/output/`.
 
 #### 6. LH_MultiTextSelector (Dynamic Prompt Generator)
 *   **Function**: A powerful text selector with support for Dynamic Prompts syntax and Batch Processing.
@@ -183,7 +187,9 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 
 ### 🔥 重磅支持：Qwen 3.5 VL
 *   **完美兼容**: 全面支持 **Qwen2.5-VL** 以及最新的 **Qwen3.5-VL** 全系列模型。
-*   **性能优化**: 针对 Qwen3.5-VL 自动禁用“思维链” (Thinking Process)，**生成速度提升3倍**，杜绝 Token 浪费。
+*   **思考控制 (Thinking Control)**: 新增 `enable_thinking` 开关，可自由控制是否启用“思维链”过程。
+    *   **禁用 (默认)**: 强制模型跳过繁琐的思考过程，直接输出结果。**生成速度提升 3 倍**，大幅节省 Token。
+    *   **启用**: 允许模型先思考再回答，适合处理复杂的逻辑推理或数学问题。
 *   **智能加载**: 自动匹配最佳的视觉编码器 (CLIP) 和对话模板，无需手动配置。
 
 ### 🧩 节点详解
@@ -195,7 +201,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **GGUF Model**: 选择主 LLM 模型。
     *   **CLIP Model**: (可选) 加载 CLIP/MMProj 模型以启用视觉能力。
     *   **GPU Layers**: 支持自动显存分流 (Offload)。
-    *   **n_ctx**: 最大上下文窗口大小 (默认: 8192)。
+    *   **n_ctx**: 最大上下文窗口大小 (默认: 4096)。
 
 #### 2. LH_AIChat (DeepBlue Architecture)
 核心智能节点。[查看逻辑流程图](./Logic_Flowchart.md)
@@ -207,6 +213,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `temperature`: 温度 (创造力，越高越随机)。
     *   `repetition_penalty`: 重复惩罚系数。
     *   `force_chinese`: (布尔值) 强制开启中文模式，在系统指令中追加翻译要求，确保输出详尽的中文内容。
+    *   `enable_thinking`: (布尔值) 启用思维链推理 (建议: 关闭以获得最快速度)。
     *   `seed`: 随机种子 (控制结果一致性)。
     *   `release_vram`: 生成后自动释放显存。
 *   **输出端口**:
@@ -233,16 +240,22 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 
 #### 5. LH_AllInOne_Saver (数据集保存器)
 *   **功能**: 一“键”保存 LoRA 训练所需的所有文件（图片、Prompt、Tags、工作流）。
+*   **特性**:
     *   **灵活命名**: 支持自定义前缀、覆盖文件名和自动递增。
+    *   **本地化支持**: 参数标签（如“保存方式”）会随插件语言设置自动切换。
 *   **输入参数**:
-    *   `folder_path`: 保存路径子文件夹 (默认: "LoRA_Train_Data")。
-    *   `filename_prefix`: 文件名前缀 (默认: "Anran").
-    *   `trigger_word`: 触发词，自动添加在 caption 文件的最开头 (默认: "ChenAnran").
+    *   `folder_path`: 保存路径子文件夹 (默认: "output")。
+    *   `filename_prefix`: 文件名前缀 (默认: "ComfyUI").
+    *   `save_method`: **新增!** 选择 `timestamp` (时间戳, 默认) 或 `sequential` (序号自增)。
     *   `save_workflow`: 开关，决定是否将 ComfyUI 工作流元数据写入图片 (支持拖入复现)。
-    *   `gen_prompt`: (可选) 连接完整描述文本，保存到 `_log.txt`。
-    *   `lora_tags`: (可选) 连接标签文本，保存到 `.txt` (位于触发词之后)。
+    *   `text1`: (可选) 主要保存文本 (如 Gen Prompt)。
+    *   `text2`: (可选) 次要保存文本 (如 Tags)。
     *   `filename_final`: (可选) 覆盖具体文件名 (会自动拼接前缀)。
-*   **路径**: 默认保存在 `output/LoRA_Train_Data/`，支持自定义子文件夹。
+*   **输出端口**:
+    *   **Image**: `.png` with metadata (Workflow).
+    *   **Tags**: `.txt` file with format `trigger_word, tags`.
+    *   **Log**: `_log.txt` with the full raw AI response.
+*   **路径**: 默认保存在 `output/` 目录。
 
 #### 6. LH_MultiTextSelector (多行提示词选择器)
 *   **功能**: 支持动态语法 (Dynamic Prompts) 和批量处理的多功能文本选择器。
@@ -298,6 +311,17 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 
 ## 📅 Update Log
 
+### v1.3.0 (2026-03-04)
+*   **[New]** **Qwen 3.5 VL**: Added full support for the latest Qwen 3.5 Vision models.
+*   **[Feature]** **Thinking Control**: Added `enable_thinking` toggle to `LH_AIChat`.
+    *   **Smart Speed-Up**: When disabled, it uses "Few-Shot Injection" + "System Constraints" to force the model to skip thinking, achieving **3x faster generation**.
+    *   **Clean Output**: Automatically removes any leaked `<think>` tags from the final output.
+*   **[Improvement]** **LH_AllInOne_Saver**:
+    *   **Save Methods**: Added `save_method` option to choose between `timestamp` (default) and `sequential` numbering.
+    *   **Localization**: Parameter labels (e.g., Save Method) now adapt to the plugin language.
+    *   **Input Update**: Renamed inputs to `text1` and `text2` for broader usage.
+*   **[Tweak]** **LH_GGUFLoader**: Increased default `n_ctx` to 4096 to support longer reasoning chains.
+
 ### v1.2.4 (2026-02-25)
 *   **[New]** **LH_SuperText**: **Auto-Unlock Feature!** The text widget now automatically becomes editable when the upstream node is **Bypassed** or **Muted**.
 *   **[Improvement]** **LH_SuperText**: Renamed input ports to `showtext` (Display) and `text` (Input) for better clarity.
@@ -319,10 +343,13 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **[FIX]** **Saver Node**: Fixed long filename errors. Filenames >100 chars or with illegal chars are now auto-replaced with `Error_Timestamp` markers instead of failing.
 *   **[OPTIMIZATION]** Removed aggressive `gc.collect()` calls during inference loops to reduce micro-stutters.
 
-### v1.2.2 更新日志
-*   **[新增]** **LH_SuperText**: 新增 `force_text` 输入端口。支持接入外部文本，断开时自动回退到文本框内容，实现连线/手动编辑的无缝切换。
-*   **[改进]** **LH_SuperText**: 增加 `seed` 种子控制和 `IS_CHANGED` 信号，确保通配符 (Wildcards) 每次运行都能正确随机更新。
-*   **[修复]** **Dynamic Prompts**: 修复了通配符文件的路径搜索问题，并优化了随机种子逻辑（seed=-1 现在是真随机）。
-
-### v1.2.1 更新日志
-*   **[严重修复]** 修复�?"Access Violation" 崩溃问题。新�?Metadata 元数据检测机制，精准识别 Qwen/Llava/Yi 模型架构，防止因加载错误的视觉处理器导致崩溃�?*   **[严重修复]** 修复了旧�?`llama-cpp-python` 不支�?`Q8_0` 量化导致的报错（增加自动回退机制）�?*   **[修复]** **Saver 节点**：修复长文件名保存失败问题。超�?00字符或含非法字符的文件名将自动替换为 `Error` 标记，确保图片数据不丢失�?*   **[优化]** 移除了推理循环中不必要的强制内存回收 (`gc.collect`)，大幅减少卡顿，提升批处理速度�?
+### v1.3.0 更新日志
+*   **[新增]** **Qwen 3.5 VL**: 全面支持最新的 Qwen 3.5 视觉模型。
+*   **[特性]** **思考控制 (Thinking Control)**: `LH_AIChat` 新增 `enable_thinking` 开关。
+    *   **智能加速**: 关闭时，通过“少样本注入 (Few-Shot Injection)”和“系统级禁令”强制模型跳过思考过程，**速度提升 3 倍**。
+    *   **纯净输出**: 自动清洗任何残留的 `<think>` 标签，确保结果干净可用。
+*   **[改进]** **LH_AllInOne_Saver**:
+    *   **保存方式**: 新增 `save_method` 选项，可选 `timestamp` (时间戳) 或 `sequential` (序号)。
+    *   **本地化**: 参数标签（如“保存方式”）现在会跟随插件语言自动切换。
+    *   **接口更新**: 输入端口重命名为 `text1` 和 `text2`，适用范围更广。
+*   **[调整]** **LH_GGUFLoader**: 默认 `n_ctx` 增加至 4096，以支持更长的推理链。

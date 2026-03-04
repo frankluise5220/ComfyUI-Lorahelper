@@ -461,7 +461,9 @@ PROMPT_FILENAME = (
 CONSTRAINT_HEADER = "\n[Constraints]\n"
 
 CONSTRAINT_NO_COT = [
-    "Output ONLY the requested sections. No conversational fillers. No <think> tags.\n"
+    "Disable internal reasoning. Disable Chain-of-Thought (CoT).",
+    "Do not output <think> tags. Do not output the thinking process.",
+    "Provide the final answer directly and immediately.\n"
 ]
 
 CONSTRAINT_ALLOW_COT = [
@@ -1769,16 +1771,23 @@ class UniversalAIChat:
             
             strict_constraints = ""
             
-            # 1. Behavior Rules (Only for Custom Instructions)
+            # 1. Behavior Rules
+            rules = []
+            
+            # [Thinking Control] Apply globally to ensure reliability
+            # This answers the user's question: "What exactly did you tell the model?"
+            # We explicitly tell it: "No <think> tags."
+            if not enable_thinking:
+                rules.extend(CONSTRAINT_NO_COT)
+                # [Reinforcement] Add a very explicit negative constraint for models that ignore standard rules
+                rules.append("Disable Chain-of-Thought. Disable internal monologue.")
+            elif chat_mode == "Debug_Chat (Raw)":
+                rules.extend(CONSTRAINT_ALLOW_COT)
+
+            # [Custom Instruction Rules]
             if not is_sc_empty:
-                rules = []
                 rules.extend(CONSTRAINT_NO_REPEAT)
                 
-                if chat_mode == "Debug_Chat (Raw)":
-                     rules.extend(CONSTRAINT_ALLOW_COT)
-                else:
-                     rules.extend(CONSTRAINT_NO_COT)
-    
                 rules.append(PROMPT_DESCRIPTION)
                 if enable_tags:
                     rules.append(PROMPT_TAGS)
@@ -1788,6 +1797,8 @@ class UniversalAIChat:
                 # [Safety Constraint] Explicitly forbid image generation
                 rules.append("Do not generate images or call external tools. Output ONLY text.")
 
+            # Build Constraint String if we have any rules
+            if rules:
                 strict_constraints += CONSTRAINT_HEADER
                 for i, rule in enumerate(rules, 1):
                     strict_constraints += f"{i}. {rule}\n"
@@ -1823,6 +1834,13 @@ class UniversalAIChat:
         messages = []
         if main_instruction:
             messages.append({"role": "system", "content": main_instruction})
+            
+        # [Thinking Control - Few-Shot Injection]
+        # For stubborn reasoning models, a few-shot example is the most effective standard technique
+        # to force them into a non-thinking state.
+        if not enable_thinking:
+            messages.append({"role": "user", "content": "Disable thinking process. Answer directly."})
+            messages.append({"role": "assistant", "content": "Understood. I will not use <think> tags and will answer directly."})
     
         # 3.2 User Message
         if is_vision_task:
@@ -1835,6 +1853,11 @@ class UniversalAIChat:
             # We inject the main instruction (style preset) directly into the user message to ensure it's followed.
             user_text_content = f"{main_instruction}\n\n{final_user_content}{template_instructions}"
             
+            # [Thinking Control - Last Resort]
+            # If thinking is disabled, we append a final command to the user message to force compliance.
+            if not enable_thinking:
+                user_text_content += "\n\nIMPORTANT: Do NOT output internal thought process. Do NOT use <think> tags. Answer directly."
+
             user_content_list = [
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
                 {"type": "text", "text": user_text_content}
@@ -1846,6 +1869,10 @@ class UniversalAIChat:
         else:
             # [Text Mode]
             final_text_content = f"{final_user_content}{template_instructions}"
+            
+            if not enable_thinking:
+                final_text_content += "\n\nIMPORTANT: Do NOT output internal thought process. Do NOT use <think> tags. Answer directly."
+                
             messages.append({"role": "user", "content": final_text_content})
             display_up = f"{LABEL_USER_INPUT}\n{user_material}"
 
@@ -2052,6 +2079,13 @@ class UniversalAIChat:
             
             # [Post-Processing]
             if full_res:
+                 # [DeepSeek/Qwen Fix] Remove <think> tags if thinking is disabled
+                 if not enable_thinking:
+                     # Remove thinking process including tags
+                     full_res = re.sub(r'<think>.*?</think>', '', full_res, flags=re.DOTALL)
+                     # Also remove standalone tags if model failed to close them or just output tags
+                     full_res = full_res.replace('<think>', '').replace('</think>', '')
+                 
                  for token in ["[/INST]", "[INST]", "<|im_end|>", "<|endoftext|>", "<|im_start|>", "User:"]:
                      full_res = full_res.replace(token, "")
             
@@ -2077,6 +2111,7 @@ class UniversalAIChat:
         # ==========================================================
         
         # [DeepSeek Fix] Remove <think> tags globally before parsing
+        # (This is redundant if enable_thinking=False, but safe to keep for parsing logic)
         clean_res_parsing = re.sub(r'<think>.*?</think>', '', full_res, flags=re.DOTALL).strip()
         
         # [Fix for "Start: ### description" Trigger]

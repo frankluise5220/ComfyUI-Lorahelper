@@ -16,3 +16,9 @@ diagnose_path.py
 wildcards/*
 !wildcards/衣服.txt
 !wildcards/场景.txt
+test/
+temp_*.py
+temp_*.js
+*.pyc
+*_remote*.py
+remote_*.py
