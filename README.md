@@ -1,6 +1,6 @@
 # 🚀 ComfyUI-LoraHelper
 
-一个专为 ComfyUI 打造的 **全能型 Prompt 引擎与 LoRA 炼丹助手**。最新支持Qwen3.5的反推和扩写。
+一个专为 ComfyUI 打造的 **全能型 Prompt 引擎与 LoRA 炼丹助手**。最新支持**Qwen3.5**的反推和扩写。
 
 它不仅是一个简单的 GGUF 模型加载器，更内置了 **“专家级” Prompt 工程师逻辑**：
 *   ✨ **灵魂反推 (Soul-Deep Captioning)**：超越简单的看图说话，精准捕捉画面氛围与意境，转化为 Flux/SD 可用的高质量 Prompt。
