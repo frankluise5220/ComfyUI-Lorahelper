@@ -63,18 +63,20 @@ const TRANSLATIONS = {
         "LoraHelper_Saver": {
             "title": "LH_全功能保存器",
             "images": "图像",
-            "gen_prompt": "生成提示词",
-            "lora_tags": "打标文本",
+            "text1": "文本1",
+            "text2": "文本2",
             "filename_final": "最终文件名",
             "folder_path": "保存路径",
             "filename_prefix": "文件前缀",
-            "trigger_word": "触发词",
-            "save_workflow": "保存工作流"
+            "save_workflow": "保存工作流",
+            "save_method": "文件名生成策略",
+            "timestamp": "时间戳",
+            "sequential": "序号"
         },
         "LoraHelper_SuperText": {
             "title": "LH_超级文本框",
             "showtext": "显示文本",
-            "text": "文本输入",
+            "text": "文本",
             "seed": "随机种子"
         },
         "LoraHelper_LoraLoader": {
@@ -308,6 +310,19 @@ function updateSingleNode(node, lang) {
                 widget.label = widget.originalLabel;
             } else if (dict && dict[widget.name]) {
                 widget.label = dict[widget.name];
+            }
+
+            // Special handling for LoRA_AllInOne_Saver save_method options
+            if (node.comfyClass === "LoRA_AllInOne_Saver" && widget.name === "save_method") {
+                if (lang === "zh-CN") {
+                    widget.options.values = ["时间戳", "序号"];
+                    if (widget.value === "timestamp") widget.value = "时间戳";
+                    if (widget.value === "sequential") widget.value = "序号";
+                } else {
+                    widget.options.values = ["timestamp", "sequential"];
+                    if (widget.value === "时间戳") widget.value = "timestamp";
+                    if (widget.value === "序号") widget.value = "sequential";
+                }
             }
         }
     }

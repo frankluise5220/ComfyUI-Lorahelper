@@ -41,6 +41,11 @@ More than just a GGUF loader, it embeds **Expert-Level Prompt Engineering logic*
 ### 🌐 Language Switching
 The plugin supports one-click language switching (English/Chinese) via the ComfyUI menu. No restart required.
 
+### 🔥 Heavy Support: Qwen 3.5 VL
+*   **Full Support**: Perfectly compatible with **Qwen2.5-VL** and the latest **Qwen3.5-VL** models.
+*   **Optimized Performance**: Automatically detects Qwen3.5-VL and disables "Chain-of-Thought" (thinking process) by default to ensure **3x faster generation speed** and prevent token waste.
+*   **Smart Loading**: Auto-configures the correct visual encoder (CLIP) and chat template.
+
 ### 🧩 Node Overview
 
 #### 1. LH_GGUFLoader (GGUF Model Loader)
@@ -175,6 +180,11 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 
 ### 🌐 中英文切换
 插件菜单支持一键切换语言（中/英），无需重启 ComfyUI。
+
+### 🔥 重磅支持：Qwen 3.5 VL
+*   **完美兼容**: 全面支持 **Qwen2.5-VL** 以及最新的 **Qwen3.5-VL** 全系列模型。
+*   **性能优化**: 针对 Qwen3.5-VL 自动禁用“思维链” (Thinking Process)，**生成速度提升3倍**，杜绝 Token 浪费。
+*   **智能加载**: 自动匹配最佳的视觉编码器 (CLIP) 和对话模板，无需手动配置。
 
 ### 🧩 节点详解
 

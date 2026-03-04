@@ -36,132 +36,179 @@ class LoRA_AllInOne_Saver:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "images": ("IMAGE", ),
-                "folder_path": ("STRING", {"default": "LoRA_Train_Data"}),
-                "filename_prefix": ("STRING", {"default": "Anran"}),
-                "trigger_word": ("STRING", {"default": "ChenAnran"}), 
-                "save_workflow": ("BOOLEAN", {"default": True}), # 功能 2：开关
+                "folder_path": ("STRING", {"default": "output"}),
+                "filename_prefix": ("STRING", {"default": "ComfyUI"}),
+                "save_workflow": ("BOOLEAN", {"default": True}),
+                "save_method": (["timestamp", "sequential", "时间戳", "序号"], {"default": "timestamp"}),
             },
             "optional": {
-                "gen_prompt": ("STRING", {"forceInput": True}),
-                "lora_tags": ("STRING", {"forceInput": True}),
+                "images": ("IMAGE", ),
+                "text1": ("STRING", {"forceInput": True}),
+                "text2": ("STRING", {"forceInput": True}),
                 "filename_final": ("STRING", {"forceInput": True}),
-            },
-            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"}
+            }
         }
+
     RETURN_TYPES = ()
     FUNCTION = "save"
-    OUTPUT_NODE = True  
+    OUTPUT_NODE = True
     CATEGORY = "LoraHelper"
 
-    def save(self, images, folder_path, filename_prefix, trigger_word, save_workflow, gen_prompt=None, lora_tags=None, filename_final=None, prompt=None, extra_pnginfo=None):
+    def save(self, folder_path, filename_prefix, save_workflow, save_method, images=None, text1=None, text2=None, filename_final=None, prompt=None, extra_pnginfo=None):
         
+        # [Localization Support] Normalize save_method
+        if save_method == "时间戳":
+            save_method = "timestamp"
+        elif save_method == "序号":
+            save_method = "sequential"
+
         # 0. Path Security Check & ComfyUI Standard Path Resolution
-        if folder_paths and folder_paths.get_output_directory:
+        if folder_paths and hasattr(folder_paths, 'get_output_directory'):
             self.output_dir = folder_paths.get_output_directory()
+        else:
+            self.output_dir = "output"
         
         # Construct the prefix properly
         if folder_path and folder_path.strip():
              full_prefix_arg = os.path.join(folder_path, filename_prefix)
         else:
              full_prefix_arg = filename_prefix
-             
-        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(full_prefix_arg, self.output_dir, images[0].shape[1], images[0].shape[0])
+        
+        # Determine image dimensions for counter logic
+        width = 0
+        height = 0
+        if images is not None and len(images) > 0:
+             width = images[0].shape[1]
+             height = images[0].shape[0]
+
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(full_prefix_arg, self.output_dir, width, height)
 
         # 1. Prepare Content (Caption)
-        if gen_prompt is None: gen_prompt = ""
-        if lora_tags is None: lora_tags = ""
-        
-        # Process tags
-        clean_tags = lora_tags.replace("\n", ", ").replace("  ", " ")
-        if trigger_word and trigger_word.strip() != "":
-            t_word = trigger_word.strip()
-            if not clean_tags.strip().lower().startswith(t_word.lower()):
-                 caption_content = f"{t_word}, {clean_tags}"
-            else:
-                 caption_content = clean_tags
-        else:
-            caption_content = clean_tags
-
-        caption_content = caption_content.strip().strip(",")
+        caption_content = ""
+        if text2 is not None:
+             clean_tags = text2.replace("\n", ", ").replace("  ", " ")
+             caption_content = clean_tags.strip().strip(",")
 
         results = []
-        # 2. Iterate Images
-        for i, image in enumerate(images):
-            # Determine Filename
-            file_parts = [filename] # This is the prefix part returned by get_save_image_path
+        
+        # 2. Pre-Loop: Determine Base Filename and Suffix (Timestamp or Sequential)
+        # We calculate the suffix ONCE for the entire batch to keep them grouped.
+        
+        # A. Base Filename Construction
+        base_file_parts = [filename] # This is the prefix part returned by get_save_image_path
+        
+        # Add filename_final (custom part) if exists
+        if filename_final:
+            # 1. Basic Sanitization
+            cleaned_name = re.sub(r'[<>:"/\\|?*\n\r\t]', "", filename_final).strip()
+            # 2. Length Check
+            if len(cleaned_name) > 100:
+                print(f"\033[33m[LoraHelper Saver] Warning: Filename too long. Truncated.\033[0m")
+                cleaned_name = cleaned_name[:100]
+            # 3. Final Cleanup
+            cleaned_name = cleaned_name.strip(". ")
+            if not cleaned_name and filename_final.strip():
+                cleaned_name = "INVALID_NAME"
+            # Remove extension
+            name_no_ext, ext = os.path.splitext(cleaned_name)
+            if ext.lower() in ['.png', '.jpg', '.jpeg', '.webp', '.txt']:
+                cleaned_name = name_no_ext
             
-            # Add filename_final (custom part) if exists
-            if filename_final:
-                # 1. Basic Sanitization: Remove illegal Windows chars
-                cleaned_name = re.sub(r'[<>:"/\\|?*\n\r\t]', "", filename_final).strip()
-                
-                # 2. Length Check & Error Fallback
-                MAX_CUSTOM_LEN = 100
-                if len(cleaned_name) > MAX_CUSTOM_LEN:
-                    print(f"\033[33m[LoraHelper Saver] Warning: Filename too long ({len(cleaned_name)} chars). Replaced with 'FILENAME_TOO_LONG_ERROR'.\033[0m")
-                    cleaned_name = "FILENAME_TOO_LONG_ERROR"
-                
-                # 3. Final Cleanup
-                # Remove trailing dots/spaces
-                cleaned_name = cleaned_name.strip(". ")
-                
-                # Check if we ended up with nothing
-                if not cleaned_name and filename_final.strip():
-                    cleaned_name = "FILENAME_INVALID_ERROR"
+            if cleaned_name:
+                base_file_parts.append(cleaned_name)
 
-                # Remove extension if user typed it manually
-                name_no_ext, ext = os.path.splitext(cleaned_name)
-                if ext.lower() in ['.png', '.jpg', '.jpeg', '.webp', '.txt']:
-                    cleaned_name = name_no_ext
-
-                if cleaned_name:
-                    file_parts.append(cleaned_name)
-
-            # Add Timestamp
-            timestamp_str = str(int(time.time()))
-            file_parts.append(timestamp_str)
+        # B. Suffix Generation (Timestamp or Sequential)
+        common_suffix = ""
+        if "timestamp" in save_method:
+            common_suffix = str(int(time.time()))
+        else:
+            # Sequential Mode: Find next available index
+            # Logic: Scan directory for files matching base_fname_XXXXX(_batch).ext
+            base_fname_str = "_".join(base_file_parts)
+            max_idx = 0
             
-            # Construct final filename
+            # Regex to match: base_fname_XXXXX(_Y).ext
+            # We match 5 digits at the end of the main part
+            # Example: Anran_00001.png or Anran_00001_0.png
+            # Pattern: ^base_fname_(\d{5})(?:_\d+)?\.(?:png|txt|json)$
+            try:
+                # Optimized Regex: Matches base_fname_ followed by digits, optionally followed by _anything (batch), ending with extension
+                pattern = re.compile(r"^" + re.escape(base_fname_str) + r"_(\d{5})(?:_.*)?\.(?:png|txt|json|jpeg|jpg|webp)$", re.IGNORECASE)
+                
+                if os.path.exists(full_output_folder):
+                    for f in os.listdir(full_output_folder):
+                        if f.startswith(base_fname_str):
+                            match = pattern.match(f)
+                            if match:
+                                try:
+                                    idx = int(match.group(1))
+                                    if idx > max_idx:
+                                        max_idx = idx
+                                except:
+                                    pass
+            except Exception as e:
+                print(f"[LoraHelper Saver] Error scanning directory: {e}")
+            
+            next_idx = max_idx + 1
+            common_suffix = f"{next_idx:05d}"
+
+        # 3. Iterate Logic
+        loop_count = 1
+        if images is not None and len(images) > 0:
+            loop_count = len(images)
+            
+        for i in range(loop_count):
+            image = None
+            if images is not None and len(images) > i:
+                image = images[i]
+            
+            # Construct Final Filename
+            file_parts = base_file_parts.copy()
+            file_parts.append(common_suffix)
+            
             fname = "_".join(file_parts)
 
-            # Handle batch index
-            if len(images) > 1:
+            # Handle batch index ONLY if we have multiple images
+            if images is not None and len(images) > 1:
                 fname += f"_{i}"
             
             # Save Image
-            img_tensor = image
-            i_np = 255. * img_tensor.cpu().numpy()
-            img = Image.fromarray(np.clip(i_np, 0, 255).astype(np.uint8))
-            
-            metadata = None
-            if save_workflow:
-                metadata = PngInfo()
-                if prompt is not None:
-                    metadata.add_text("prompt", json.dumps(prompt))
-                if extra_pnginfo is not None:
-                    for x in extra_pnginfo:
-                        metadata.add_text(x, json.dumps(extra_pnginfo[x]))
+            if image is not None:
+                img_tensor = image
+                i_np = 255. * img_tensor.cpu().numpy()
+                img = Image.fromarray(np.clip(i_np, 0, 255).astype(np.uint8))
+                
+                metadata = None
+                if save_workflow:
+                    metadata = PngInfo()
+                    if prompt is not None:
+                        metadata.add_text("prompt", json.dumps(prompt))
+                    if extra_pnginfo is not None:
+                        metadata.add_text("workflow", json.dumps(extra_pnginfo))
 
-            img_path = os.path.join(full_output_folder, f"{fname}.png")
-            img.save(img_path, pnginfo=metadata, compress_level=4)
+                img_path = os.path.join(full_output_folder, f"{fname}.png")
+                img.save(img_path, pnginfo=metadata, compress_level=4)
+                
+                results.append({
+                    "filename": f"{fname}.png",
+                    "subfolder": subfolder,
+                    "type": "output"
+                })
+            else:
+                pass
 
             # Save Caption
-            txt_path = os.path.join(full_output_folder, f"{fname}.txt")
-            with open(txt_path, "w", encoding="utf-8") as f:
-                f.write(caption_content)
+            if text2 is not None:
+                txt_path = os.path.join(full_output_folder, f"{fname}.txt")
+                with open(txt_path, "w", encoding="utf-8") as f:
+                    f.write(caption_content)
             
             # Save Log
-            log_path = os.path.join(full_output_folder, f"{fname}_log.txt")
-            with open(log_path, "w", encoding="utf-8") as f:
-                f.write(f"{gen_prompt}")
-
-            results.append({
-                "filename": f"{fname}.png",
-                "subfolder": subfolder,
-                "type": "output"
-            })
-
+            if text1 is not None:
+                log_path = os.path.join(full_output_folder, f"{fname}_log.txt")
+                with open(log_path, "w", encoding="utf-8") as f:
+                    f.write(f"{text1}")
+            
         return {"ui": {"images": results}}
 
 

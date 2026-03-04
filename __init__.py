@@ -1,17 +1,28 @@
-from .LH_Chat import UniversalAIChat, UniversalGGUFLoader, UniversalOllamaLoader, LH_History_Monitor, LH_KeywordLoraLoader, LH_TextDirectoryLoader
-from .LH_LlamaInstruct import LH_LlamaInstruct
-from .LH_Utils import LoRA_AllInOne_Saver, LH_AutoRatio
-from .LH_Text import LH_SuperText, LH_MultiTextSelector
 import os
+import shutil
+import sys
 import json
+import folder_paths
 from aiohttp import web
+from server import PromptServer
 
-# Try to import PromptServer from server (ComfyUI standard)
-try:
-    from server import PromptServer
-except ImportError:
-    # Fallback or dummy if running outside ComfyUI (unlikely)
-    PromptServer = None
+from .LH_Chat import (
+    UniversalOllamaLoader, 
+    UniversalGGUFLoader, 
+    UniversalAIChat, 
+    LH_History_Monitor, 
+    LH_KeywordLoraLoader, 
+    LH_TextDirectoryLoader
+)
+from .LH_LlamaInstruct import LH_LlamaInstruct
+from .LH_Text import (
+    LH_SuperText, 
+    LH_MultiTextSelector
+)
+from .LH_Utils import (
+    LoRA_AllInOne_Saver, 
+    LH_AutoRatio
+)
 
 # --- Config Management ---
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "lh_config.json")
@@ -78,8 +89,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LH_AutoRatio": "LH_AutoRatio",
 }
 
+
+
 WEB_DIRECTORY = "./web"
 
 __version__ = "1.2.6"
 __author__ = "LoraHelper Team"
-

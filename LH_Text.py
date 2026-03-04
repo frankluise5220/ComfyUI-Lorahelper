@@ -15,24 +15,14 @@ class LH_SuperText:
                 # Nothing required, allowing the node to be a pure generator/display node
             },
             "optional": {
-                # 'text' is a standard Widget now (forceInput removed to avoid mandatory connection error)
-                # But placed FIRST to capture auto-connect.
-                "text": ("STRING", {"multiline": True, "forceInput": True, "default": ""}), 
-                # Wait, if forceInput is True, it demands connection? 
-                # Let's try forceInput: False or just omit it. 
-                # If omitted, it's a widget. But we want it to be an input point primarily?
-                # Actually, forceInput: True in optional SHOULD be fine. 
-                # The user report "must be connected" suggests it's treated as required.
-                # Let's try making it a simple STRING widget that auto-converts.
-                # BUT auto-convert only happens if it's NOT forceInput.
-                # If we remove forceInput, it becomes a text box.
-                # Let's keep forceInput: True but ensure it's optional.
-                # Maybe the issue was the lack of default value?
-                # Let's add default value to text.
+                # 'text' is the ONLY input port (The Dot).
+                # 'showtext' is the display widget (The Box) and should NOT be connectable.
+                
+                # Input Dot (Top connection point)
                 "text": ("STRING", {"forceInput": True, "default": ""}), 
 
+                # Display Widget (Text Box, not connectable)
                 "showtext": ("STRING", {"multiline": True, "default": "", "forceInput": False}),
-                # Seed is hidden to simplify UI.
             }
         }
     RETURN_TYPES = ("STRING",)

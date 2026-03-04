@@ -26,13 +26,7 @@
             "n_ctx": "最大上下文 (n_ctx)"
         }
     },
-    "UniversalOllamaLoader": {
-        "title": "LH_Ollama加载器",
-        "inputs": {
-            "ollama_model": "Ollama模型",
-            "ollama_url": "Ollama地址"
-        }
-    },
+
     "UniversalCloudLoader": {
         "title": "LH_云端模型加载器",
         "inputs": {
@@ -62,20 +56,34 @@
         "title": "LH_全功能保存器",
         "inputs": {
             "images": "图像",
-            "gen_prompt": "生成提示词",
-            "lora_tags": "LoRA标签",
+            "text1": "文本1",
+            "text2": "文本2",
             "filename_final": "最终文件名",
             "folder_path": "保存路径",
             "filename_prefix": "文件前缀",
-            "trigger_word": "触发词",
-            "save_workflow": "保存工作流"
+            "save_workflow": "保存工作流",
+            "save_method": "文件名生成策略",
+            "timestamp": "时间戳",
+            "sequential": "序号"
         }
     },
     "LH_SuperText": {
         "title": "LH_超级文本框",
         "inputs": {
             "showtext": "显示文本",
-            "text": "文本输入"
+            "text": "文本"
+        },
+        "outputs": {
+            "text": "文本"
+        }
+    },
+    "UniversalOllamaLoader": {
+        "title": "LH_Ollama模型加载器",
+        "inputs": {
+            "ollama_url": "Ollama地址 (默认: http://127.0.0.1:11434)",
+            "model_name": "模型名称 (下拉选择)",
+            "custom_model": "自定义模型 (手动输入, 优先使用)",
+            "api_key": "API 密钥 (OpenAI/云端服务专用)"
         }
     },
     "LH_KeywordLoraLoader": {
