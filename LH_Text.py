@@ -74,6 +74,7 @@ class LH_MultiTextSelector:
     def __init__(self):
         self.index = 0
         self._spintax_pattern = re.compile(r"\{([^{}]+)\}")
+        self.history_texts = []  # Store pushed texts
 
     @classmethod
     def INPUT_TYPES(s):
@@ -85,17 +86,12 @@ class LH_MultiTextSelector:
                         "tooltip": "多文本选择模式：Sequential=按顺序批量运行；Random=每次随机选择一行",
                     },
                 ),
+                "clear_history": ("BOOLEAN", {"default": False, "tooltip": "是否在每次运行时清空历史记录"}),
             },
             "optional": {
-                "batch_text": ("STRING", {"forceInput": True}),
+                "batch_text": ("STRING", {"forceInput": True, "tooltip": "连接此处以将文本'推送'到列表末尾"}),
                 "widget_text": ("STRING", {"default": "", "multiline": True}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "随机种子 (用于控制Wildcards选择)"}),
-                "text_1": ("STRING", {"forceInput": True}),
-                "text_2": ("STRING", {"forceInput": True}),
-                "text_3": ("STRING", {"forceInput": True}),
-                "text_4": ("STRING", {"forceInput": True}),
-                "text_5": ("STRING", {"forceInput": True}),
-                "text_6": ("STRING", {"forceInput": True}),
             }
         }
 
@@ -155,40 +151,52 @@ class LH_MultiTextSelector:
             text = self._spintax_pattern.sub(repl, text)
         return text
 
-    def select(self, mode, batch_text=None, widget_text=None, seed=-1, **kwargs):
-        # 1. Collect all inputs
-        items = []
+    def select(self, mode, clear_history, batch_text=None, widget_text=None, seed=-1):
+        # Clear history if requested
+        if clear_history:
+            self.history_texts = []
+
+        # 1. Collect inputs
+        new_items = []
 
         # Process batch_text (multiline string or list)
         if batch_text is not None:
             if isinstance(batch_text, list):
                 # If upstream sends a list, use it directly (flattening)
                 for item in batch_text:
-                     items.append(str(item))
+                     new_items.append(str(item))
             else:
-                # If string, split by newline
+                # If string, split by newline? Or treat as single item to push?
+                # "Push" logic usually implies adding one item (or a batch) to the existing queue.
+                # If it contains newlines, should we split? 
+                # Let's assume standard behavior: split by lines if it looks like a batch, 
+                # or treat as one if it's a single prompt.
+                # To be safe and flexible: Split by lines.
                 lines = [line.strip() for line in str(batch_text).split('\n') if line.strip()]
-                items.extend(lines)
+                new_items.extend(lines)
 
-        # Process widget_text (multiline string)
+        # Process widget_text (multiline string) - always treated as base/static list
+        static_items = []
         if widget_text is not None:
              lines = [line.strip() for line in widget_text.split('\n') if line.strip()]
-             items.extend(lines)
+             static_items.extend(lines)
 
-        # Process individual text inputs (text_1 to text_6)
-        # Check kwargs for text_1, text_2, etc.
-        for i in range(1, 7):
-            key = f"text_{i}"
-            val = kwargs.get(key)
-            if val is not None and val != "":
-                if isinstance(val, list):
-                    for v in val:
-                         items.append(str(v))
-                else:
-                    items.append(str(val))
-
+        # Update history with new items (Push logic)
+        # We only add to history if there are new items from batch_text
+        if new_items:
+            self.history_texts.extend(new_items)
+            # Limit history to prevent infinite growth? Let's say 100 max for now, or keep all?
+            # User said "push 6 times", so probably wants to accumulate.
+            # Let's keep it unbounded for this session but provide clear_history to reset.
+            
+        # Combine static items (from widget) and history items (from push)
+        # Priority: Widget text + History text
+        combined_items = static_items + self.history_texts
+        
         # Filter out empty strings
-        items = [item for item in items if item.strip()]
+        items = [item for item in combined_items if item.strip()]
+        
+        # Remove duplicates? Maybe user wants duplicates. Let's keep them.
         
         if not items:
             return ([""],)

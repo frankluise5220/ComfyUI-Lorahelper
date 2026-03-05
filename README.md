@@ -132,9 +132,10 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 #### 6. LH_MultiTextSelector (Dynamic Prompt Generator)
 *   **Function**: A powerful text selector with support for Dynamic Prompts syntax and Batch Processing.
 *   **Features**:
-    *   **Batch Mode**: Paste multiple lines of text into `batch_text`. The node can output them as a list, running one workflow for each line (Sequential).
-    *   **Multi-Input Support**: Connect up to 6 separate text inputs (`text_1` to `text_6`) to combine them into a single batch.
-    *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through list/batch).
+    *   **Push Mode**: Connect upstream text to `batch_text`. Each time you run, the new text is appended to the internal list (history), like a stack.
+    *   **Batch Mode**: Paste multiple lines of text into `widget_text`. The node can output them as a list.
+    *   **Mode**: `Random` (select one randomly from list) or `Sequential` (cycle through list).
+    *   **Clear History**: Toggle `clear_history` to True to reset the pushed text stack.
     *   **Seed Control**: Ensure reproducible results.
 
 #### 7. LH_History_Monitor (History Viewer)
@@ -284,8 +285,9 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 #### 6. LH_MultiTextSelector (多行提示词选择器)
 *   **功能**: 支持动态语法 (Dynamic Prompts) 和批量处理的多功能文本选择器。
 *   **特性**:
-    *   **批量模式 (Batch)**: 在 `batch_text` 中粘贴多行文本，节点可将其作为列表输出，实现“一行文本运行一次工作流”的批量生成。
-    *   **多输入支持**: 支持连接最多 6 个独立的文本输入 (`text_1` 至 `text_6`)，将其合并为一个批次进行处理。
+    *   **推送模式 (Push Mode)**: 连接上游文本到 `batch_text`。每次运行，新文本会自动追加到内部列表（类似堆栈）。这允许你通过多次运行将不同的 Prompt 收集起来。
+    *   **批量模式 (Batch Mode)**: 在 `widget_text` 中粘贴多行文本，节点可将其作为列表输出。
+    *   **清空历史**: 设置 `clear_history` 为 True 即可清空之前推送积累的文本列表。
     *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环/批量列表)。
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
