@@ -70,11 +70,14 @@ class LH_SuperText:
         # Let's show the raw input text so user knows what came in.
         return {"ui": {"showtext": [text_to_process]}, "result": (final_text,)}
 
+# Global cache for LH_MultiTextSelector to persist history across executions
+_MULTI_TEXT_HISTORY = {}
+
 class LH_MultiTextSelector:
     def __init__(self):
         self.index = 0
         self._spintax_pattern = re.compile(r"\{([^{}]+)\}")
-        self.history_texts = []  # Store pushed texts
+        # self.history_texts is now managed via _MULTI_TEXT_HISTORY using unique_id
 
     @classmethod
     def INPUT_TYPES(s):
@@ -92,7 +95,8 @@ class LH_MultiTextSelector:
                 "batch_text": ("STRING", {"forceInput": True, "tooltip": "连接此处以将文本'推送'到列表末尾"}),
                 "widget_text": ("STRING", {"default": "", "multiline": True}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "随机种子 (用于控制Wildcards选择)"}),
-            }
+            },
+            "hidden": {"unique_id": "UNIQUE_ID"},
         }
 
     RETURN_TYPES = ("STRING",)
@@ -151,12 +155,22 @@ class LH_MultiTextSelector:
             text = self._spintax_pattern.sub(repl, text)
         return text
 
-    def select(self, mode, clear_history, batch_text=None, widget_text=None, seed=-1):
+    def select(self, mode, clear_history, unique_id=None, batch_text=None, widget_text=None, seed=-1):
+        global _MULTI_TEXT_HISTORY
+        
+        # Ensure unique_id is available (fallback to a default if not provided, though hidden inputs should work)
+        if unique_id is None:
+            unique_id = "default"
+            
+        # Initialize history for this node if not present
+        if unique_id not in _MULTI_TEXT_HISTORY:
+            _MULTI_TEXT_HISTORY[unique_id] = []
+
         # Clear history if requested
         if clear_history:
-            self.history_texts = []
+            _MULTI_TEXT_HISTORY[unique_id] = []
 
-        # 1. Collect inputs
+        # 1. Collect NEW inputs
         new_items = []
 
         # Process batch_text (multiline string or list)
@@ -166,12 +180,7 @@ class LH_MultiTextSelector:
                 for item in batch_text:
                      new_items.append(str(item))
             else:
-                # If string, split by newline? Or treat as single item to push?
-                # "Push" logic usually implies adding one item (or a batch) to the existing queue.
-                # If it contains newlines, should we split? 
-                # Let's assume standard behavior: split by lines if it looks like a batch, 
-                # or treat as one if it's a single prompt.
-                # To be safe and flexible: Split by lines.
+                # Split by lines
                 lines = [line.strip() for line in str(batch_text).split('\n') if line.strip()]
                 new_items.extend(lines)
 
@@ -184,19 +193,15 @@ class LH_MultiTextSelector:
         # Update history with new items (Push logic)
         # We only add to history if there are new items from batch_text
         if new_items:
-            self.history_texts.extend(new_items)
-            # Limit history to prevent infinite growth? Let's say 100 max for now, or keep all?
-            # User said "push 6 times", so probably wants to accumulate.
-            # Let's keep it unbounded for this session but provide clear_history to reset.
+            _MULTI_TEXT_HISTORY[unique_id].extend(new_items)
+            print(f"[LoraHelper] Node {unique_id}: Pushed {len(new_items)} items. Total history: {len(_MULTI_TEXT_HISTORY[unique_id])}")
             
         # Combine static items (from widget) and history items (from push)
         # Priority: Widget text + History text
-        combined_items = static_items + self.history_texts
+        combined_items = static_items + _MULTI_TEXT_HISTORY[unique_id]
         
         # Filter out empty strings
         items = [item for item in combined_items if item.strip()]
-        
-        # Remove duplicates? Maybe user wants duplicates. Let's keep them.
         
         if not items:
             return ([""],)
