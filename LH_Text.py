@@ -90,6 +90,12 @@ class LH_MultiTextSelector:
                 "batch_text": ("STRING", {"forceInput": True}),
                 "widget_text": ("STRING", {"default": "", "multiline": True}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "随机种子 (用于控制Wildcards选择)"}),
+                "text_1": ("STRING", {"forceInput": True}),
+                "text_2": ("STRING", {"forceInput": True}),
+                "text_3": ("STRING", {"forceInput": True}),
+                "text_4": ("STRING", {"forceInput": True}),
+                "text_5": ("STRING", {"forceInput": True}),
+                "text_6": ("STRING", {"forceInput": True}),
             }
         }
 
@@ -149,15 +155,40 @@ class LH_MultiTextSelector:
             text = self._spintax_pattern.sub(repl, text)
         return text
 
-    def select(self, mode, batch_text=None, widget_text=None, seed=-1):
-        # 1. Determine source
-        raw_text = ""
+    def select(self, mode, batch_text=None, widget_text=None, seed=-1, **kwargs):
+        # 1. Collect all inputs
+        items = []
+
+        # Process batch_text (multiline string or list)
         if batch_text is not None:
-            raw_text = "\n".join(batch_text) if isinstance(batch_text, list) else str(batch_text)
-        elif widget_text is not None:
-            raw_text = widget_text
-            
-        items = [line.strip() for line in raw_text.split('\n') if line.strip()]
+            if isinstance(batch_text, list):
+                # If upstream sends a list, use it directly (flattening)
+                for item in batch_text:
+                     items.append(str(item))
+            else:
+                # If string, split by newline
+                lines = [line.strip() for line in str(batch_text).split('\n') if line.strip()]
+                items.extend(lines)
+
+        # Process widget_text (multiline string)
+        if widget_text is not None:
+             lines = [line.strip() for line in widget_text.split('\n') if line.strip()]
+             items.extend(lines)
+
+        # Process individual text inputs (text_1 to text_6)
+        # Check kwargs for text_1, text_2, etc.
+        for i in range(1, 7):
+            key = f"text_{i}"
+            val = kwargs.get(key)
+            if val is not None and val != "":
+                if isinstance(val, list):
+                    for v in val:
+                         items.append(str(v))
+                else:
+                    items.append(str(val))
+
+        # Filter out empty strings
+        items = [item for item in items if item.strip()]
         
         if not items:
             return ([""],)

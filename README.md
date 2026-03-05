@@ -133,6 +133,7 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 *   **Function**: A powerful text selector with support for Dynamic Prompts syntax and Batch Processing.
 *   **Features**:
     *   **Batch Mode**: Paste multiple lines of text into `batch_text`. The node can output them as a list, running one workflow for each line (Sequential).
+    *   **Multi-Input Support**: Connect up to 6 separate text inputs (`text_1` to `text_6`) to combine them into a single batch.
     *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through list/batch).
     *   **Seed Control**: Ensure reproducible results.
 
@@ -257,11 +258,6 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `text1`: (可选) 主要保存文本 (如 Gen Prompt)。
     *   `text2`: (可选) 次要保存文本 (如 Tags)。
     *   `filename_final`: (可选) 覆盖具体文件名 (会自动拼接前缀)。
-*   **保存内容** (该节点无输出端口):
-    *   **Image**: `.png` 图片，包含工作流元数据。
-    *   **Tags**: `.txt` 标签文件，格式为 `触发词, 标签`。
-    *   **Log**: `_log.txt` 日志文件，包含完整的 AI 对话原始输出。
-*   **路径**: 默认保存在 `output/` 目录。
 
 #### 4. LH_GGUFLoader (模型加载器)
 *   **功能**: 加载 `.gguf` 格式的大语言模型。
@@ -289,6 +285,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **功能**: 支持动态语法 (Dynamic Prompts) 和批量处理的多功能文本选择器。
 *   **特性**:
     *   **批量模式 (Batch)**: 在 `batch_text` 中粘贴多行文本，节点可将其作为列表输出，实现“一行文本运行一次工作流”的批量生成。
+    *   **多输入支持**: 支持连接最多 6 个独立的文本输入 (`text_1` 至 `text_6`)，将其合并为一个批次进行处理。
     *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环/批量列表)。
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
@@ -315,7 +312,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **默认回退**: 如果未连接图片，则使用 `default_ratio` 作为默认比例。
 
 ### 🎨 全局特性：动态提示词引擎 (Dynamic Prompts Engine)
-*   **支持节点**: `LH_AIChat`, `LH_MultiTextSelector` 等所有核心节点。
+*   **支持节点**: `LH_AIChat`,`LH_Supertext`, `LH_MultiTextSelector` 等所有核心节点。
 *   **进阶语法**:
     *   **递归通配符**: `__colors__` - 读取 `.txt` 文件 (支持递归查找 `ComfyUI/wildcards` 或本插件内置目录)。
     *   **深度嵌套**: `{A|{B|C}}` - 支持高达 20 层嵌套选择。
