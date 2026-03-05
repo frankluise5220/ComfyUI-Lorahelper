@@ -50,17 +50,7 @@ The plugin supports one-click language switching (English/Chinese) via the Comfy
 
 ### 🧩 Node Overview
 
-#### 1. LH_GGUFLoader (GGUF Model Loader)
-*   **Function**: Loads `.gguf` format LLM models.
-*   **Supported Models**: Extensive support for mainstream VLM/LLM GGUF models, including **Qwen2.5-VL / Qwen2-VL**, **Llama 3.2 Vision**, **Yi-VL**, **Llava 1.5/1.6**, and other GGUF-compatible models.
-*   **Path**: Place your models in `ComfyUI/models/llm/`.
-*   **Features**:
-    *   **GGUF Model**: Select your main LLM.
-    *   **CLIP Model**: (Optional) Load a CLIP/MMProj model to enable vision capabilities for image analysis.
-    *   **GPU Layers**: Supports auto-offloading VRAM.
-    *   **n_ctx**: Maximum context window size (default: 4096).
-
-#### 2. LH_AIChat (DeepBlue Architecture)
+#### 1. LH_AIChat (DeepBlue Architecture)
 The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 *   **Inputs**:
     *   `model`: The loaded LLM.
@@ -87,27 +77,14 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Enhance_Prompt**: Creatively expands on user inputs.
     *   **Debug_Chat**: Analyzes prompts based on instructions.
 
-#### 3. LH_History_Monitor (History Viewer)
-*   **Function**: Manages conversation history and context.
+#### 2. LH_SuperText (Prompt Relay Station)
+*   **Function**: The **Prompt Control Center**. Acts as a bridge between your Prompt Generator and CLIP, balancing "AI Creativity" with "Manual Precision".
 *   **Features**:
-    *   **Visual History**: Displays the last 5 rounds in clear "Round X" cards.
-    *   **Auto-Resize**: Automatically adjusts size to fit content.
-    *   **Context Loop**: Outputs formatted context to be copied into `user_material` for multi-turn debugging.
+    *   **Dual Role**: Acts as both an upstream text aggregator/pass-through and a direct downstream text source.
+    *   **Smart Relay (Auto-Unlock)**: Automatically receives upstream prompts. To **take over** and manually edit the text, simply disconnect, bypass, or mute the upstream node. The widget will automatically unlock, allowing you to refine the AI-generated text perfectly ("What You Type Is What You Get").
+    *   **Dynamic Syntax**: Even manually edited text supports dynamic syntax like `{red|blue}` or `__wildcards__`.
 
-#### 4. UniversalOllamaLoader (Local/Remote Ollama)
-*   **Function**: Loads models from a local or remote Ollama instance.
-*   **Features**:
-    *   **Auto-Discovery**: Automatically fetches the list of available models from the Ollama server.
-    *   **Vision Ready**: Auto-detects vision capabilities based on model name keywords (e.g., "llava", "vision").
-    *   **Config Memory**: Automatically saves your Ollama URL and API Key to `lh_config.json`, so you don't have to re-enter them.
-    *   **Custom Models**: Supports manual entry for new models not yet in the list.
-*   **Inputs**:
-    *   `ollama_url`: The URL of your Ollama server (default: `http://127.0.0.1:11434`).
-    *   `model_name`: Select from the list of available models.
-    *   `custom_model`: Manually specify a model name (priority over list selection).
-    *   `api_key`: Optional API Key for OpenAI-compatible endpoints.
-
-#### 5. LH_AllInOne_Saver (Dataset Saver)
+#### 3. LH_AllInOne_Saver (Dataset Saver)
 *   **Function**: One-click solution for saving training data, prompts, tags, and workflows.
 *   **Features**:
     *   **One-Click Save**: Simultaneously saves Images, Caption text, Log files, and ComfyUI Workflow metadata.
@@ -129,6 +106,29 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Log**: `_log.txt` with the full raw AI response.
 *   **Path**: Default saves to `ComfyUI/output/`.
 
+#### 4. LH_GGUFLoader (GGUF Model Loader)
+*   **Function**: Loads `.gguf` format LLM models.
+*   **Supported Models**: Extensive support for mainstream VLM/LLM GGUF models, including **Qwen2.5-VL / Qwen2-VL**, **Llama 3.2 Vision**, **Yi-VL**, **Llava 1.5/1.6**, and other GGUF-compatible models.
+*   **Path**: Place your models in `ComfyUI/models/llm/`.
+*   **Features**:
+    *   **GGUF Model**: Select your main LLM.
+    *   **CLIP Model**: (Optional) Load a CLIP/MMProj model to enable vision capabilities for image analysis.
+    *   **GPU Layers**: Supports auto-offloading VRAM.
+    *   **n_ctx**: Maximum context window size (default: 4096).
+
+#### 5. UniversalOllamaLoader (Local/Remote Ollama)
+*   **Function**: Loads models from a local or remote Ollama instance.
+*   **Features**:
+    *   **Auto-Discovery**: Automatically fetches the list of available models from the Ollama server.
+    *   **Vision Ready**: Auto-detects vision capabilities based on model name keywords (e.g., "llava", "vision").
+    *   **Config Memory**: Automatically saves your Ollama URL and API Key to `lh_config.json`, so you don't have to re-enter them.
+    *   **Custom Models**: Supports manual entry for new models not yet in the list.
+*   **Inputs**:
+    *   `ollama_url`: The URL of your Ollama server (default: `http://127.0.0.1:11434`).
+    *   `model_name`: Select from the list of available models.
+    *   `custom_model`: Manually specify a model name (priority over list selection).
+    *   `api_key`: Optional API Key for OpenAI-compatible endpoints.
+
 #### 6. LH_MultiTextSelector (Dynamic Prompt Generator)
 *   **Function**: A powerful text selector with support for Dynamic Prompts syntax and Batch Processing.
 *   **Features**:
@@ -136,12 +136,12 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through list/batch).
     *   **Seed Control**: Ensure reproducible results.
 
-#### 7. LH_SuperText (Prompt Relay Station)
-*   **Function**: The **Prompt Control Center**. Acts as a bridge between your Prompt Generator and CLIP, balancing "AI Creativity" with "Manual Precision".
+#### 7. LH_History_Monitor (History Viewer)
+*   **Function**: Manages conversation history and context.
 *   **Features**:
-    *   **Dual Role**: Acts as both an upstream text aggregator/pass-through and a direct downstream text source.
-    *   **Smart Relay (Auto-Unlock)**: Automatically receives upstream prompts. To **take over** and manually edit the text, simply disconnect, bypass, or mute the upstream node. The widget will automatically unlock, allowing you to refine the AI-generated text perfectly ("What You Type Is What You Get").
-    *   **Dynamic Syntax**: Even manually edited text supports dynamic syntax like `{red|blue}` or `__wildcards__`.
+    *   **Visual History**: Displays the last 5 rounds in clear "Round X" cards.
+    *   **Auto-Resize**: Automatically adjusts size to fit content.
+    *   **Context Loop**: Outputs formatted context to be copied into `user_material` for multi-turn debugging.
 
 #### 8. LH_LoraLoader (Keyword Lora Loader)
 *   **Function**: Automatically loads specific LoRAs based on keywords found in the prompt.
@@ -207,16 +207,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 
 ### 🧩 节点详解
 
-#### 1. LH_GGUFLoader (模型加载器)
-*   **功能**: 加载 `.gguf` 格式的大语言模型。
-*   **路径**: 请将模型文件放入 `ComfyUI/models/llm/` 目录。
-*   **特性**:
-    *   **GGUF Model**: 选择主 LLM 模型。
-    *   **CLIP Model**: (可选) 加载 CLIP/MMProj 模型以启用视觉能力。
-    *   **GPU Layers**: 支持自动显存分流 (Offload)。
-    *   **n_ctx**: 最大上下文窗口大小 (默认: 4096)。
-
-#### 2. LH_AIChat (DeepBlue Architecture)
+#### 1. LH_AIChat (DeepBlue Architecture)
 核心智能节点。[查看逻辑流程图](./Logic_Flowchart.md)
 *   **输入参数**:
     *   `image` (可选): 连接图片后自动触发 **隐形反推模式**。
@@ -245,26 +236,14 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **视觉预设**:
     *   **Vision_Beauty (Film-level)**: **新增!** 法医级女性人像分析，在无审查与艺术美感之间取得平衡。
 
-#### 3. LH_History_Monitor (历史看板)
-*   **功能**: 维护并显示最近 5 轮的对话历史。
+#### 2. LH_SuperText (提示词中转站)
+*   **功能**: **提示词调度中心**。连接在提示词生成器与 CLIP 之间，充当“AI 灵感”与“人工精修”的桥梁。
 *   **特性**:
-    *   **可视化显示**: 以 "Round X" 卡片形式清晰展示对话内容，自动调整窗口大小。
-    *   **上下文循环**: 输出格式化后的 `context` 文本，可复制到 `user_material` 实现多轮对话调试。
+    *   **双重角色 (Dual Role)**: 既是上游文本的聚合/透传节点，也是下游的直接文本源。
+    *   **中转接管 (Smart Relay & Auto-Unlock)**: 自动接收上游提示词。若需人工介入，只需断开、绕开或静音上游节点，文本框即会自动**解锁**。此时您可以基于 AI 生成的底稿进行精细化编辑（断点精修），实现“指哪打哪”的精准控制。
+    *   **动态语法**: 手动修改的文本依然支持 `{red|blue}` 或 `__wildcard__` 等动态语法。
 
-#### 4. UniversalOllamaLoader (本地 Ollama 加载器)
-*   **功能**: 加载本地或远程 Ollama 服务中的模型。
-*   **特性**:
-    *   **自动发现**: 自动获取 Ollama 服务端已下载的模型列表。
-    *   **视觉支持**: 根据模型名称关键词（如 "llava", "vision"）自动识别是否支持视觉功能。
-    *   **配置记忆**: 自动保存 Ollama 地址和 API Key 到配置文件，无需重复输入。
-    *   **自定义模型**: 支持手动输入模型名称（针对未在列表中显示的新模型）。
-*   **输入参数**:
-    *   `ollama_url`: Ollama 服务地址 (默认: `http://127.0.0.1:11434`)。
-    *   `model_name`: 从列表中选择模型。
-    *   `custom_model`: 手动输入模型名称 (优先使用)。
-    *   `api_key`: 可选 API Key (用于兼容 OpenAI 格式的服务)。
-
-#### 5. LH_AllInOne_Saver (数据集保存器)
+#### 3. LH_AllInOne_Saver (数据集保存器)
 *   **功能**: 一“键”保存 LoRA 训练所需的所有文件（图片、Prompt、Tags、工作流）。
 *   **特性**:
     *   **灵活命名**: 支持自定义前缀、覆盖文件名和自动递增。
@@ -284,6 +263,28 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **Log**: `_log.txt` 日志文件，包含完整的 AI 对话原始输出。
 *   **路径**: 默认保存在 `output/` 目录。
 
+#### 4. LH_GGUFLoader (模型加载器)
+*   **功能**: 加载 `.gguf` 格式的大语言模型。
+*   **路径**: 请将模型文件放入 `ComfyUI/models/llm/` 目录。
+*   **特性**:
+    *   **GGUF Model**: 选择主 LLM 模型。
+    *   **CLIP Model**: (可选) 加载 CLIP/MMProj 模型以启用视觉能力。
+    *   **GPU Layers**: 支持自动显存分流 (Offload)。
+    *   **n_ctx**: 最大上下文窗口大小 (默认: 4096)。
+
+#### 5. UniversalOllamaLoader (本地 Ollama 加载器)
+*   **功能**: 加载本地或远程 Ollama 服务中的模型。
+*   **特性**:
+    *   **自动发现**: 自动获取 Ollama 服务端已下载的模型列表。
+    *   **视觉支持**: 根据模型名称关键词（如 "llava", "vision"）自动识别是否支持视觉功能。
+    *   **配置记忆**: 自动保存 Ollama 地址和 API Key 到配置文件，无需重复输入。
+    *   **自定义模型**: 支持手动输入模型名称（针对未在列表中显示的新模型）。
+*   **输入参数**:
+    *   `ollama_url`: Ollama 服务地址 (默认: `http://127.0.0.1:11434`)。
+    *   `model_name`: 从列表中选择模型。
+    *   `custom_model`: 手动输入模型名称 (优先使用)。
+    *   `api_key`: 可选 API Key (用于兼容 OpenAI 格式的服务)。
+
 #### 6. LH_MultiTextSelector (多行提示词选择器)
 *   **功能**: 支持动态语法 (Dynamic Prompts) 和批量处理的多功能文本选择器。
 *   **特性**:
@@ -291,12 +292,11 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环/批量列表)。
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
-#### 7. LH_SuperText (提示词中转站)
-*   **功能**: **提示词调度中心**。连接在提示词生成器与 CLIP 之间，充当“AI 灵感”与“人工精修”的桥梁。
+#### 7. LH_History_Monitor (历史看板)
+*   **功能**: 维护并显示最近 5 轮的对话历史。
 *   **特性**:
-    *   **双重角色 (Dual Role)**: 既是上游文本的聚合/透传节点，也是下游的直接文本源。
-    *   **中转接管 (Smart Relay & Auto-Unlock)**: 自动接收上游提示词。若需人工介入，只需断开、绕开或静音上游节点，文本框即会自动**解锁**。此时您可以基于 AI 生成的底稿进行精细化编辑（断点精修），实现“指哪打哪”的精准控制。
-    *   **动态语法**: 手动修改的文本依然支持 `{red|blue}` 或 `__wildcard__` 等动态语法。
+    *   **可视化显示**: 以 "Round X" 卡片形式清晰展示对话内容，自动调整窗口大小。
+    *   **上下文循环**: 输出格式化后的 `context` 文本，可复制到 `user_material` 实现多轮对话调试。
 
 #### 8. LH_LoraLoader (关键词 Lora 加载器)
 *   **功能**: 与手动填写触发词不同，该节点根据检查提示词中的关键词，自动判断是否加载指定的 LoRA。
