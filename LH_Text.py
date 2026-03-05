@@ -1,5 +1,7 @@
 import re
 import random
+import json
+import time  # Import time for IS_CHANGED
 from .LH_Utils import process_dynamic_prompts
 
 class LH_SuperText:
@@ -49,7 +51,6 @@ class LH_SuperText:
                 # Join list items with newline
                 text_to_process = "\n".join([str(item) for item in text])
             elif isinstance(text, dict):
-                 import json
                  try:
                      text_to_process = json.dumps(text, indent=4, ensure_ascii=False)
                  except:
@@ -94,6 +95,7 @@ class LH_MultiTextSelector:
             "optional": {
                 "batch_text": ("STRING", {"forceInput": True, "tooltip": "连接此处以将文本'推送'到列表末尾"}),
                 "widget_text": ("STRING", {"default": "", "multiline": True}),
+                "showtext": ("STRING", {"default": "", "multiline": True, "forceInput": False}),
                 "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "tooltip": "随机种子 (用于控制Wildcards选择)"}),
             },
             "hidden": {"unique_id": "UNIQUE_ID"},
@@ -101,13 +103,15 @@ class LH_MultiTextSelector:
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
-    OUTPUT_IS_LIST = (True,)
+    OUTPUT_IS_LIST = (False,)
+    OUTPUT_NODE = True
     FUNCTION = "select"
     CATEGORY = "LoraHelper"
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
-        return float("nan")
+        # Use timestamp to ensure execution on every run, avoiding cache issues
+        return float(time.time())
 
     def _apply_spintax(self, text):
         if not isinstance(text, str):
@@ -155,76 +159,63 @@ class LH_MultiTextSelector:
             text = self._spintax_pattern.sub(repl, text)
         return text
 
-    def select(self, mode, clear_history, unique_id=None, batch_text=None, widget_text=None, seed=-1):
+    def select(self, mode, clear_history, unique_id=None, batch_text=None, widget_text=None, showtext=None, seed=-1):
         global _MULTI_TEXT_HISTORY
         
-        # Ensure unique_id is available (fallback to a default if not provided, though hidden inputs should work)
-        if unique_id is None:
-            unique_id = "default"
-            
-        # Initialize history for this node if not present
-        if unique_id not in _MULTI_TEXT_HISTORY:
-            _MULTI_TEXT_HISTORY[unique_id] = []
+        unique_id = unique_id if unique_id is not None else "default"
+        
+        # Initialize history
+        if unique_id not in _MULTI_TEXT_HISTORY or clear_history:
+             if clear_history:
+                 print(f"[LoraHelper] Node {unique_id}: History cleared.")
+             _MULTI_TEXT_HISTORY[unique_id] = []
 
-        # Clear history if requested
-        if clear_history:
-            _MULTI_TEXT_HISTORY[unique_id] = []
-
-        # 1. Collect NEW inputs
-        new_items = []
-
-        # Process batch_text (multiline string or list)
-        if batch_text is not None:
+        # 1. Collect NEW inputs (Push to Stack)
+        if batch_text:
+            new_items = []
             if isinstance(batch_text, list):
-                # If upstream sends a list, use it directly (flattening)
-                for item in batch_text:
-                     new_items.append(str(item))
+                new_items = [str(item) for item in batch_text]
             else:
-                # Split by lines
-                lines = [line.strip() for line in str(batch_text).split('\n') if line.strip()]
-                new_items.extend(lines)
-
-        # Process widget_text (multiline string) - always treated as base/static list
-        static_items = []
-        if widget_text is not None:
-             lines = [line.strip() for line in widget_text.split('\n') if line.strip()]
-             static_items.extend(lines)
-
-        # Update history with new items (Push logic)
-        # We only add to history if there are new items from batch_text
-        if new_items:
-            _MULTI_TEXT_HISTORY[unique_id].extend(new_items)
-            print(f"[LoraHelper] Node {unique_id}: Pushed {len(new_items)} items. Total history: {len(_MULTI_TEXT_HISTORY[unique_id])}")
+                # Handle string input (split lines)
+                s_text = str(batch_text).strip()
+                if s_text:
+                    new_items = [line.strip() for line in s_text.split('\n') if line.strip()]
             
-        # Combine static items (from widget) and history items (from push)
-        # Priority: Widget text + History text
-        combined_items = static_items + _MULTI_TEXT_HISTORY[unique_id]
-        
-        # Filter out empty strings
-        items = [item for item in combined_items if item.strip()]
-        
+            if new_items:
+                _MULTI_TEXT_HISTORY[unique_id].extend(new_items)
+                print(f"[LoraHelper] Node {unique_id}: Pushed {len(new_items)} items. Total: {len(_MULTI_TEXT_HISTORY[unique_id])}")
+
+        # 2. Get Current Stack
+        items = [x for x in _MULTI_TEXT_HISTORY[unique_id] if x.strip()]
+        full_text_display = "\n".join(items)
+
         if not items:
-            return ([""],)
-            
+            return {"ui": {"widget_text": [""], "showtext": [""]}, "result": ("",)}
+
+        # 3. Mode Selection
+        try:
+            seed_int = int(seed)
+        except (ValueError, TypeError):
+            seed_int = random.randint(0, 0xffffffffffffffff)
+
         final_list = []
-        
         if mode == "Random":
-            # Random Mode: Return 1 random item (List of 1)
-            rng = random.Random(seed) if seed != -1 else random.Random()
-            chosen = rng.choice(items)
-            final_list = [chosen]
+            rng = random.Random(seed_int) if seed_int != -1 else random.Random()
+            final_list = [rng.choice(items)]
         else:
-            # Sequential Mode: Return ALL items (List of N)
-            # This triggers ComfyUI batch processing (one run per item)
+            # Sequential (All items)
             final_list = items
 
-        # Process each item in the list
+        # 4. Process Content (Wildcards & Spintax)
         processed_list = []
+        dp_seed = seed_int if seed_int != -1 else random.randint(0, 0xffffffffffffffff)
+        
         for item in final_list:
-            # 1. Process Wildcards (Dynamic Prompts)
-            item = process_dynamic_prompts(item, seed)
-            # 2. Process Spintax (Inline Random with weights)
+            item = process_dynamic_prompts(item, dp_seed)
             item = self._apply_spintax(item)
             processed_list.append(item)
+
+        # 5. Output
+        final_output_string = "\n".join(processed_list)
         
-        return (processed_list,)
+        return {"ui": {"widget_text": [full_text_display], "showtext": [full_text_display]}, "result": (final_output_string,)}
