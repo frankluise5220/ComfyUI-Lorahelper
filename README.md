@@ -136,12 +136,14 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Mode**: `Random` (select one randomly) or `Sequential` (cycle through list/batch).
     *   **Seed Control**: Ensure reproducible results.
 
-#### 7. LH_SuperText
-*   **Function**: **Bidirectional Text Node (Input/Output)**. Supports disconnected editing and rapid image generation.
+#### 7. LH_SuperText (Prompt Relay Station)
+*   **Function**: The **Prompt Control Center**. Acts as a bridge between your Prompt Generator and CLIP, balancing "AI Creativity" with "Manual Precision".
 *   **Features**:
     *   **Dual Role**: Acts as both an upstream text aggregator/pass-through and a direct downstream text source.
-    *   **Editable Mode**: Automatically enables editing when disconnected, bypassed, or when the upstream node is disabled. Supports instant editing and locking of current content.
-    *   **Quick Generation**: Perfect for "Gacha" style prompting. Generate a prompt, then temporarily bypass/disable the upstream workflow to "lock" the text in SuperText. Use this fixed text as the prompt for image generation, avoiding constant re-generation from the upstream LLM.
+    *   **Relay & Takeover**: Automatically receives prompts from upstream. If the result is good but needs tweaking, you can edit it directly.
+    *   **Auto-Unlock**: Automatically enters **Editable Mode** when the upstream node is disconnected, bypassed, or muted.
+    *   **Interrupt & Refine**: Once you have a good base prompt, mute the upstream. SuperText retains the text for precise manual editing ("What You Type Is What You Get").
+    *   **Dynamic Syntax**: Even manually edited text supports dynamic syntax like `{red|blue}` or `__wildcards__`.
 
 #### 8. LH_LoraLoader (Keyword Lora Loader)
 *   **Function**: Automatically loads specific LoRAs based on keywords found in the prompt.
@@ -291,12 +293,14 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **模式切换**: `Random` (随机选择) 或 `Sequential` (顺序循环/批量列表)。
     *   **Seed 控制**: 通过种子固定随机结果，方便复现。
 
-#### 7. LH_SuperText
-*   **功能**: **双向文本节点（输入/输出）**，支持断链编辑与快速出图。
+#### 7. LH_SuperText (提示词中转站)
+*   **功能**: **提示词调度中心**。连接在提示词生成器与 CLIP 之间，充当“AI 灵感”与“人工精修”的桥梁。
 *   **特性**:
-    *   **双重角色**: 既能作为上游文本的聚合/透传节点，也能作为下游的直接文本输出节点。
-    *   **可编辑模式**: 当断开、绕开或关闭上游节点时，自动进入可编辑状态，支持在节点内即时编辑与锁定当前内容。
-    *   **快速出图**: 抽卡获得提示词后，可暂时屏蔽上游工作流，直接使用 SuperText 的文本作为 Prompt 投喂至下游生成节点，避免上游反复改写带来的干扰。
+    *   **双重角色 (Dual Role)**: 既是上游文本的聚合/透传节点，也是下游的直接文本源。
+    *   **中转接管 (Relay & Takeover)**: 自动接收上游生成的提示词。若对生成结果不满意，可直接在文本框中手动微调。
+    *   **智能解锁 (Auto-Unlock)**: 当断开、绕开或关闭上游节点时，文本框会自动解锁进入**可编辑模式**。
+    *   **断点精修 (Interrupt & Edit)**: 生成满意的基底提示词后，可静音上游。SuperText 会保留文本，供您进行精细化编辑，实现“指哪打哪”的精准生图。
+    *   **动态语法**: 手动修改的文本依然支持 `{red|blue}` 或 `__wildcard__` 等动态语法。
 
 #### 8. LH_LoraLoader (关键词 Lora 加载器)
 *   **功能**: 与手动填写触发词不同，该节点根据检查提示词中的关键词，自动判断是否加载指定的 LoRA。

@@ -442,6 +442,9 @@ TRIGGER_ORDER_FILENAME = f"### filename\n{filename_placeholder}\n"
 TRIGGER_SUFFIX = "\nStart:\n### description\n"
 
 # Standard Output Format Block (To be appended to presets)
+# [REDUNDANT] This was used in old presets logic.
+# Now we construct output format dynamically based on enabled flags (lines 1730+).
+# Keeping it for reference or fallback but it's not the primary source of truth.
 STANDARD_OUTPUT_FORMAT = (
     "\n\n[Output Format]\n"
     f"### description: {main_instruction_placeholder}\n"
@@ -468,8 +471,12 @@ CONSTRAINT_NO_COT = [
     "Provide the final answer directly and immediately."
 ]
 
-CONSTRAINT_ALLOW_COT = [
-    "You MAY output your thinking process enclosed in <think>...</think> tags BEFORE the actual content.\n"
+# CONSTRAINT_ALLOW_COT = [
+#    "You MAY output your thinking process enclosed in <think>...</think> tags BEFORE the actual content.\n"
+# ]
+
+CONSTRAINT_NO_REPEAT = [
+    "Do NOT repeat the instructions.\n"
 ]
 
 # [Thinking Control] Few-Shot & Suffix
@@ -478,9 +485,6 @@ THINKING_DISABLE_USER_MSG = "Disable thinking process. Answer directly."
 THINKING_DISABLE_ASSISTANT_MSG = ""
 # THINKING_DISABLE_SUFFIX = "\n\nIMPORTANT: Do NOT output internal thought process. Do NOT use <think> tags. Answer directly."
 THINKING_DISABLE_SUFFIX = ""
-CONSTRAINT_NO_REPEAT = [
-    "Do NOT repeat the instructions.\n"
-]
 
 # [Config] Input Labels
 LABEL_USER_INPUT = "[User Material]:"
@@ -1787,8 +1791,10 @@ class UniversalAIChat:
             # We explicitly tell it: "No <think> tags."
             if not enable_thinking:
                 rules.extend(CONSTRAINT_NO_COT)
-            elif chat_mode == "Debug_Chat (Raw)":
-                rules.extend(CONSTRAINT_ALLOW_COT)
+            # elif chat_mode == "Debug_Chat (Raw)":
+            #    # [REMOVED] Redundant. If thinking is enabled, models naturally output thoughts.
+            #    # No need to explicitly allow it, which wastes tokens.
+            #    pass
 
             # [Custom Instruction Rules]
             if not is_sc_empty:
