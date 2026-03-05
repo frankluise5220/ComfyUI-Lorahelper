@@ -140,9 +140,7 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
 *   **Function**: The **Prompt Control Center**. Acts as a bridge between your Prompt Generator and CLIP, balancing "AI Creativity" with "Manual Precision".
 *   **Features**:
     *   **Dual Role**: Acts as both an upstream text aggregator/pass-through and a direct downstream text source.
-    *   **Relay & Takeover**: Automatically receives prompts from upstream. If the result is good but needs tweaking, you can edit it directly.
-    *   **Auto-Unlock**: Automatically enters **Editable Mode** when the upstream node is disconnected, bypassed, or muted.
-    *   **Interrupt & Refine**: Once you have a good base prompt, mute the upstream. SuperText retains the text for precise manual editing ("What You Type Is What You Get").
+    *   **Smart Relay (Auto-Unlock)**: Automatically receives upstream prompts. To **take over** and manually edit the text, simply disconnect, bypass, or mute the upstream node. The widget will automatically unlock, allowing you to refine the AI-generated text perfectly ("What You Type Is What You Get").
     *   **Dynamic Syntax**: Even manually edited text supports dynamic syntax like `{red|blue}` or `__wildcards__`.
 
 #### 8. LH_LoraLoader (Keyword Lora Loader)
@@ -297,9 +295,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **功能**: **提示词调度中心**。连接在提示词生成器与 CLIP 之间，充当“AI 灵感”与“人工精修”的桥梁。
 *   **特性**:
     *   **双重角色 (Dual Role)**: 既是上游文本的聚合/透传节点，也是下游的直接文本源。
-    *   **中转接管 (Relay & Takeover)**: 自动接收上游生成的提示词。若对生成结果不满意，可直接在文本框中手动微调。
-    *   **智能解锁 (Auto-Unlock)**: 当断开、绕开或关闭上游节点时，文本框会自动解锁进入**可编辑模式**。
-    *   **断点精修 (Interrupt & Edit)**: 生成满意的基底提示词后，可静音上游。SuperText 会保留文本，供您进行精细化编辑，实现“指哪打哪”的精准生图。
+    *   **中转接管 (Smart Relay & Auto-Unlock)**: 自动接收上游提示词。若需人工介入，只需断开、绕开或静音上游节点，文本框即会自动**解锁**。此时您可以基于 AI 生成的底稿进行精细化编辑（断点精修），实现“指哪打哪”的精准控制。
     *   **动态语法**: 手动修改的文本依然支持 `{red|blue}` 或 `__wildcard__` 等动态语法。
 
 #### 8. LH_LoraLoader (关键词 Lora 加载器)
