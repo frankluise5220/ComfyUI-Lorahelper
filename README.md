@@ -94,6 +94,19 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   **Auto-Resize**: Automatically adjusts size to fit content.
     *   **Context Loop**: Outputs formatted context to be copied into `user_material` for multi-turn debugging.
 
+#### 4. UniversalOllamaLoader (Local/Remote Ollama)
+*   **Function**: Loads models from a local or remote Ollama instance.
+*   **Features**:
+    *   **Auto-Discovery**: Automatically fetches the list of available models from the Ollama server.
+    *   **Vision Ready**: Auto-detects vision capabilities based on model name keywords (e.g., "llava", "vision").
+    *   **Config Memory**: Automatically saves your Ollama URL and API Key to `lh_config.json`, so you don't have to re-enter them.
+    *   **Custom Models**: Supports manual entry for new models not yet in the list.
+*   **Inputs**:
+    *   `ollama_url`: The URL of your Ollama server (default: `http://127.0.0.1:11434`).
+    *   `model_name`: Select from the list of available models.
+    *   `custom_model`: Manually specify a model name (priority over list selection).
+    *   `api_key`: Optional API Key for OpenAI-compatible endpoints.
+
 #### 5. LH_AllInOne_Saver (Dataset Saver)
 *   **Function**: One-click solution for saving training data, prompts, tags, and workflows.
 *   **Features**:
@@ -110,7 +123,7 @@ The core intelligence node. [View Logic Flowchart](./Logic_Flowchart.md)
     *   `text1`: (Optional) Primary text to save (e.g., Gen Prompt).
     *   `text2`: (Optional) Secondary text to save (e.g., Tags).
     *   `filename_final`: (Optional) Override specific filename (will be combined with prefix).
-*   **Outputs**:
+*   **Saved Files** (No Output Node connection):
     *   **Image**: `.png` with metadata (Workflow).
     *   **Tags**: `.txt` file with format `trigger_word, tags`.
     *   **Log**: `_log.txt` with the full raw AI response.
@@ -238,12 +251,26 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   **可视化显示**: 以 "Round X" 卡片形式清晰展示对话内容，自动调整窗口大小。
     *   **上下文循环**: 输出格式化后的 `context` 文本，可复制到 `user_material` 实现多轮对话调试。
 
+#### 4. UniversalOllamaLoader (本地 Ollama 加载器)
+*   **功能**: 加载本地或远程 Ollama 服务中的模型。
+*   **特性**:
+    *   **自动发现**: 自动获取 Ollama 服务端已下载的模型列表。
+    *   **视觉支持**: 根据模型名称关键词（如 "llava", "vision"）自动识别是否支持视觉功能。
+    *   **配置记忆**: 自动保存 Ollama 地址和 API Key 到配置文件，无需重复输入。
+    *   **自定义模型**: 支持手动输入模型名称（针对未在列表中显示的新模型）。
+*   **输入参数**:
+    *   `ollama_url`: Ollama 服务地址 (默认: `http://127.0.0.1:11434`)。
+    *   `model_name`: 从列表中选择模型。
+    *   `custom_model`: 手动输入模型名称 (优先使用)。
+    *   `api_key`: 可选 API Key (用于兼容 OpenAI 格式的服务)。
+
 #### 5. LH_AllInOne_Saver (数据集保存器)
 *   **功能**: 一“键”保存 LoRA 训练所需的所有文件（图片、Prompt、Tags、工作流）。
 *   **特性**:
     *   **灵活命名**: 支持自定义前缀、覆盖文件名和自动递增。
     *   **本地化支持**: 参数标签（如“保存方式”）会随插件语言设置自动切换。
 *   **输入参数**:
+    *   `images`: 待保存的输入图像。
     *   `folder_path`: 保存路径子文件夹 (默认: "output")。
     *   `filename_prefix`: 文件名前缀 (默认: "ComfyUI").
     *   `save_method`: **新增!** 选择 `timestamp` (时间戳, 默认) 或 `sequential` (序号自增)。
@@ -251,10 +278,10 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
     *   `text1`: (可选) 主要保存文本 (如 Gen Prompt)。
     *   `text2`: (可选) 次要保存文本 (如 Tags)。
     *   `filename_final`: (可选) 覆盖具体文件名 (会自动拼接前缀)。
-*   **输出端口**:
-    *   **Image**: `.png` with metadata (Workflow).
-    *   **Tags**: `.txt` file with format `trigger_word, tags`.
-    *   **Log**: `_log.txt` with the full raw AI response.
+*   **保存内容** (该节点无输出端口):
+    *   **Image**: `.png` 图片，包含工作流元数据。
+    *   **Tags**: `.txt` 标签文件，格式为 `触发词, 标签`。
+    *   **Log**: `_log.txt` 日志文件，包含完整的 AI 对话原始输出。
 *   **路径**: 默认保存在 `output/` 目录。
 
 #### 6. LH_MultiTextSelector (多行提示词选择器)

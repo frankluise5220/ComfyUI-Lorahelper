@@ -19,9 +19,9 @@ from datetime import datetime
 # ==========================================================
 # PROJECT: LoraHelper_Saver (Dataset Saver)
 # MANDATORY UI ORDER (INPUT_TYPES):
-#   1. images -> 2. gen_prompt -> 3. lora_tags
-#   4. filename_final -> 5. folder_path -> 6. trigger_word
-#   7. save_workflow
+#   1. images -> 2. text1 -> 3. text2
+#   4. filename_final -> 5. folder_path -> 6. filename_prefix
+#   7. save_workflow -> 8. save_method
 #
 # LOGIC DEFINITION:
 #   - Saves images to output/folder_path

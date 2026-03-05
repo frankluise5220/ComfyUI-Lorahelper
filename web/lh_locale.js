@@ -12,6 +12,7 @@ const TRANSLATIONS = {
             "instruction": "系统指令/执行指令",
             "user_material": "用户素材",
             "chat_mode": "对话模式",
+            "enable_thinking": "开启思考",
             "enable_tags": "启用标签提取",
             "enable_filename": "启用文件名生成",
             "seed": "种子",

@@ -12,7 +12,8 @@
             "chat_mode": "对话模式",
             "enable_tag": "启用标签提取",
             "enable_filename": "启用文件名生成",
-            "seed": "种子 (Seed)",
+            "enable_thinking": "开启思考",
+            "seed": "种子",
             "release_vram": "自动释放显存",
             "force_chinese": "强制中文输出"
         }

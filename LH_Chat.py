@@ -134,26 +134,27 @@ def setup_vision_handler(model, clip_path, verbose=False, enable_thinking=False)
         try:
             # [Optimization] Use inspect to safely pass supported parameters
             # This avoids expensive try/except blocks and ensures compatibility
-            if name == "Qwen3.5-VL":
-                try:
-                    sig = inspect.signature(HandlerClass.__init__)
-                    kwargs = {"clip_model_path": clip_path, "verbose": verbose}
-                    
-                    if "enable_thinking" in sig.parameters:
-                        kwargs["enable_thinking"] = enable_thinking
+            try:
+                sig = inspect.signature(HandlerClass.__init__)
+                kwargs = {"clip_model_path": clip_path, "verbose": verbose}
+                
+                # [Generic Support] Check for enable_thinking in ANY handler (e.g. Qwen2/3)
+                if "enable_thinking" in sig.parameters:
+                    kwargs["enable_thinking"] = enable_thinking
+                
+                # [Qwen Specific]
+                if name == "Qwen3.5-VL" or name == "Qwen2-VL":
                     if "add_vision_id" in sig.parameters:
                         kwargs["add_vision_id"] = True
+            
+                if verbose:
+                    print(f"\033[36m[UniversalAIChat] Init Handler {name} with kwargs: {kwargs}\033[0m")
                 
-                    if verbose:
-                        print(f"\033[36m[UniversalAIChat] Init Handler {name} with kwargs: {kwargs}\033[0m")
-                    
-                    h = HandlerClass(**kwargs)
-                except ValueError:
-                    # If inspect fails (e.g. C-extension without signature), fallback to basic
-                     h = HandlerClass(clip_model_path=clip_path, verbose=verbose)
-            else:
-                h = HandlerClass(clip_model_path=clip_path, verbose=verbose)
-                
+                h = HandlerClass(**kwargs)
+            except ValueError:
+                # If inspect fails (e.g. C-extension without signature), fallback to basic
+                 h = HandlerClass(clip_model_path=clip_path, verbose=verbose)
+
             if verbose:
                 print(f"\033[32m[UniversalAIChat] Success: {name} Vision Adapter Loaded (Lazy).\033[0m")
             return h
@@ -310,6 +311,7 @@ UI_TEXT = {
         "aichat_mirostat_tau": "Mirostat target perplexity. Only used when Mirostat is enabled. Typical 5.",
         "aichat_mirostat_eta": "Mirostat learning rate. Only used when Mirostat is enabled. Typical 0.1.",
         "aichat_force_chinese": "Force Chinese for the main description. Tags and filename remain English.",
+        "aichat_enable_thinking": "Enable Chain-of-Thought (Reasoning) for supported models (e.g. Qwen 3.5). Slower but smarter.",
         "aichat_chat_mode": "Chat behavior preset: Auto (image/text auto-switch), Beauty (vision), or Debug (raw).",
         "loraloader_prompt_in": "The text to be checked for keywords. If a keyword matches, 'triggered' output is True.",
         "loraloader_strength_model": "How strongly the LoRA modifies the main UNet model (visuals/style).",
@@ -337,6 +339,7 @@ UI_TEXT = {
         "aichat_mirostat_tau": "Mirostat 目标困惑度参数。仅在开启 Mirostat 时生效，常用 5",
         "aichat_mirostat_eta": "Mirostat 学习率参数。仅在开启 Mirostat 时生效，常用 0.1",
         "aichat_force_chinese": "强制使用中文输出内容。仅影响主要描述部分，Tag 和文件名仍保持英文。",
+        "aichat_enable_thinking": "开启后允许模型进行思维链推理（如 Qwen 3.5）。速度较慢但逻辑更强。",
         "aichat_chat_mode": (
             "Auto_Mode: 自动模式（连图用 Vision_Caption，没图用 Enhance_Prompt）\n"
             "Vision_Beauty: 电影级美女大师（视觉）\n"
@@ -461,15 +464,20 @@ PROMPT_FILENAME = (
 CONSTRAINT_HEADER = "\n[Constraints]\n"
 
 CONSTRAINT_NO_COT = [
-    "Disable internal reasoning. Disable Chain-of-Thought (CoT).",
-    "Do not output <think> tags. Do not output the thinking process.",
-    "Provide the final answer directly and immediately.\n"
+    "Disable internal reasoning and Chain-of-Thought (CoT). Do not output <think> tags.",
+    "Provide the final answer directly and immediately."
 ]
 
 CONSTRAINT_ALLOW_COT = [
     "You MAY output your thinking process enclosed in <think>...</think> tags BEFORE the actual content.\n"
 ]
 
+# [Thinking Control] Few-Shot & Suffix
+THINKING_DISABLE_USER_MSG = "Disable thinking process. Answer directly."
+# THINKING_DISABLE_ASSISTANT_MSG = "Understood. I will not use <think> tags and will answer directly."
+THINKING_DISABLE_ASSISTANT_MSG = ""
+# THINKING_DISABLE_SUFFIX = "\n\nIMPORTANT: Do NOT output internal thought process. Do NOT use <think> tags. Answer directly."
+THINKING_DISABLE_SUFFIX = ""
 CONSTRAINT_NO_REPEAT = [
     "Do NOT repeat the instructions.\n"
 ]
@@ -1362,7 +1370,7 @@ class UniversalAIChat:
                     "BOOLEAN",
                     {
                         "default": False,
-                        "tooltip": "Enable Chain-of-Thought (Reasoning) for supported models (e.g. Qwen 3.5). Slower but smarter.",
+                        "tooltip": get_ui_text("aichat_enable_thinking", locale),
                     },
                 ),
             }
@@ -1779,13 +1787,13 @@ class UniversalAIChat:
             # We explicitly tell it: "No <think> tags."
             if not enable_thinking:
                 rules.extend(CONSTRAINT_NO_COT)
-                # [Reinforcement] Add a very explicit negative constraint for models that ignore standard rules
-                rules.append("Disable Chain-of-Thought. Disable internal monologue.")
             elif chat_mode == "Debug_Chat (Raw)":
                 rules.extend(CONSTRAINT_ALLOW_COT)
 
             # [Custom Instruction Rules]
             if not is_sc_empty:
+                # [Strict Adherence] User request: Enforce strict adherence to instructions when thinking is disabled
+                rules.append("STRICTLY FOLLOW the user's instructions. Do not deviate.")
                 rules.extend(CONSTRAINT_NO_REPEAT)
                 
                 rules.append(PROMPT_DESCRIPTION)
@@ -1839,8 +1847,8 @@ class UniversalAIChat:
         # For stubborn reasoning models, a few-shot example is the most effective standard technique
         # to force them into a non-thinking state.
         if not enable_thinking:
-            messages.append({"role": "user", "content": "Disable thinking process. Answer directly."})
-            messages.append({"role": "assistant", "content": "Understood. I will not use <think> tags and will answer directly."})
+            messages.append({"role": "user", "content": THINKING_DISABLE_USER_MSG})
+            messages.append({"role": "assistant", "content": THINKING_DISABLE_ASSISTANT_MSG})
     
         # 3.2 User Message
         if is_vision_task:
@@ -1856,7 +1864,7 @@ class UniversalAIChat:
             # [Thinking Control - Last Resort]
             # If thinking is disabled, we append a final command to the user message to force compliance.
             if not enable_thinking:
-                user_text_content += "\n\nIMPORTANT: Do NOT output internal thought process. Do NOT use <think> tags. Answer directly."
+                user_text_content += THINKING_DISABLE_SUFFIX
 
             user_content_list = [
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}},
@@ -1871,7 +1879,7 @@ class UniversalAIChat:
             final_text_content = f"{final_user_content}{template_instructions}"
             
             if not enable_thinking:
-                final_text_content += "\n\nIMPORTANT: Do NOT output internal thought process. Do NOT use <think> tags. Answer directly."
+                final_text_content += THINKING_DISABLE_SUFFIX
                 
             messages.append({"role": "user", "content": final_text_content})
             display_up = f"{LABEL_USER_INPUT}\n{user_material}"
