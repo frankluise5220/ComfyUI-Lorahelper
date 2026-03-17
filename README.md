@@ -238,7 +238,7 @@ It is recommended to use this tool with **[Dynamic Prompts (DP)](https://github.
 *   **视觉预设**:
     *   **Vision_Beauty (Film-level)**: **新增!** 法医级女性人像分析，在无审查与艺术美感之间取得平衡。
 
-#### 2. LH_SuperText (提示词中转站)
+#### 2. LH_SuperText (提示词中转站。全能文本节点，强烈推荐)
 *   **功能**: **提示词调度中心**。连接在提示词生成器与 CLIP 之间，充当“AI 灵感”与“人工精修”的桥梁。
 *   **特性**:
     *   **双重角色 (Dual Role)**: 既是上游文本的聚合/透传节点，也是下游的直接文本源。
